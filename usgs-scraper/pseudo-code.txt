@@ -1,0 +1,32 @@
+
+Pick city X
+
+(?download all of USGS dataset metadata to identify bounds and years of data
+
+Manually identify which USGS data sets overlaps with city
+https://apps.nationalmap.gov/lidar-explorer/#/
+
+Download metadata index for data-set
+e.g. for dataset "CA_ContraCostaCo_2007"
+https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/<data-set-name>/metadata/
+
+use Python to do wget and get XML files
+save XML file count
+report if NONE
+start downloading XML meta file
+
+check dates:
+<rngdates>
+<begdate>20171201</begdate>
+<enddate>20180424</enddate>
+</rngdates>
+
+check bounding box
+<bounding>
+<westbc>-121.81692871680157</westbc>
+<eastbc>-121.80275034347437</eastbc>
+<northbc>38.104507222853485</northbc>
+<southbc>38.093519006180045</southbc>
+</bounding>
+
+
