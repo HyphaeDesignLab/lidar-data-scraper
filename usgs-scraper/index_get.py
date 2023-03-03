@@ -7,18 +7,28 @@ import json
 from shapely.geometry import Polygon
 from datetime import datetime
 
+# check if there is META Data
+# if META DATA is a list of XML files, download them, find bouning box
+# if META DATA is a ZIP file of SHP fileset, try to download and convert with geopandas to a bounding box
+# if META DATA ZIP is corrupted or missing, use the wXXXX nYYYY local projection in filename and convert to a bounding box if we can figure out the projection
+# if no metadata possible, count the number of LAZ files and if NOT too big, download them all and grab date/bounding box from there
+# if DATA is older than 2014, mark it as old, check FILE NAME of project name/dataset for year
+
+
+# configure URL base to come from a CONFIG file
+# TODO: run a check on base URL to confirm that it is still viable
 usgs_url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
 
 downloads_dir = '_downloads'
 
-def get_downloads_dir(project_name, project_dataset):
+def downloads_dir(project_name, project_dataset):
     dir_path = '%s/%s__%s' % (downloads_dir, project_name, project_dataset)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
 
-def download_meta_index(project_name, project_dataset, index_filename_custom=None):
-    index_filename = get_downloads_dir(project_name, project_dataset) + '/'
+def metadata_index_get(project_name, project_dataset, index_filename_custom=None):
+    index_filename = downloads_dir(project_name, project_dataset) + '/'
     if index_filename_custom != None:
       index_filename += index_filename_custom
     else:
@@ -37,13 +47,13 @@ def download_meta_index(project_name, project_dataset, index_filename_custom=Non
 
     return index_filename
 
-def download_meta_files(index_filename, project_name, project_dataset, limit=4):
+def metadata_files_fetch(index_filename, project_name, project_dataset, limit=4):
     xml_regex = re.compile('(?<=\>)[\w\.\-]+\.xml', re.IGNORECASE)
     ## TEST
     ##match = xml_regex.search('asdasd>a_a.xml asdas')
     ##print(match)
 
-    dir_path = get_downloads_dir(project_name, project_dataset)
+    dir_path = downloads_dir(project_name, project_dataset)
     index_file = open(dir_path + '/' + index_filename)
     index_file.seek(0)
 
@@ -76,7 +86,7 @@ def download_meta_files(index_filename, project_name, project_dataset, limit=4):
 
     return meta_filenames
 
-def extract_bounds_and_date(filename):
+def metadata_extract_data(filename):
     file_obj = open(filename)
     file_obj.seek(0)
 
@@ -129,7 +139,7 @@ def extract_bounds_and_date(filename):
     return (bounds_bbox, dates)
 
 
-def is_lidar_scan_overlap_with_city(lidar_polygon, city_multi_polygon):
+def polygon_multipolygon_overlap_check(lidar_polygon, city_multi_polygon):
     p1 = Polygon(lidar_polygon)
     is_intersects = False
     for polygon_i in city_multi_polygon:
@@ -139,28 +149,52 @@ def is_lidar_scan_overlap_with_city(lidar_polygon, city_multi_polygon):
     return is_intersects
 
 
-def get_city_polygon(city_id):
+def city_polygon_get(city_id):
     file_obj = open('../cities/%s.json' % city_id)
     bounds = json.loads(file_obj.read())
     multipolygon = bounds.get('geometries')[0].get('coordinates')
     return multipolygon
 
 def find_overlapping_lidar_scans(project_name, project_dataset, city_id):
-    city_multi_polygon = get_city_polygon(city_id)
+    city_multi_polygon = city_polygon_get(city_id)
 
-    dir_path = get_downloads_dir(project_name, project_dataset)
+    dir_path = downloads_dir(project_name, project_dataset)
     file_list = os.listdir(dir_path)
 
     file_bounds_and_date = {}
     for f in file_list:
       if f.find('.xml') < 0:
         continue
-      bounds_and_date = extract_bounds_and_date(dir_path + '/' + f)
+      bounds_and_date = metadata_extract_data(dir_path + '/' + f)
       if bounds_and_date != None:
-        if is_lidar_scan_overlap_with_city(bounds_and_date[0], city_multi_polygon):
+        if polygon_multipolygon_overlap_check(bounds_and_date[0], city_multi_polygon):
           file_bounds_and_date[f] = bounds_and_date
 
     return file_bounds_and_date
+
+
+# RESULT
+# TODO: an easy to way to monitor a scraping process (simple webpage that polls the scraped files/data)
+#  - a list of USGS projects/datasets to scrape (with status next to each)
+#  - button to kick off a scrape or re-scrape
+#  - checks/status on
+#      - scrape process is running normally, scrape process did not exist abnormally
+#      - meta index was fetch (or failed to fetch): 2053 meta files total
+#      - 2040 meta files fetched, 13 failed to fetch
+#      - 2020 meta files contain proper bounding box/dates, 20 contain invalid bounding box/dates (manually investigate)
+#      - 1240 meta files intersect with RICHMOND, CA,
+#      - 1233 LAZ files fetch, 7 failed to fetch
+#      - 1233 LAZ files dates parsed
+#      - date ranges from LAZ: 1/2/2020-1/19/2020
+#      - date ranges from Meta: 1/1/2020-1/20/2020
+
+# TODO: tie to the satellite imagery
+
+# TODO: compare the rngdates from XML meta file to point reading from LAZ file in first 2-3 sets to establish if meta data is enough
+# city polygon
+# array of lidar scan polygons with dates attached to each: rows of the format: <lidar polygon ID or polygon coordinates>,<start date>,<end date>,<LAZ/meta file URL>
+# a global date range for entire city lidar points
+#  ==> ideally we can put this on a Mapbox UI
 
 def testit(test):
     sample_project_name = 'CA_NoCAL_3DEP_Supp_Funding_2018_D18'
@@ -175,23 +209,23 @@ def testit(test):
        (-122.3573707, 37.9432179)]
 
     out = 'select a test'
-    if test == 'get_downloads_dir':
-        out = get_downloads_dir(sample_project_name, sample_project_dataset)
-    elif test == 'download_meta_index':
-        download_meta_index(sample_project_name, sample_project_dataset)
-    elif test == 'download_meta_files':
-        out = download_meta_files(sample_meta_index, sample_project_name, sample_project_dataset, -1)
+    if test == 'downloads_dir':
+        out = downloads_dir(sample_project_name, sample_project_dataset)
+    elif test == 'metadata_index_get':
+        metadata_index_get(sample_project_name, sample_project_dataset)
+    elif test == 'metadata_files_fetch':
+        out = metadata_files_fetch(sample_meta_index, sample_project_name, sample_project_dataset, -1)
     elif test == 'list_downloads_dir':
-        out = os.listdir(get_downloads_dir(sample_project_name, sample_project_dataset))
-    elif test == 'extract_bounds_and_date':
-        out = extract_bounds_and_date(get_downloads_dir(sample_project_name, sample_project_dataset)+'/'+sample_meta)
-    elif test == 'get_city_polygon':
-        out = get_city_polygon(sample_city_id)
-    elif test == 'is_lidar_scan_overlap_with_city':
-        out = is_lidar_scan_overlap_with_city(
-          extract_bounds_and_date(
-           get_downloads_dir(sample_project_name, sample_project_dataset)+'/'+sample_meta)[0],
-           get_city_polygon(sample_city_id))
+        out = os.listdir(downloads_dir(sample_project_name, sample_project_dataset))
+    elif test == 'metadata_extract_data':
+        out = metadata_extract_data(downloads_dir(sample_project_name, sample_project_dataset)+'/'+sample_meta)
+    elif test == 'city_polygon_get':
+        out = city_polygon_get(sample_city_id)
+    elif test == 'polygon_multipolygon_overlap_check':
+        out = polygon_multipolygon_overlap_check(
+          metadata_extract_data(
+           downloads_dir(sample_project_name, sample_project_dataset)+'/'+sample_meta)[0],
+           city_polygon_get(sample_city_id))
     elif test == 'find_overlapping_lidar_scans':
         out = find_overlapping_lidar_scans(
                 sample_project_name, sample_project_dataset, sample_city_id)
