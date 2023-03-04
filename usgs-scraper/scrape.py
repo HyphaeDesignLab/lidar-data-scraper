@@ -7,28 +7,20 @@ import json
 from shapely.geometry import Polygon
 from datetime import datetime
 
-# check if there is META Data
-# if META DATA is a list of XML files, download them, find bouning box
-# if META DATA is a ZIP file of SHP fileset, try to download and convert with geopandas to a bounding box
-# if META DATA ZIP is corrupted or missing, use the wXXXX nYYYY local projection in filename and convert to a bounding box if we can figure out the projection
-# if no metadata possible, count the number of LAZ files and if NOT too big, download them all and grab date/bounding box from there
-# if DATA is older than 2014, mark it as old, check FILE NAME of project name/dataset for year
-
-
 # configure URL base to come from a CONFIG file
 # TODO: run a check on base URL to confirm that it is still viable
 usgs_url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
 
 downloads_dir = '_downloads'
 
-def downloads_dir(project_name, project_dataset):
+def downloads_dir_get(project_name, project_dataset):
     dir_path = '%s/%s__%s' % (downloads_dir, project_name, project_dataset)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
 
 def metadata_index_get(project_name, project_dataset, index_filename_custom=None):
-    index_filename = downloads_dir(project_name, project_dataset) + '/'
+    index_filename = downloads_dir_get(project_name, project_dataset) + '/'
     if index_filename_custom != None:
       index_filename += index_filename_custom
     else:
@@ -38,10 +30,20 @@ def metadata_index_get(project_name, project_dataset, index_filename_custom=None
 
     index_url = '%s/%s/%s/metadata/' % (usgs_url_base, project_name, project_dataset)
 
-    cmd = "wget -S --quiet -t 13 -O %s %s " % (index_filename, index_url)
-    wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    wget_process_out = str(wget_process.communicate()[0], 'utf-8')
-    if wget_process_out == None or wget_process_out == '':
+    i = 9
+    while i > 0:
+      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_filename, index_url)
+      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+      if wget_process_out != None and wget_process_out != '':
+        status = 'success'
+        break
+      else:
+        status = 'failed'
+        # TODO: log miss
+      i = i - 1
+
+    if status == 'failed':
       print('did not fetch xml index')
       return None
 
@@ -53,7 +55,7 @@ def metadata_files_fetch(index_filename, project_name, project_dataset, limit=4)
     ##match = xml_regex.search('asdasd>a_a.xml asdas')
     ##print(match)
 
-    dir_path = downloads_dir(project_name, project_dataset)
+    dir_path = downloads_dir_get(project_name, project_dataset)
     index_file = open(dir_path + '/' + index_filename)
     index_file.seek(0)
 
@@ -66,17 +68,7 @@ def metadata_files_fetch(index_filename, project_name, project_dataset, limit=4)
 
     i = 0
     for meta_filename in meta_filenames:
-      status = 'in progress'
-      meta_url = '%s/%s/%s/metadata/%s' % (usgs_url_base, project_name, project_dataset, meta_filename)
-      cmd = "wget -S --quiet -t 13 -O %s/%s %s " % (dir_path, meta_filename, meta_url)
-      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
-
-      status = 'fetched'
-      if wget_process_out == None or wget_process_out == '':
-        status = 'failed fetch'
-        # TODO: log miss
-
+      status = metadata_file_fetch(meta_filename, project_name, project_dataset)
       meta_filenames_status.append( '%s (%s)' % (status, meta_filename) )
       i = i + 1
 
@@ -85,6 +77,28 @@ def metadata_files_fetch(index_filename, project_name, project_dataset, limit=4)
        break
 
     return meta_filenames
+
+def metadata_file_fetch(filename, project_name, project_dataset):
+    status = 'in progress'
+    meta_url = '%s/%s/%s/metadata/%s' % (usgs_url_base, project_name, project_dataset, filename)
+    dir_path = downloads_dir_get(project_name, project_dataset)
+    download_filepath = '%s/%s' % (dir_path, filename)
+
+    j = 9
+    while j > 0:
+      cmd = "wget -S --quiet -t 1 -O %s %s " % (download_filepath, meta_url)
+      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+
+      if wget_process_out != None and wget_process_out != '':
+        status = 'success'
+        break
+      else:
+        status = 'failed'
+        # TODO: log miss
+      j = j - 1
+
+    return status
 
 def metadata_extract_data(filename):
     file_obj = open(filename)
@@ -158,7 +172,7 @@ def city_polygon_get(city_id):
 def find_overlapping_lidar_scans(project_name, project_dataset, city_id):
     city_multi_polygon = city_polygon_get(city_id)
 
-    dir_path = downloads_dir(project_name, project_dataset)
+    dir_path = downloads_dir_get(project_name, project_dataset)
     file_list = os.listdir(dir_path)
 
     file_bounds_and_date = {}
@@ -171,6 +185,105 @@ def find_overlapping_lidar_scans(project_name, project_dataset, city_id):
           file_bounds_and_date[f] = bounds_and_date
 
     return file_bounds_and_date
+
+def download_meta_shape_files_from_zip(index_filename, project_name, project_dataset, limit=4):
+    # download ZIP
+    # extract ZIP
+    # extract geo info from SHP file => geojson ?!
+    #  USE geopandas to read SHP file (as long as all other files are in same dir)
+    return None
+
+def polygon_projection_convert():
+
+    # CAlifornia projection 6420 (ID is the SW corner of the tile "w123123n123123")
+    # https://epsg.io/transform#s_srs=6420&t_srs=4326&x=0.0000000&y=0.0000000
+    #
+     # x (w->e) 6054000 ---decreases---> 6051000 = 3000 (feet wide)
+    # y (n->s) 2133000 ---decreases---> 2130000 = 3000 (feet tall)
+
+    # data for GeoDataFrame with local-projection coordinates
+    d = {'col1': ['p1'], 'geometry': Polygon([[6051000,2130000], [6051000,2133000], [6054000,2133000], [6054000,2130000]])}
+
+    # specify projection of coordinates
+    gdf = geopandas.GeoDataFrame(d, crs="EPSG:6420")
+    # convert to standard lng/lat
+    gdf2 = gdf.to_crs(4326)
+
+    # test intersection with another polygon
+    p1 = Polygon([
+           (-122.3583707, 37.9432179),
+           (-122.3583707, 37.9422179),
+           (-122.3573707, 37.9422179),
+           (-122.3573707, 37.9432179)])
+
+    print(p1.intersects(gdf2.geometry[0]))
+
+
+def laz_file_fetch(project_name, project_dataset, filename):
+    status = 'in progress'
+    dir_path = downloads_dir_get(project_name, project_dataset)
+    url = '%s/%s/%s/LAZ/%s' % (usgs_url_base, project_name, project_dataset, filename)
+    download_filepath = '%s/%s' % (dir_path, filename)
+
+    i = 9
+    while i > 0:
+      cmd = "wget -S --quiet -t 1 -O %s %s " % (download_filepath, url)
+      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+
+      if wget_process_out != None and wget_process_out != '':
+        status = 'success'
+        break
+      else:
+        status = 'failed'
+        # TODO: log miss
+      i = i - 1
+
+    return status
+
+def laz_extract_data(project_name, project_dataset, filename):
+    # Buffered read to extract all dates of individual points
+    #  (buffered so that we do not need HUGE RAM and costly VMs)
+    import numpy as np
+    import laspy
+
+    dir_path = downloads_dir_get(project_name, project_dataset)
+    file = '%s/%s' % (dir_path, filename)
+
+    data = {'bbox': [[],[]], 'dates_range': [None, None]}
+    with laspy.open(file) as f:
+
+      # fetch bounding box from header (if meta data did not provide any info on bounding box)
+      data['bbox'][0].append(f.header.min[0]) # x0, aka lng0
+      data['bbox'][0].append(f.header.max[0]) # x1 aka lng1
+      data['bbox'][1].append(f.header.min[1]) # y0, aka lat0
+      data['bbox'][1].append(f.header.max[1]) # y1, aka lat1
+      # f.header.min[2] # z0 (elevation0)
+      # f.header.max[2] # z1 (elevation1)
+
+
+      i = 10
+      for point in f.chunk_iterator(100):
+        gps_times = list(point.point_format.dimension_names)
+        gps_times_index = gps_times.index('gps_time')
+        #gps_time is often used in the laz 1.4 standard. However, the lidar operator may do something weird here so be careful!
+        #actually it is always a bit weird: The gps_time is seconds since January 6th 1980 minus 1 billion. So to get a unix timestamp we do the following:
+        unix_time = point.gps_time[0]+1000000000+315964782
+        #now turn the unix timstamp to a local timestamp:
+        local_time = datetime.fromtimestamp(unix_time)
+        print (unix_time, local_time)
+        i = i - 1
+        if i <= 0:
+          break
+
+    return data
+
+# check if there is META Data
+# if META DATA is a list of XML files, download them, find bouning box
+# if META DATA is a ZIP file of SHP fileset, try to download and convert with geopandas to a bounding box
+# if META DATA ZIP is corrupted or missing, use the wXXXX nYYYY local projection in filename and convert to a bounding box if we can figure out the projection
+# if no metadata possible, count the number of LAZ files and if NOT too big, download them all and grab date/bounding box from there
+# if DATA is older than 2014, mark it as old, check FILE NAME of project name/dataset for year
 
 
 # RESULT
@@ -201,6 +314,7 @@ def testit(test):
     sample_project_dataset = 'CA_NoCAL_Wildfires_B5b_2018'
     sample_meta_index = 'meta_index_23_03_01_12_29_46__6407.html'
     sample_meta = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.xml'
+    sample_laz = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.laz'
     sample_city_id = 'richmond-ca'
     sample_lidar_polygon = [
        (-122.3583707, 37.9432179),
@@ -208,28 +322,46 @@ def testit(test):
        (-122.3573707, 37.9422179),
        (-122.3573707, 37.9432179)]
 
-    out = 'select a test'
-    if test == 'downloads_dir':
-        out = downloads_dir(sample_project_name, sample_project_dataset)
+    out = '''select a test
+        downloads_dir_get
+        downloads_dir_list
+        metadata_index_get
+        metadata_files_fetch
+        metadata_file_fetch
+        metadata_extract_data
+        city_polygon_get
+        polygon_multipolygon_overlap_check
+        find_overlapping_lidar_scans
+        laz_file_fetch
+        laz_extract_data
+        '''
+    if test == 'downloads_dir_get':
+        out = downloads_dir_get(sample_project_name, sample_project_dataset)
     elif test == 'metadata_index_get':
         metadata_index_get(sample_project_name, sample_project_dataset)
     elif test == 'metadata_files_fetch':
         out = metadata_files_fetch(sample_meta_index, sample_project_name, sample_project_dataset, -1)
-    elif test == 'list_downloads_dir':
-        out = os.listdir(downloads_dir(sample_project_name, sample_project_dataset))
+    elif test == 'metadata_file_fetch':
+        out = metadata_file_fetch(sample_meta, sample_project_name, sample_project_dataset)
+    elif test == 'downloads_dir_list':
+        out = os.listdir(downloads_dir_get(sample_project_name, sample_project_dataset))
     elif test == 'metadata_extract_data':
-        out = metadata_extract_data(downloads_dir(sample_project_name, sample_project_dataset)+'/'+sample_meta)
+        out = metadata_extract_data(downloads_dir_get(sample_project_name, sample_project_dataset)+'/'+sample_meta)
     elif test == 'city_polygon_get':
         out = city_polygon_get(sample_city_id)
     elif test == 'polygon_multipolygon_overlap_check':
         out = polygon_multipolygon_overlap_check(
           metadata_extract_data(
-           downloads_dir(sample_project_name, sample_project_dataset)+'/'+sample_meta)[0],
+           downloads_dir_get(sample_project_name, sample_project_dataset)+'/'+sample_meta)[0],
            city_polygon_get(sample_city_id))
     elif test == 'find_overlapping_lidar_scans':
         out = find_overlapping_lidar_scans(
                 sample_project_name, sample_project_dataset, sample_city_id)
+    elif test == 'laz_file_fetch':
+        out = laz_file_fetch(sample_project_name, sample_project_dataset, sample_laz)
+    elif test == 'laz_extract_data':
+        out = laz_extract_data(sample_project_name, sample_project_dataset, sample_laz)
 
     print(out)
 
-testit('find_overlapping_lidar_scans')
+testit(  sys.argv[1] if len(sys.argv) > 1 else '')
