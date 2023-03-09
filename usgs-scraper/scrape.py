@@ -203,29 +203,50 @@ def download_meta_shape_files_from_zip(index_filename, project_name, project_dat
     #  USE geopandas to read SHP file (as long as all other files are in same dir)
     return None
 
-def polygon_projection_convert():
+projections_aliases = {
+    'NAD83(CSRS98)' : 'EPSG:4140',
+    'NAD83(HARN)' : 'EPSG:4152',
+    'WGS 84' : 'EPSG:4326',
+    'NAD83(CSRS)' : 'EPSG:4617',
+    'NAVD88 height' : 'EPSG:5703',
+    'NAD83(2011)' : 'EPSG:6318',
+    'NAD83(CSRS)v2' : 'EPSG:8237',
+    'NAD83(CSRS)v3' : 'EPSG:8240',
+    'NAD83(CSRS)v4' : 'EPSG:8246',
+    'NAD83(CSRS)v6' : 'EPSG:8252',
+    'NAD83(CSRS)v7' : 'EPSG:8255'
+}
 
+def projection_convert(coordinates, projection, geometry_type):
+    import geopandas
     # CAlifornia projection 6420 (ID is the SW corner of the tile "w123123n123123")
+    # "EPSG:6420"
+    # [[6051000,2130000], [6051000,2133000], [6054000,2133000], [6054000,2130000]]
     # https://epsg.io/transform#s_srs=6420&t_srs=4326&x=0.0000000&y=0.0000000
      # x (w->e) 6054000 ---decreases---> 6051000 = 3000 (feet wide)
     # y (n->s) 2133000 ---decreases---> 2130000 = 3000 (feet tall)
 
     # data for GeoDataFrame with local-projection coordinates
-    d = {'col1': ['p1'], 'geometry': Polygon([[6051000,2130000], [6051000,2133000], [6054000,2133000], [6054000,2130000]])}
+    if geometry_type == 'polygon':
+      geometry = Polygon(coordinates)
+    elif geometry_type == 'point':
+      geometry = Point(coordinates)
 
+    data = {'col1': ['p1'], 'geometry': geometry}
+
+    # convert alias/alternate projection ID to standard EPSG ID
+    projection_EPSG = projection
+    if projection in projections_aliases:
+        projection_EPSG = projections_aliases[projection]
+
+    print (projection_EPSG)
     # specify projection of coordinates
-    gdf = geopandas.GeoDataFrame(d, crs="EPSG:6420")
+    geo_data_frame = geopandas.GeoDataFrame(data, crs=projection_EPSG)
     # convert to standard lng/lat
-    gdf2 = gdf.to_crs(4326)
+    geo_data_frame_EPSG4326 = geo_data_frame.to_crs(4326)
 
-    # test intersection with another polygon
-    p1 = Polygon([
-           (-122.3583707, 37.9432179),
-           (-122.3583707, 37.9422179),
-           (-122.3573707, 37.9422179),
-           (-122.3573707, 37.9432179)])
-
-    print(p1.intersects(gdf2.geometry[0]))
+    # returns a Shapely Polygon/Point object
+    return geo_data_frame_EPSG4326.geometry[0]
 
 
 def laz_file_fetch(project_name, project_dataset, filename):
