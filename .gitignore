@@ -2,3 +2,4 @@
 _downloads/
 # cities/*json
 env/
+.env
