@@ -4,7 +4,7 @@ import os
 import sys
 import random
 import json
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 from datetime import datetime
 
 # configure URL base to come from a CONFIG file
@@ -100,8 +100,9 @@ def metadata_file_fetch(filename, project_name, project_dataset):
 
     return status
 
-def metadata_extract_data(filename):
-    file_obj = open(filename)
+def metadata_extract_data(project_name, project_dataset, filename):
+    dir_path = downloads_dir_get(project_name, project_dataset)
+    file_obj = open(dir_path + '/' + filename)
     file_obj.seek(0)
 
     date_seen = False
@@ -111,6 +112,7 @@ def metadata_extract_data(filename):
 
     dates = []
     bounds = {}
+    projection = ''
 
     for line in file_obj:
       if (not date_seen and not date_extracted) or line.find('<rngdates>') >= 0:
@@ -140,17 +142,25 @@ def metadata_extract_data(filename):
       if bounds_seen and len(bounds.keys()) == 4:
         bounds_extracted = True
 
+      if line.find('<mapprojn>') >= 0:
+        projection = line.replace('<mapprojn>', '').replace('</mapprojn>', '').strip()
+
+    projection_cleanup_regex = re.compile('\s*/.+$', re.IGNORECASE)
+    if projection != '':
+      projection = projection_cleanup_regex.sub('', projection)
+      projection = projection.strip()
+
     if len(bounds.keys()) < 4:
       # TODO: log miss
       return None
 
-    bounds_bbox = [
+    bounds_polygon_coordinates = [
       [bounds['w'], bounds['n']],
       [bounds['e'], bounds['n']],
       [bounds['e'], bounds['s']],
       [bounds['w'], bounds['s']]]
 
-    return (bounds_bbox, dates)
+    return (bounds_polygon_coordinates, dates, projection)
 
 
 def polygon_multipolygon_overlap_check(lidar_polygon, city_multi_polygon):
@@ -179,7 +189,7 @@ def find_overlapping_lidar_scans(project_name, project_dataset, city_id):
     for f in file_list:
       if f.find('.xml') < 0:
         continue
-      bounds_and_date = metadata_extract_data(dir_path + '/' + f)
+      bounds_and_date = metadata_extract_data(project_name, project_dataset, f)
       if bounds_and_date != None:
         if polygon_multipolygon_overlap_check(bounds_and_date[0], city_multi_polygon):
           file_bounds_and_date[f] = bounds_and_date
@@ -197,7 +207,6 @@ def polygon_projection_convert():
 
     # CAlifornia projection 6420 (ID is the SW corner of the tile "w123123n123123")
     # https://epsg.io/transform#s_srs=6420&t_srs=4326&x=0.0000000&y=0.0000000
-    #
      # x (w->e) 6054000 ---decreases---> 6051000 = 3000 (feet wide)
     # y (n->s) 2133000 ---decreases---> 2130000 = 3000 (feet tall)
 
@@ -250,14 +259,16 @@ def laz_extract_data(project_name, project_dataset, filename):
     dir_path = downloads_dir_get(project_name, project_dataset)
     file = '%s/%s' % (dir_path, filename)
 
-    data = {'bbox': [[],[]], 'dates_range': [None, None]}
+    data = {'bbox': [], 'bbox_polygon': [], 'date_range': [None, None]}
     with laspy.open(file) as f:
 
       # fetch bounding box from header (if meta data did not provide any info on bounding box)
-      data['bbox'][0].append(f.header.min[0]) # x0, aka lng0
-      data['bbox'][0].append(f.header.max[0]) # x1 aka lng1
-      data['bbox'][1].append(f.header.min[1]) # y0, aka lat0
-      data['bbox'][1].append(f.header.max[1]) # y1, aka lat1
+      data['bbox'].append([f.header.min[0], f.header.max[0]]) # x0, y0 = lng0, lat0
+      data['bbox'].append([f.header.min[1], f.header.max[1]]) # x1, y1 = lng1, lat1
+      data['bbox_polygon'].append([f.header.min[0], f.header.max[1]]) # x0, y1 = lng0, lat1
+      data['bbox_polygon'].append([f.header.min[0], f.header.min[1]])
+      data['bbox_polygon'].append([f.header.max[0], f.header.min[1]])
+      data['bbox_polygon'].append([f.header.max[0], f.header.max[1]])
       # f.header.min[2] # z0 (elevation0)
       # f.header.max[2] # z1 (elevation1)
 
@@ -269,12 +280,21 @@ def laz_extract_data(project_name, project_dataset, filename):
         #gps_time is often used in the laz 1.4 standard. However, the lidar operator may do something weird here so be careful!
         #actually it is always a bit weird: The gps_time is seconds since January 6th 1980 minus 1 billion. So to get a unix timestamp we do the following:
         unix_time = point.gps_time[0]+1000000000+315964782
-        #now turn the unix timstamp to a local timestamp:
-        local_time = datetime.fromtimestamp(unix_time)
-        print (unix_time, local_time)
+
+        if data['date_range'][0] == None:
+          data['date_range'][0] = unix_time
+        if data['date_range'][1] == None:
+          data['date_range'][1] = unix_time
+
+        data['date_range'][0] = min(data['date_range'][0], unix_time)
+        data['date_range'][1] = max(data['date_range'][1], unix_time)
+
         i = i - 1
         if i <= 0:
           break
+
+    #now turn the unix timstamp to a local timestamp:
+    data['date_range_local'] = [datetime.fromtimestamp(data['date_range'][0]), datetime.fromtimestamp(data['date_range'][1])]
 
     return data
 
@@ -346,14 +366,13 @@ def testit(test):
     elif test == 'downloads_dir_list':
         out = os.listdir(downloads_dir_get(sample_project_name, sample_project_dataset))
     elif test == 'metadata_extract_data':
-        out = metadata_extract_data(downloads_dir_get(sample_project_name, sample_project_dataset)+'/'+sample_meta)
+        out = metadata_extract_data(sample_project_name, sample_project_dataset, sample_meta)
     elif test == 'city_polygon_get':
         out = city_polygon_get(sample_city_id)
     elif test == 'polygon_multipolygon_overlap_check':
         out = polygon_multipolygon_overlap_check(
-          metadata_extract_data(
-           downloads_dir_get(sample_project_name, sample_project_dataset)+'/'+sample_meta)[0],
-           city_polygon_get(sample_city_id))
+          metadata_extract_data(sample_project_name, sample_project_dataset, sample_meta)[0],
+          city_polygon_get(sample_city_id))
     elif test == 'find_overlapping_lidar_scans':
         out = find_overlapping_lidar_scans(
                 sample_project_name, sample_project_dataset, sample_city_id)
