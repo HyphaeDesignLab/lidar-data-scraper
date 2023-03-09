@@ -250,7 +250,7 @@ def laz_file_fetch(project_name, project_dataset, filename):
 
     return status
 
-def laz_extract_data(project_name, project_dataset, filename):
+def laz_extract_data(project_name, project_dataset, filename, point_limit=0):
     # Buffered read to extract all dates of individual points
     #  (buffered so that we do not need HUGE RAM and costly VMs)
     import numpy as np
@@ -273,7 +273,7 @@ def laz_extract_data(project_name, project_dataset, filename):
       # f.header.max[2] # z1 (elevation1)
 
 
-      i = 10
+      i = point_limit
       for point in f.chunk_iterator(100):
         gps_times = list(point.point_format.dimension_names)
         gps_times_index = gps_times.index('gps_time')
@@ -290,7 +290,7 @@ def laz_extract_data(project_name, project_dataset, filename):
         data['date_range'][1] = max(data['date_range'][1], unix_time)
 
         i = i - 1
-        if i <= 0:
+        if point_limit > 0 and i <= 0:
           break
 
     #now turn the unix timstamp to a local timestamp:
