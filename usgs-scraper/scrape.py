@@ -319,6 +319,16 @@ def laz_extract_data(project_name, project_dataset, filename, point_limit=0):
 
     return data
 
+def laz_meta_extract_data(project_name, project_dataset, filename):
+    meta_filename = filename.replace('.laz', '.xml')
+    laz_filename = filename.replace('.xml', '.laz')
+    laz_data = laz_extract_data(project_name, project_dataset, laz_filename)
+    meta_data = metadata_extract_data(project_name, project_dataset, meta_filename)
+
+    converted = projection_convert(laz_data['bbox'][0], meta_data[2], 'point')
+    print (laz_data)
+    print(laz_data['bbox'][0], meta_data[2], converted)
+
 # check if there is META Data
 # if META DATA is a list of XML files, download them, find bouning box
 # if META DATA is a ZIP file of SHP fileset, try to download and convert with geopandas to a bounding box
@@ -375,6 +385,7 @@ def testit(test):
         find_overlapping_lidar_scans
         laz_file_fetch
         laz_extract_data
+        laz_and_meta_extract_data
         '''
     if test == 'downloads_dir_get':
         out = downloads_dir_get(sample_project_name, sample_project_dataset)
@@ -401,6 +412,8 @@ def testit(test):
         out = laz_file_fetch(sample_project_name, sample_project_dataset, sample_laz)
     elif test == 'laz_extract_data':
         out = laz_extract_data(sample_project_name, sample_project_dataset, sample_laz)
+    elif test == 'laz_and_meta_extract_data':
+        out = laz_meta_extract_data(sample_project_name, sample_project_dataset, sample_laz)
 
     print(out)
 
