@@ -9,7 +9,7 @@ from datetime import datetime
 
 # configure URL base to come from a CONFIG file
 # TODO: run a check on base URL to confirm that it is still viable
-usgs_url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
+url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
 
 downloads_dir = '_downloads'
 
@@ -28,7 +28,7 @@ def metadata_index_get(project_name, project_dataset, index_filename_custom=None
         datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
         random.randint(1000,10000-1))
 
-    index_url = '%s/%s/%s/metadata/' % (usgs_url_base, project_name, project_dataset)
+    index_url = '%s/%s/%s/metadata/' % (url_base, project_name, project_dataset)
 
     i = 9
     while i > 0:
@@ -49,7 +49,7 @@ def metadata_index_get(project_name, project_dataset, index_filename_custom=None
 
     return index_filename
 
-def metadata_files_fetch(index_filename, project_name, project_dataset, limit=4):
+def metadata_files_fetch(project_name, project_dataset, index_filename, limit=4):
     xml_regex = re.compile('(?<=\>)[\w\.\-]+\.xml', re.IGNORECASE)
     ## TEST
     ##match = xml_regex.search('asdasd>a_a.xml asdas')
@@ -80,7 +80,7 @@ def metadata_files_fetch(index_filename, project_name, project_dataset, limit=4)
 
 def metadata_file_fetch(filename, project_name, project_dataset):
     status = 'in progress'
-    meta_url = '%s/%s/%s/metadata/%s' % (usgs_url_base, project_name, project_dataset, filename)
+    meta_url = '%s/%s/%s/metadata/%s' % (url_base, project_name, project_dataset, filename)
     dir_path = downloads_dir_get(project_name, project_dataset)
     download_filepath = '%s/%s' % (dir_path, filename)
 
@@ -252,7 +252,7 @@ def projection_convert(coordinates, projection, geometry_type):
 def laz_file_fetch(project_name, project_dataset, filename):
     status = 'in progress'
     dir_path = downloads_dir_get(project_name, project_dataset)
-    url = '%s/%s/%s/LAZ/%s' % (usgs_url_base, project_name, project_dataset, filename)
+    url = '%s/%s/%s/LAZ/%s' % (url_base, project_name, project_dataset, filename)
     download_filepath = '%s/%s' % (dir_path, filename)
 
     i = 9
@@ -360,19 +360,7 @@ def laz_meta_extract_data(project_name, project_dataset, filename):
 # a global date range for entire city lidar points
 #  ==> ideally we can put this on a Mapbox UI
 
-def testit(test):
-    sample_project_name = 'CA_NoCAL_3DEP_Supp_Funding_2018_D18'
-    sample_project_dataset = 'CA_NoCAL_Wildfires_B5b_2018'
-    sample_meta_index = 'meta_index_23_03_01_12_29_46__6407.html'
-    sample_meta = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.xml'
-    sample_laz = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.laz'
-    sample_city_id = 'richmond-ca'
-    sample_lidar_polygon = [
-       (-122.3583707, 37.9432179),
-       (-122.3583707, 37.9422179),
-       (-122.3573707, 37.9422179),
-       (-122.3573707, 37.9432179)]
-
+def run(cmd, args):
     out = '''select a test
         downloads_dir_get
         downloads_dir_list
@@ -387,34 +375,54 @@ def testit(test):
         laz_extract_data
         laz_and_meta_extract_data
         '''
-    if test == 'downloads_dir_get':
-        out = downloads_dir_get(sample_project_name, sample_project_dataset)
-    elif test == 'metadata_index_get':
-        metadata_index_get(sample_project_name, sample_project_dataset)
-    elif test == 'metadata_files_fetch':
-        out = metadata_files_fetch(sample_meta_index, sample_project_name, sample_project_dataset, -1)
-    elif test == 'metadata_file_fetch':
-        out = metadata_file_fetch(sample_meta, sample_project_name, sample_project_dataset)
-    elif test == 'downloads_dir_list':
-        out = os.listdir(downloads_dir_get(sample_project_name, sample_project_dataset))
-    elif test == 'metadata_extract_data':
-        out = metadata_extract_data(sample_project_name, sample_project_dataset, sample_meta)
-    elif test == 'city_polygon_get':
-        out = city_polygon_get(sample_city_id)
-    elif test == 'polygon_multipolygon_overlap_check':
+    if cmd == 'downloads_dir_get':
+        out = downloads_dir_get(args.project_name, args.project_dataset)
+    elif cmd == 'metadata_index_get':
+        metadata_index_get(args.project_name, args.project_dataset)
+    elif cmd == 'metadata_files_fetch':
+        out = metadata_files_fetch(args.project_name, args.project_dataset, args.file, -1)
+    elif cmd == 'metadata_file_fetch':
+        out = metadata_file_fetch(args.project_name, args.project_dataset, args.file)
+    elif cmd == 'downloads_dir_list':
+        out = os.listdir(downloads_dir_get(args.project_name, args.project_dataset))
+    elif cmd == 'metadata_extract_data':
+        out = metadata_extract_data(args.project_name, args.project_dataset, args.file)
+    elif cmd == 'city_polygon_get':
+        out = city_polygon_get(args.city_id)
+    elif cmd == 'polygon_multipolygon_overlap_check':
         out = polygon_multipolygon_overlap_check(
-          metadata_extract_data(sample_project_name, sample_project_dataset, sample_meta)[0],
-          city_polygon_get(sample_city_id))
-    elif test == 'find_overlapping_lidar_scans':
+          metadata_extract_data(args.project_name, args.project_dataset, args.file)[0],
+          city_polygon_get(args.city_id))
+    elif cmd == 'find_overlapping_lidar_scans':
         out = find_overlapping_lidar_scans(
-                sample_project_name, sample_project_dataset, sample_city_id)
-    elif test == 'laz_file_fetch':
-        out = laz_file_fetch(sample_project_name, sample_project_dataset, sample_laz)
-    elif test == 'laz_extract_data':
-        out = laz_extract_data(sample_project_name, sample_project_dataset, sample_laz)
-    elif test == 'laz_and_meta_extract_data':
-        out = laz_meta_extract_data(sample_project_name, sample_project_dataset, sample_laz)
+                args.project_name, args.project_dataset, args.city_id)
+    elif cmd == 'laz_file_fetch':
+        out = laz_file_fetch(args.project_name, args.project_dataset, args.file)
+    elif cmd == 'laz_extract_data':
+        out = laz_extract_data(args.project_name, args.project_dataset, args.file)
+    elif cmd == 'laz_and_meta_extract_data':
+        out = laz_meta_extract_data(args.project_name, args.project_dataset, args.file)
 
     print(out)
 
-testit(  sys.argv[1] if len(sys.argv) > 1 else '')
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--cmd', dest='cmd', type=str, help='Specify command')
+parser.add_argument('--project_name', dest='project_name', type=str, help='Specify project_name')
+parser.add_argument('--project_dataset', dest='project_dataset', type=str, help='Specify project_dataset')
+parser.add_argument('--file', dest='file', type=str, help='Specify file')
+args = parser.parse_args()
+
+sample_project_name = 'CA_NoCAL_3DEP_Supp_Funding_2018_D18'
+sample_project_dataset = 'CA_NoCAL_Wildfires_B5b_2018'
+sample_meta_index = 'meta_index_23_03_01_12_29_46__6407.html'
+sample_meta = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.xml'
+sample_laz = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.laz'
+sample_city_id = 'richmond-ca'
+sample_lidar_polygon = [
+   (-122.3583707, 37.9432179),
+   (-122.3583707, 37.9422179),
+   (-122.3573707, 37.9422179),
+   (-122.3573707, 37.9432179)]
+
+run(args.cmd, args)
