@@ -39,6 +39,37 @@ def project_db_save(project_name, project_dataset, data):
     f.close()
     return charsWritten > 0
 
+def projects_list_get():
+    filename = 'projects.html'
+    cmd = "wget -S --quiet -t 1 -O %s %s " % (filename, url_base)
+    wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+    if wget_process_out != None and wget_process_out != '':
+        status = 'success'
+    else:
+        status = 'failed'
+        # TODO: log miss
+
+    file = open(filename)
+    file.seek(0)
+
+    regex = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
+    # <img src="/icons/folder.gif" alt="[DIR]"> <a href="WI_Statewide_2021_B21/">WI_Statewide_2021_B21/</a>  2023-02-10 11:13 -
+
+    projects = {}
+    for line in file:
+      match = regex.search(line)
+      if match != None:
+        projects[match.group(1).replace('/', '')] = match.group(2)
+
+    file.close()
+
+    jsonFile = open(filename.replace('.html', '.json'), 'w')
+    jsonFile.write(json.dumps(projects))
+    jsonFile.close()
+
+    return len(projects.keys())
+
 def metadata_index_get(project_name, project_dataset, index_filename_custom=None):
     index_filename = downloads_dir_get(project_name, project_dataset) + '/'
     if index_filename_custom != None:
@@ -422,6 +453,8 @@ def run(cmd, args):
         out = laz_extract_data(args.project_name, args.project_dataset, args.file)
     elif cmd == 'laz_and_meta_extract_data':
         out = laz_meta_extract_data(args.project_name, args.project_dataset, args.file)
+    elif cmd == 'projects_list_get':
+        out = projects_list_get()
 
     print(out)
 
