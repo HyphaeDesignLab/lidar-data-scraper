@@ -19,6 +19,26 @@ def downloads_dir_get(project_name, project_dataset):
        os.makedirs(dir_path)
     return dir_path
 
+def project_db_get(project_name, project_dataset):
+    path = '%s/%s__%s.json' % (downloads_dir, project_name, project_dataset)
+    data = {}
+    if not os.path.isfile(path):
+      f = open(path, 'w')
+      f.write('{}')
+      f.close()
+    else:
+      f = open(path)
+      data = json.load(f)
+      f.close()
+    return data
+
+def project_db_save(project_name, project_dataset, data):
+    path = '%s/%s__%s.json' % (downloads_dir, project_name, project_dataset)
+    f = open(path, 'w')
+    charsWritten = f.write(json.dumps(data))
+    f.close()
+    return charsWritten > 0
+
 def metadata_index_get(project_name, project_dataset, index_filename_custom=None):
     index_filename = downloads_dir_get(project_name, project_dataset) + '/'
     if index_filename_custom != None:
