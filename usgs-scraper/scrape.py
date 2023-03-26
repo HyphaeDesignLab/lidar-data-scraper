@@ -40,7 +40,7 @@ def project_db_save(project_name, project_dataset, data):
     return charsWritten > 0
 
 def projects_list_get():
-    filename = 'projects.html'
+    filename = '%/_all/projects.html' % projects_dir
     cmd = "wget -S --quiet -t 1 -O %s %s " % (filename, url_base)
     wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     wget_process_out = str(wget_process.communicate()[0], 'utf-8')
