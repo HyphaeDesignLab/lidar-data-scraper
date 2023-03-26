@@ -11,16 +11,16 @@ from datetime import datetime
 # TODO: run a check on base URL to confirm that it is still viable
 url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
 
-downloads_dir = '_downloads'
+projects_dir = 'projects'
 
 def downloads_dir_get(project_name, project_dataset):
-    dir_path = '%s/%s__%s' % (downloads_dir, project_name, project_dataset)
+    dir_path = '%s/%s/%s/_downloads' % (projects_dir, project_name, project_dataset)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
 
 def project_db_get(project_name, project_dataset):
-    path = '%s/%s__%s.json' % (downloads_dir, project_name, project_dataset)
+    path = '%s/%s/%s/project.json' % (projects_dir, project_name, project_dataset)
     data = {}
     if not os.path.isfile(path):
       f = open(path, 'w')
@@ -33,7 +33,7 @@ def project_db_get(project_name, project_dataset):
     return data
 
 def project_db_save(project_name, project_dataset, data):
-    path = '%s/%s__%s.json' % (downloads_dir, project_name, project_dataset)
+    path = '%s/%s/%s/project.json' % (projects_dir, project_name, project_dataset)
     f = open(path, 'w')
     charsWritten = f.write(json.dumps(data))
     f.close()
