@@ -1,0 +1,213 @@
+* {
+    margin: 0;
+    box-sizing: border-box;
+}
+
+div, span, p, a, input, button, section {
+    font-size: 16px;
+}
+
+div, p {
+    margin: 2px 0;
+    padding: 1px 0;
+}
+span, div, p {
+    font-family: Verdana, sans-serif;
+}
+section, div div.section, section div.section {
+    margin-left: 10px;
+    margin-top: 22px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 5px 0;
+    padding: 1px 0;
+}
+h5 { padding-top: 15px; }
+
+h1 { font-size: 32px; }
+h2 { font-size: 28px; }
+h3 { font-size: 24px; color: #0202cb; }
+h4 { font-size: 20px; color: #0066c7; }
+h5 { font-size: 18px; color: #0076ec; }
+h6 { font-size: 16px; color: dodgerblue; }
+
+h1 span, h2 span, h3 span, h4 span, h5 span, h6 span {
+    font-size: inherit;
+}
+
+.text-length-measurable {
+    display: inline-block;
+    padding: 0 10px;
+}
+
+input {
+    font-family: Verdana, sans-serif;
+    line-height: 1;
+    font-size: inherit;
+}
+h2 > input, h3 > input, h4 > input {
+    font-size: inherit;
+}
+
+button {
+    height: 25px;
+    display: inline-block;
+}
+button.link, .button-link {
+    display: inline-block;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    font-family: inherit;
+    font-size: inherit;
+    height: 25px;
+}
+button.link[disabled] {
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+button.link:hover, button.link[disabled], .button-link:hover {
+    position: relative;
+    background-color: lightgrey;
+    border: 1px solid lightgrey;
+    border-radius: 5px;
+}
+button.link:focus, .button-link:focus {
+    top: 1px;
+    border: 1px solid grey;
+}
+
+.projects {
+
+}
+.projects .link {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.projects .project.current {
+    background: rgb(191, 245, 116);
+    font-weight: bold;
+}
+
+.measure-text-length-offpage, .offpage {
+    position: fixed;
+    top: -1000vh;
+    left: -1000vw;
+}
+
+.spinning-loader {
+    display: block;
+    height: 20px;
+    width: 20px;
+    border: 4px dotted grey;
+    border-radius: 10px;
+    animation-name: spinningLoaderSpin;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+}
+
+@keyframes spinningLoaderSpin {
+    from {
+        transform: rotateZ(0);
+    }
+    to {
+        transform: rotateZ(360deg);
+    }
+}
+
+.error {
+    color: #c40f0f;
+}
+
+
+.overlay-wrap {
+    position: fixed;
+    z-index: 8888;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background-color: rgba(255, 255, 255, .5);
+    transition: background-color 500ms ease-in;
+}
+
+
+.overlay-wrap .overlay-text {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    text-align: center;
+    flex-direction: column;
+    width: 40%;
+    max-width: 300px;
+    min-width: 200px;
+    min-height: 200px;
+    padding: 0;
+    border-radius: 20px;
+    background-color: rgba(213, 213, 234, 0.8)
+}
+
+.overlay-text h3 {
+    font-size: 20px;
+}
+.overlay-text p {
+    font-size: 14px;
+}
+.overlay-text .overlay-close  {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 6px;
+    height: 20px;
+    width: 20px;
+    background: #1c2e5c;
+    color: white;
+}
+.overlay-text .overlay-close:hover {
+    background: #000000;
+    color: #5bcad9;
+}
+
+button.number-control {
+    margin: 0 2px;
+    padding: 7px;
+    font-size: 25px;
+    line-height: 10px;
+    height: 30px;
+}
+
+.more-info-on-hover {
+    cursor: help;
+    position: relative;
+}
+.more-info-on-hover span {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    top: 100%;
+    border: 1px dashed grey;
+    padding: 5px;
+    background: lightyellow;
+    font-size: 70%;
+    border-radius: 5px;
+}
+
+.more-info-on-hover:hover span, .more-info-on-hover:focus span, .more-info-on-hover:active span {
+    display: inherit;
+}
+.more-info-on-hover:hover, .more-info-on-hover:focus, .more-info-on-hover:active {
+    background-color: lightcyan;
+}
