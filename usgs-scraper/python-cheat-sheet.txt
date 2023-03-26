@@ -1,3 +1,0 @@
-
-# regexp flags: https://docs.python.org/3/library/re.html#re.MULTILINE
-# https://docs.python.org/3/library/re.html#match-objects
