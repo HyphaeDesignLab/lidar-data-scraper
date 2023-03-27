@@ -14,13 +14,13 @@ url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Pr
 projects_dir = 'projects'
 
 def downloads_dir_get(project_name, project_dataset):
-    dir_path = '%s/%s/%s/_downloads' % (projects_dir, project_name, project_dataset)
+    dir_path = '%s/%s/%s/downloads' % (projects_dir, project_name, project_dataset)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
 
 def project_db_get(project_name, project_dataset):
-    path = '%s/%s/%s/project.json' % (projects_dir, project_name, project_dataset)
+    path = '%s/%s/%s/data.json' % (projects_dir, project_name, project_dataset)
     data = {}
     if not os.path.isfile(path):
       f = open(path, 'w')
@@ -33,15 +33,17 @@ def project_db_get(project_name, project_dataset):
     return data
 
 def project_db_save(project_name, project_dataset, data):
-    path = '%s/%s/%s/project.json' % (projects_dir, project_name, project_dataset)
+    path = '%s/%s/%s/data.json' % (projects_dir, project_name, project_dataset)
     f = open(path, 'w')
     charsWritten = f.write(json.dumps(data))
     f.close()
     return charsWritten > 0
 
 def projects_list_get():
-    filename = '%/_all/projects.html' % projects_dir
-    cmd = "wget -S --quiet -t 1 -O %s %s " % (filename, url_base)
+    filepath_html = '%s/_index/index.html' % projects_dir
+    filepath_json = '%s/_index/index.json' % projects_dir
+    backup_dir = '%s/_index/backup' % projects_dir
+    cmd = "wget -S --quiet -t 1 -O %s %s " % (filepath_html, url_base)
     wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     wget_process_out = str(wget_process.communicate()[0], 'utf-8')
     if wget_process_out != None and wget_process_out != '':
@@ -50,7 +52,7 @@ def projects_list_get():
         status = 'failed'
         # TODO: log miss
 
-    file = open(filename)
+    file = open(filepath_html)
     file.seek(0)
 
     regex = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
@@ -64,7 +66,16 @@ def projects_list_get():
 
     file.close()
 
-    jsonFile = open(filename.replace('.html', '.json'), 'w')
+    # make a backup
+    filepath_json_backup += '%s/%s__%d.json' % (
+            backup_dir
+            datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
+            random.randint(1000,10000-1))
+    backup_cmd = 'cp %s %s' % (filepath_json,  filepath_json_backup)
+    backup_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    backup_process_out = str(backup_process.communicate()[0], 'utf-8')
+
+    jsonFile = open(filepath_json, 'w')
     jsonFile.write(json.dumps(projects))
     jsonFile.close()
 
@@ -412,7 +423,8 @@ def laz_meta_extract_data(project_name, project_dataset, filename):
 #  ==> ideally we can put this on a Mapbox UI
 
 def run(cmd, args):
-    out = '''select a test
+    out = '''select a Command:
+        projects_list_get
         downloads_dir_get
         downloads_dir_list
         metadata_index_get
