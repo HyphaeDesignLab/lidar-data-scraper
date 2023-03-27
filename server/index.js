@@ -23,41 +23,30 @@ if (!!env.cors_urls) {
 const childProcess = require("child_process");
 const removeSpaces = s => s.replace(/[^\w]/, '_').replace(/__+/, '_').replace(/^_+|_+$/, '');
 
-app.get('/blah1', function (req, res) {
-    try {
-
-        const name = decodeURIComponent(req.query.name).replace('"', ''); // sensor name
-        const type = removeSpaces(req.query.type); // sensor type
-        const project = removeSpaces(req.query.project);
-        const deveui = req.query.deveui;
-        const appeui = req.query.appeui;
-        const appkey = req.query.appkey;
-
-        const cmd = `aws iotwireless create-wireless-device \\
-  --type LoRaWAN \\
-  --name "${name} (type: ${type}, project: ${project})" \\
-  --destination-name "${project}__${type}" \\
-  --lorawan '{"DeviceProfileId": "bd2f3e79-bbea-47a0-9697-c9414b2d6394","ServiceProfileId": "349d0631-1d39-4438-8487-a43b3919d80c","OtaaV1_0_x": {"AppKey": "${appkey}","AppEui": "${appeui}"},"DevEui": "${deveui}"}'`;
-
-        const outputBuffer = childProcess.execSync(cmd);
-        const outputObject = JSON.parse(outputBuffer.toString());
-        // convert hash keys to lowercase
-        const outputObjectLowercaseKeys = Object.fromEntries(Object.entries(outputObject).map(e => [e[0].toLowerCase(), e[1]]));
-
-        res.send(JSON.stringify(outputObjectLowercaseKeys));
-    } catch(error) {
-        const output = JSON.stringify({id: 0, error: error.stderr.toString()})
-        res.status(500).send(output);
-    }
-});
-app.get('/test/run-in-bg', function (req, res) {
+app.get('/usgs/scrape', function (req, res) {
+    /*
+    projects_list_get
+    downloads_dir_get
+    downloads_dir_list
+    metadata_index_get
+    metadata_files_fetch
+    metadata_file_fetch
+    metadata_extract_data
+    city_polygon_get
+    polygon_multipolygon_overlap_check
+    find_overlapping_lidar_scans
+    laz_file_fetch
+    laz_extract_data
+    laz_and_meta_extract_data
+    */
+    const cmd = req.query.cmd.replace(/\W/g, '');
 
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper');
 
         // to run a file WITHOUT a shell.
         const testPy = childProcess.spawn('python3',
-            ['test.py', '--cmd', 'run_in_bg'],
+            ['test.py', '--cmd', cmd],
             {'cwd': testPath});
         testPy.stderr.on('data', data => {
             console.log('test py error '+data);
@@ -76,7 +65,7 @@ app.get('/test/run-in-bg', function (req, res) {
         res.status(500).send(output);
     }
 });
-app.get('/test/check', function (req, res) {
+app.get('/scrape/check', function (req, res) {
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'run_in_bg.txt');
         const out = childProcess.execSync('ps aux | grep -i test.py | grep -v grep | cat');
@@ -89,32 +78,39 @@ app.get('/test/check', function (req, res) {
     }
 });
 
-app.get('/usgs', function (req, res) {
-    try {
-        const cmd = `ls -1 ../usgs-scraper/_downloads/*.json`;
+app.get('/test/run-in-bg', function (req, res) {
 
-        const outputBuffer = childProcess.execSync(cmd);
-        if (!outputBuffer) {
-            throw new Error('no USGS folder');
-        }
-        if (!outputBuffer.toString()) {
-            throw new Error('no projects');
-        }
-        const projectDatasets = outputBuffer.toString().split("\n");
-        let out = '';
-        projectDatasets.forEach(file => {
-            out += file + ";<br/>";
-            if (!file.trim()) {
-                return;
-            }
-            if (!fs.existsSync(file.trim())) {
-                return;
-            }
-            let data = fs.readFileSync(file.trim(), 'utf8');
-            out += data+"\n<br/>";
+    try {
+        const testPath = path.join(__dirname, '..', 'usgs-scraper', 'tests');
+
+        // to run a file WITHOUT a shell.
+        const testPy = childProcess.spawn('python3',
+            ['run-in-bg.py', '--cmd', 'background'],
+            {'cwd': testPath});
+        testPy.stderr.on('data', data => {
+            console.log('test py error '+data);
+        });
+        testPy.stdout.on('data', data => {
+            console.log('test py out '+ data);
+        });
+        testPy.on('close', code => {
+            console.log('test py exited with '+code);
         });
 
-        res.send(out);
+        const out = childProcess.execSync('ps aux | grep -i run-in-bg.py | grep -v grep | cat')
+        res.send(`running in bg:  ${out}`);
+    } catch(error) {
+        const output = JSON.stringify({id: 0, error: error.message})
+        res.status(500).send(output);
+    }
+});
+app.get('/test/check', function (req, res) {
+    try {
+        const testPath = path.join(__dirname, '..', 'usgs-scraper', 'tests', 'run-in-bg.txt');
+        const out = childProcess.execSync('ps aux | grep -i run-in-bg.py | grep -v grep | cat');
+        res.setHeader("Content-Type", "text/plain");
+        // res.setHeader("Content-Type", "application/json");
+        res.send(String(out) + "\n\n"+ fs.readFileSync(testPath).toString().split("\n").length + ' lines output so far');
     } catch(error) {
         const output = JSON.stringify({id: 0, error: error.message})
         res.status(500).send(output);

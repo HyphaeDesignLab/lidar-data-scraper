@@ -2,7 +2,7 @@ import time
 
 last_i = 0
 for i in range(100):
-    f = open('run_in_bg.txt', 'a')
+    f = open('run-in-bg.txt', 'a')
     f.write("z" + str(i)+"\n")
     f.close()
     time.sleep(.5)
