@@ -1,0 +1,12 @@
+{
+  "usgs": {
+    "name": "USGS Data",
+    "dir": "usgs-scraper",
+    "projectsIndex": "projects/_index/index.json"
+  },
+  "fake": {
+    "name": "Fake Data",
+    "dir": "fake-scraper",
+    "projectsIndex": "projects/_index/index.json"
+  }
+}

@@ -23,6 +23,34 @@ if (!!env.cors_urls) {
 const childProcess = require("child_process");
 const removeSpaces = s => s.replace(/[^\w]/, '_').replace(/__+/, '_').replace(/^_+|_+$/, '');
 
+app.get('/sources', function (req, res) {
+    const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
+    res.setHeader("Content-Type", "application/json");
+    res.status(200).send(text);
+});
+app.get('/sources/:id', function (req, res) {
+    res.setHeader("Content-Type", "application/json");
+
+    const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
+    const sources = JSON.parse(text);
+    const id = req.params.id;
+    if (!id) {
+        res.status(500).send({error: `no project id`});
+        return;
+    }
+    if (!sources[id]) {
+        res.status(500).send({error: `no such project: ${req.params.id}`});
+        return;
+    }
+    const projectIndex = path.join(__dirname, '..', sources[id].dir, sources[id].projectsIndex);
+    if (!fs.existsSync(projectIndex)) {
+        res.status(500).send({error: `project ${req.params.id} has no index`});
+        return;
+    }
+
+    res.status(200).send(fs.readFileSync(projectIndex));
+});
+
 app.get('/usgs/scrape', function (req, res) {
     /*
     projects_list_get
