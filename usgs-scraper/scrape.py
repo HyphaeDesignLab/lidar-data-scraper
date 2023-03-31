@@ -39,7 +39,7 @@ def project_db_save(project_name, project_dataset, data):
     f.close()
     return charsWritten > 0
 
-def projects_list_get():
+def projects_list_get(is_return_json=False):
     filepath_json = '%s/_index/index.json' % projects_dir
 
     if not os.path.isfile(filepath_json):
@@ -55,7 +55,7 @@ def projects_list_get():
             continue
         projects['data'][dir]['hasDownloads'] = True
 
-    return projects
+    return projects if not is_return_json else json.dumps(projects)
 
 def projects_list_compare(new_projects, old_projects):
     changes = {}
@@ -520,7 +520,7 @@ def run(cmd, args):
     elif cmd == 'laz_and_meta_extract_data':
         out = laz_meta_extract_data(args.project_name, args.project_dataset, args.file)
     elif cmd == 'projects_list_get':
-        out = projects_list_get()
+        out = projects_list_get(args.options == 'json_only')
     elif cmd == 'projects_list_scrape':
         out = projects_list_scrape()
 
@@ -532,6 +532,7 @@ parser.add_argument('--cmd', dest='cmd', type=str, help='Specify command')
 parser.add_argument('--project_name', dest='project_name', type=str, help='Specify project_name')
 parser.add_argument('--project_dataset', dest='project_dataset', type=str, help='Specify project_dataset')
 parser.add_argument('--file', dest='file', type=str, help='Specify file')
+parser.add_argument('--options', dest='options', type=str, help='Specify options')
 args = parser.parse_args()
 
 sample_project_name = 'CA_NoCAL_3DEP_Supp_Funding_2018_D18'

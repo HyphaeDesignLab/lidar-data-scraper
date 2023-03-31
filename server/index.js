@@ -42,7 +42,7 @@ app.get('/sources/:id', function (req, res) {
         res.status(500).send({error: `no such project: ${req.params.id}`});
         return;
     }
-    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_list_get | cat`)
+    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_list_get --options=json_only | cat`)
     if (!projects) {
         res.status(500).send({error: `project ${req.params.id} has no index`});
         return;
