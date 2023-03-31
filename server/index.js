@@ -42,13 +42,13 @@ app.get('/sources/:id', function (req, res) {
         res.status(500).send({error: `no such project: ${req.params.id}`});
         return;
     }
-    const projectIndex = path.join(__dirname, '..', sources[id].dir, sources[id].projectsIndex);
-    if (!fs.existsSync(projectIndex)) {
+    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_list_get | cat`)
+    if (!projects) {
         res.status(500).send({error: `project ${req.params.id} has no index`});
         return;
     }
 
-    res.status(200).send(fs.readFileSync(projectIndex));
+    res.status(200).send(projects);
 });
 
 app.get('/usgs/scrape', function (req, res) {
