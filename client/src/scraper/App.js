@@ -20,7 +20,7 @@ const App = () => {
             <h1>Lidar Scraper App</h1>
             <main>
                 {Object.keys(sources).map(id =>
-                    <Source key={id} data={sources[id]} isCurrent={currentSourceId === id} onShow={id => setCurrentSourceId(id)} />
+                    <Source key={id} model={sources[id]} isCurrent={currentSourceId === id} onShow={id => setCurrentSourceId(id)} />
                 )}
             </main>
         </div>
