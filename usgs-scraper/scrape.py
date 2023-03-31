@@ -40,6 +40,44 @@ def project_db_save(project_name, project_dataset, data):
     return charsWritten > 0
 
 def projects_list_get():
+    filepath_json = '%s/_index/index.json' % projects_dir
+
+    if not os.path.isfile(filepath_json):
+        return None
+
+    jsonFile = open(filepath_json, 'r')
+    projects = json.load(jsonFile)
+    jsonFile.close()
+
+    project_dirs_list = os.listdir(projects_dir)
+    for dir in project_dirs_list:
+        if dir[0] == '.' or dir[0] == '_':
+            continue
+        projects['data'][dir]['hasDownloads'] = True
+
+    return projects
+
+def projects_list_compare(new_projects, old_projects):
+    changes = {}
+    for k in new_projects:
+        if not k in old_projects:
+            changes[k] = 'new'
+            new_projects[k]['isNew'] = True
+        elif new_projects[k]['dateModified'] != old_projects[k]['dateModified']:
+            new_projects[k]['oldDateModified'] = old_projects[k]['dateModified']
+            changes[k] = 'was updated on %s' % new_projects[k]['dateModified']
+    for k in old_projects:
+        if not k in new_projects:
+            changes[k] = 'removed'
+            new_projects[k] = old_projects[k]
+            new_projects[k]['isRemovedFromServer'] = True
+
+    if len(changes.keys()) == 0:
+        return None
+    else:
+        return changes
+
+def projects_list_scrape():
     filepath_html = '%s/_index/index.html' % projects_dir
     filepath_json = '%s/_index/index.json' % projects_dir
     backup_dir = '%s/_index/backup' % projects_dir
@@ -62,24 +100,40 @@ def projects_list_get():
     for line in file:
       match = regex.search(line)
       if match != None:
-        projects[match.group(1).replace('/', '')] = match.group(2)
+        projects[match.group(1).replace('/', '')] = {'dateModified': match.group(2)}
 
     file.close()
 
-    # make a backup
-    filepath_json_backup += '%s/%s__%d.json' % (
-            backup_dir
-            datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
-            random.randint(1000,10000-1))
-    backup_cmd = 'cp %s %s' % (filepath_json,  filepath_json_backup)
-    backup_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    backup_process_out = str(backup_process.communicate()[0], 'utf-8')
+    previous_projects = projects_list_get()
+    changes = None
+    if previous_projects:
+        changes = projects_list_compare(projects, previous_projects['data'])
+        if not changes:
+            previous_projects['dateChecked'] = datetime.now().strftime('%y_%m_%d_%H_%M_%S')
+            return previous_projects
+        else:
+            # make a backup
+            filepath_json_backup = '%s/%s__%d.json' % (
+                    backup_dir,
+                    datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
+                    random.randint(1000,10000-1))
+            backup_cmd = 'cp %s %s' % (filepath_json,  filepath_json_backup)
+            backup_process = subprocess.Popen(backup_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            backup_process_out = str(backup_process.communicate()[0], 'utf-8')
+
 
     jsonFile = open(filepath_json, 'w')
-    jsonFile.write(json.dumps(projects))
+    projectsWrapper = {
+        "dateModified": datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
+        "dateChecked": datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
+        "data": projects,
+        "dataChanges": changes
+    }
+
+    jsonFile.write(json.dumps(projectsWrapper))
     jsonFile.close()
 
-    return len(projects.keys())
+    return projectsWrapper
 
 def metadata_index_get(project_name, project_dataset, index_filename_custom=None):
     index_filename = downloads_dir_get(project_name, project_dataset) + '/'
@@ -467,6 +521,8 @@ def run(cmd, args):
         out = laz_meta_extract_data(args.project_name, args.project_dataset, args.file)
     elif cmd == 'projects_list_get':
         out = projects_list_get()
+    elif cmd == 'projects_list_scrape':
+        out = projects_list_scrape()
 
     print(out)
 
@@ -490,4 +546,5 @@ sample_lidar_polygon = [
    (-122.3573707, 37.9422179),
    (-122.3573707, 37.9432179)]
 
-run(args.cmd, args)
+if (__name__ == '__main__'):
+    run(args.cmd, args)
