@@ -9,7 +9,7 @@ div, span, p, a, input, button, section {
 
 div, p {
     margin: 2px 0;
-    padding: 1px 0;
+    padding: 1px 4px;
 }
 span, div, p {
     font-family: Verdana, sans-serif;
