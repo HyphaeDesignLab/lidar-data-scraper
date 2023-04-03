@@ -116,7 +116,7 @@ def projects_list_scrape(is_return_json=False):
                     continue
                 previous_projects['data'][dir]['hasDownloads'] = True
             previous_projects['dateChecked'] = datetime.now().strftime('%y-%m-%d %H:%M:%S')
-            return previous_projects
+            return previous_projects if not is_return_json else json.dumps(previous_projects)
         else:
             # make a backup
             filepath_json_backup = '%s/%s__%d.json' % (
