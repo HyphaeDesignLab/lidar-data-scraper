@@ -205,7 +205,7 @@ def metadata_files_fetch(project_name, project_dataset, index_filename, limit=4)
 
     return meta_filenames
 
-def metadata_file_fetch(filename, project_name, project_dataset):
+def metadata_file_fetch(filename, project_id):
     status = 'in progress'
     meta_url = '%s/%s/metadata/%s' % (url_base, project_id, filename)
     dir_path = downloads_dir_get(project_id)
@@ -306,7 +306,7 @@ def city_polygon_get(city_id):
     multipolygon = bounds.get('geometries')[0].get('coordinates')
     return multipolygon
 
-def find_overlapping_lidar_scans(project_name, project_dataset, city_id):
+def find_overlapping_lidar_scans(project_id, city_id):
     city_multi_polygon = city_polygon_get(city_id)
 
     dir_path = downloads_dir_get(project_id)
@@ -376,7 +376,7 @@ def projection_convert(coordinates, projection, geometry_type):
     return geo_data_frame_EPSG4326.geometry[0]
 
 
-def laz_file_fetch(project_name, project_dataset, filename):
+def laz_file_fetch(project_id, filename):
     status = 'in progress'
     dir_path = downloads_dir_get(project_id)
     url = '%s/%s/%s/LAZ/%s' % (url_base, project_name, project_dataset, filename)
