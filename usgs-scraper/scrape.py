@@ -13,8 +13,8 @@ url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Pr
 
 projects_dir = 'projects'
 
-def downloads_dir_get(project_name, project_dataset):
-    dir_path = '%s/%s/%s/downloads' % (projects_dir, project_name, project_dataset)
+def downloads_dir_get(project_id):
+    dir_path = '%s/%s/downloads' % (projects_dir, project_id)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
@@ -153,20 +153,13 @@ def projects_list_scrape(is_return_json=False):
 
     return projectsWrapper if not is_return_json else json.dumps(projectsWrapper)
 
-def metadata_index_get(project_name, project_dataset, index_filename_custom=None):
-    index_filename = downloads_dir_get(project_name, project_dataset) + '/'
-    if index_filename_custom != None:
-      index_filename += index_filename_custom
-    else:
-      index_filename += 'meta_index_%s__%d.html' % (
-        datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
-        random.randint(1000,10000-1))
-
+def metadata_index_get(project_id, subproject_id):
+    index_html_filename = downloads_dir_get(project_id) + '/index.html'
     index_url = '%s/%s/%s/metadata/' % (url_base, project_name, project_dataset)
 
     i = 9
     while i > 0:
-      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_filename, index_url)
+      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
       wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
       wget_process_out = str(wget_process.communicate()[0], 'utf-8')
       if wget_process_out != None and wget_process_out != '':
@@ -214,8 +207,8 @@ def metadata_files_fetch(project_name, project_dataset, index_filename, limit=4)
 
 def metadata_file_fetch(filename, project_name, project_dataset):
     status = 'in progress'
-    meta_url = '%s/%s/%s/metadata/%s' % (url_base, project_name, project_dataset, filename)
-    dir_path = downloads_dir_get(project_name, project_dataset)
+    meta_url = '%s/%s/metadata/%s' % (url_base, project_id, filename)
+    dir_path = downloads_dir_get(project_id)
     download_filepath = '%s/%s' % (dir_path, filename)
 
     j = 9
@@ -234,8 +227,8 @@ def metadata_file_fetch(filename, project_name, project_dataset):
 
     return status
 
-def metadata_extract_data(project_name, project_dataset, filename):
-    dir_path = downloads_dir_get(project_name, project_dataset)
+def metadata_extract_data(project_id, filename):
+    dir_path = downloads_dir_get(project_id)
     file_obj = open(dir_path + '/' + filename)
     file_obj.seek(0)
 
@@ -316,7 +309,7 @@ def city_polygon_get(city_id):
 def find_overlapping_lidar_scans(project_name, project_dataset, city_id):
     city_multi_polygon = city_polygon_get(city_id)
 
-    dir_path = downloads_dir_get(project_name, project_dataset)
+    dir_path = downloads_dir_get(project_id)
     file_list = os.listdir(dir_path)
 
     file_bounds_and_date = {}
@@ -385,7 +378,7 @@ def projection_convert(coordinates, projection, geometry_type):
 
 def laz_file_fetch(project_name, project_dataset, filename):
     status = 'in progress'
-    dir_path = downloads_dir_get(project_name, project_dataset)
+    dir_path = downloads_dir_get(project_id)
     url = '%s/%s/%s/LAZ/%s' % (url_base, project_name, project_dataset, filename)
     download_filepath = '%s/%s' % (dir_path, filename)
 
@@ -411,7 +404,7 @@ def laz_extract_data(project_name, project_dataset, filename, point_limit=0):
     import numpy as np
     import laspy
 
-    dir_path = downloads_dir_get(project_name, project_dataset)
+    dir_path = downloads_dir_get(project_id)
     file = '%s/%s' % (dir_path, filename)
 
     data = {'bbox': [], 'bbox_polygon': [], 'date_range': [None, None]}
@@ -511,7 +504,7 @@ def run(cmd, args):
         laz_and_meta_extract_data
         '''
     if cmd == 'downloads_dir_get':
-        out = downloads_dir_get(args.project_name, args.project_dataset)
+        out = downloads_dir_get(args.project_id)
     elif cmd == 'metadata_index_get':
         metadata_index_get(args.project_name, args.project_dataset)
     elif cmd == 'metadata_files_fetch':
@@ -519,7 +512,7 @@ def run(cmd, args):
     elif cmd == 'metadata_file_fetch':
         out = metadata_file_fetch(args.project_name, args.project_dataset, args.file)
     elif cmd == 'downloads_dir_list':
-        out = os.listdir(downloads_dir_get(args.project_name, args.project_dataset))
+        out = os.listdir(downloads_dir_get(args.project_id))
     elif cmd == 'metadata_extract_data':
         out = metadata_extract_data(args.project_name, args.project_dataset, args.file)
     elif cmd == 'city_polygon_get':
@@ -547,8 +540,7 @@ def run(cmd, args):
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--cmd', dest='cmd', type=str, help='Specify command')
-parser.add_argument('--project_name', dest='project_name', type=str, help='Specify project_name')
-parser.add_argument('--project_dataset', dest='project_dataset', type=str, help='Specify project_dataset')
+parser.add_argument('--project_id', dest='project_id', type=str, help='Specify project ID')
 parser.add_argument('--file', dest='file', type=str, help='Specify file')
 parser.add_argument('--options', dest='options', type=str, help='Specify options')
 args = parser.parse_args()
