@@ -50,6 +50,28 @@ app.get('/sources/:id', function (req, res) {
 
     res.status(200).send(projects);
 });
+app.get('/sources/:id/scrape', function (req, res) {
+    res.setHeader("Content-Type", "application/json");
+
+    const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
+    const sources = JSON.parse(text);
+    const id = req.params.id;
+    if (!id) {
+        res.status(500).send({error: `no project id`});
+        return;
+    }
+    if (!sources[id]) {
+        res.status(500).send({error: `no such project: ${req.params.id}`});
+        return;
+    }
+    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_list_scrape --options=json_only | cat`)
+    if (!projects) {
+        res.status(500).send({error: `project ${req.params.id} has no index`});
+        return;
+    }
+
+    res.status(200).send(projects);
+});
 
 app.get('/usgs/scrape', function (req, res) {
     /*
