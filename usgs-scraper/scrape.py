@@ -123,7 +123,7 @@ def projects_list_scrape(is_return_json=False):
             # add extra data for each project (from local dir meta)
             projects_list_add_local_meta_data(current_projects_wrapper)
 
-            current_projects_wrapper['dateChecked'] = datetime.now().strftime('%y-%m-%d %H:%M:%S')
+            current_projects_wrapper['dateChecked'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             return current_projects_wrapper if not is_return_json else json.dumps(current_projects_wrapper)
         else:
             # make a backup
@@ -138,8 +138,8 @@ def projects_list_scrape(is_return_json=False):
 
     jsonFile = open(filepath_json, 'w')
     projects_wrapper = {
-        "dateModified": datetime.now().strftime('%y-%m-%d %H:%M:%S'),
-        "dateChecked": datetime.now().strftime('%y-%m-%d %H:%M:%S'),
+        "dateModified": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        "dateChecked": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         "data": projects_from_usgs_server,
         "dataChanges": changes
     }
