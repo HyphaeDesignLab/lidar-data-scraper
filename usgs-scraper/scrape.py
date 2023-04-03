@@ -102,7 +102,7 @@ def projects_list_scrape(is_return_json=False):
     for line in file:
       match = regex.search(line)
       if match != None:
-        projects[match.group(1).replace('/', '')] = {'dateModified': match.group(2)}
+        projects[match.group(1).replace('/', '')] = {'dateModified': match.group(2), 'dateScraped': None}
 
     file.close()
 
