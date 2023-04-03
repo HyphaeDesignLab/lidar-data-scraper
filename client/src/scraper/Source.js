@@ -22,11 +22,14 @@ const Source = ({model, isCurrent, onShow}) => {
         }
 
         if (!projects) {
+            setLoading(true);
             fetch(`/sources/${model.id}`, {
                 method: 'GET'
             }).then(resp => resp.json())
                 .then(json => {
                     setProjects(json);
+            }).finally(() => {
+                setLoading(false);
             });
         } else {
             //console.log('already has '+model.id)
@@ -80,6 +83,7 @@ const Source = ({model, isCurrent, onShow}) => {
     const [isShowProjectChanges, setShowProjectChanges] = useState(false);
     return <div className='projects'>
         <h2><a href={`/sources/${model.id}`} onClick={onSourceClick} style={{fontSize: 'inherit'}}>{model.name}</a></h2>
+        {!projects && isLoading && <div>Loading data... <span className='spinning-loader'></span></div>}
         {!!projects && <div>
             {!!projects.dataChanges ?
                 <span>USGS has <span className={'link'} onClick={() => setShowProjectChanges(s => !s)}>updated projects</span>
