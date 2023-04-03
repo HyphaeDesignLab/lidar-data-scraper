@@ -14,6 +14,7 @@ const Source = ({model, isCurrent, onShow}) => {
     const [scrapedProjectIds, setScrapedProjectIds] = useState(null);
     const [projectIdsPaged, setProjectIdsPaged] = useState([]);
     const [isShow, setShow] = useState(false);
+    const [isLoading, setLoading] = useState(false);
     useEffect(() => {
         if (!isCurrent) {
             setShow(false);
@@ -26,7 +27,7 @@ const Source = ({model, isCurrent, onShow}) => {
             }).then(resp => resp.json())
                 .then(json => {
                     setProjects(json);
-                })
+            });
         } else {
             //console.log('already has '+model.id)
         }
@@ -65,12 +66,15 @@ const Source = ({model, isCurrent, onShow}) => {
     const [currentProjectId, setCurrentProjectId] = useState(null);
 
     const onScrapeAgainClick = () => {
+        setLoading(true);
         fetch(`/sources/${model.id}/scrape`, {
             method: 'GET'
         }).then(resp => resp.json())
             .then(json => {
                 setProjects(json);
-            })
+        }).finally(() => {
+            setLoading(false);
+        });
     };
 
     const [isShowProjectChanges, setShowProjectChanges] = useState(false);
@@ -87,7 +91,8 @@ const Source = ({model, isCurrent, onShow}) => {
             }
             <br/>
             (last checked: {projects.dateChecked})<br/>
-            <button onClick={onScrapeAgainClick}>check for updates</button>
+            <button onClick={onScrapeAgainClick} disabled={isLoading}>check for updates</button>
+            {isLoading && <span className='spinning-loader'></span>}
         </div>}
         <div style={{display: isShow ? '':'none'}}>
             <h3>Scraped Projects</h3>
