@@ -61,7 +61,7 @@ def projects_list_compare(new_projects, old_projects):
     changes = {}
     for k in new_projects:
         if not k in old_projects:
-            changes[k] = 'new'
+            changes[k] = 'added on '+new_projects[k]['dateModified']
             new_projects[k]['isNew'] = True
         elif new_projects[k]['dateModified'] != old_projects[k]['dateModified']:
             new_projects[k]['oldDateModified'] = old_projects[k]['dateModified']
