@@ -49,13 +49,22 @@ def projects_list_get(is_return_json=False):
     projects = json.load(jsonFile)
     jsonFile.close()
 
+    projects_list_add_local_meta_data(projects)
+
+    return projects if not is_return_json else json.dumps(projects)
+
+def projects_list_add_local_meta_data(projects):
     project_dirs_list = os.listdir(projects_dir)
     for dir in project_dirs_list:
         if dir[0] == '.' or dir[0] == '_':
             continue
         projects['data'][dir]['hasDownloads'] = True
-
-    return projects if not is_return_json else json.dumps(projects)
+        project_meta_data_filepath = projects_dir + '/' + dir + '/meta-data.json'
+        if os.path.isfile(project_meta_data_filepath):
+            project_meta_data_file = open(project_meta_data_filepath, 'r')
+            project_meta_data = json.load(project_meta_data_file)
+            projects['data'][dir]['lastScraped'] = project_meta_data['lastScraped']
+    return projects
 
 def projects_list_compare(new_projects, old_projects):
     changes = {}
@@ -98,25 +107,24 @@ def projects_list_scrape(is_return_json=False):
     regex = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
     # <img src="/icons/folder.gif" alt="[DIR]"> <a href="WI_Statewide_2021_B21/">WI_Statewide_2021_B21/</a>  2023-02-10 11:13 -
 
-    projects = {}
+    projects_from_usgs_server = {}
     for line in file:
       match = regex.search(line)
       if match != None:
-        projects[match.group(1).replace('/', '')] = {'dateModified': match.group(2), 'dateScraped': None}
+        projects_from_usgs_server[match.group(1).replace('/', '')] = {'dateModified': match.group(2), 'dateScraped': None}
 
     file.close()
 
-    previous_projects = projects_list_get()
+    current_projects_wrapper = projects_list_get()
     changes = None
-    if previous_projects:
-        changes = projects_list_compare(projects, previous_projects['data'])
+    if current_projects_wrapper:
+        changes = projects_list_compare(projects_from_usgs_server, current_projects_wrapper['data'])
         if not changes:
-            for dir in project_dirs_list:
-                if dir[0] == '.' or dir[0] == '_':
-                    continue
-                previous_projects['data'][dir]['hasDownloads'] = True
-            previous_projects['dateChecked'] = datetime.now().strftime('%y-%m-%d %H:%M:%S')
-            return previous_projects if not is_return_json else json.dumps(previous_projects)
+            # add extra data for each project (from local dir meta)
+            projects_list_add_local_meta_data(current_projects_wrapper)
+
+            current_projects_wrapper['dateChecked'] = datetime.now().strftime('%y-%m-%d %H:%M:%S')
+            return current_projects_wrapper if not is_return_json else json.dumps(current_projects_wrapper)
         else:
             # make a backup
             filepath_json_backup = '%s/%s__%d.json' % (
@@ -129,20 +137,19 @@ def projects_list_scrape(is_return_json=False):
 
 
     jsonFile = open(filepath_json, 'w')
-    projectsWrapper = {
+    projects_wrapper = {
         "dateModified": datetime.now().strftime('%y-%m-%d %H:%M:%S'),
         "dateChecked": datetime.now().strftime('%y-%m-%d %H:%M:%S'),
-        "data": projects,
+        "data": projects_from_usgs_server,
         "dataChanges": changes
     }
 
-    jsonFile.write(json.dumps(projectsWrapper))
+    jsonFile.write(json.dumps(projects_wrapper))
     jsonFile.close()
 
-    for dir in project_dirs_list:
-        if dir[0] == '.' or dir[0] == '_':
-            continue
-        projectsWrapper['data'][dir]['hasDownloads'] = True
+    # add extra data for each project (from local dir meta)
+    # BUT DO NOT SAVE IT to global projects json
+    projects_list_add_local_meta_data(projects_wrapper)
 
     return projectsWrapper if not is_return_json else json.dumps(projectsWrapper)
 
