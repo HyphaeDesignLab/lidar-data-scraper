@@ -10,7 +10,20 @@ const ScrapedProject = ({project, isExpanded, onExpand, onCollapse}) => {
     return (
         <div>
             {!isExpanded ?
-                <span className='link' onClick={onExpandClick}>{project.id} ({project.dateModified})</span>
+                <div>
+                    <h4 className='link' onClick={onExpandClick}>{project.id} </h4>
+                    <div>
+                        {!!project.dateScraped ?
+                            (
+                                project.dateModified > project.dateScraped ?
+                                    <span style={{color: '#a33'}}>project data out of date (last scraped on {project.dateScraped}, BUT modified by USGS on {project.dateMofified})</span> :
+                                    <span style={{color: '#3a3'}}>project data up to date (last scraped on {project.dateScraped}, modified by USGS on {project.dateMofified}))</span>
+                            )
+                            :
+                            <span>project never been scraped</span>
+                        }
+                    </div>
+                </div>
                 :
                 <h4>{project.id} ({project.dateModified})
                     <span className='link' style={{fontSize: '80%'}} onClick={onCollapseClick}>close</span>

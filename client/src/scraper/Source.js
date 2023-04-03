@@ -21,7 +21,6 @@ const Source = ({model, isCurrent, onShow}) => {
         }
 
         if (!projects) {
-            console.log('fetching '+ model.id)
             fetch(`/sources/${model.id}`, {
                 method: 'GET'
             }).then(resp => resp.json())
@@ -29,7 +28,7 @@ const Source = ({model, isCurrent, onShow}) => {
                     setProjects(json);
                 })
         } else {
-            console.log('already has '+model.id)
+            //console.log('already has '+model.id)
         }
         setShow(true);
     }, [isCurrent]);
@@ -65,8 +64,31 @@ const Source = ({model, isCurrent, onShow}) => {
 
     const [currentProjectId, setCurrentProjectId] = useState(null);
 
+    const onScrapeAgainClick = () => {
+        fetch(`/sources/${model.id}/scrape`, {
+            method: 'GET'
+        }).then(resp => resp.json())
+            .then(json => {
+                setProjects(json);
+            })
+    };
+
+    const [isShowProjectChanges, setShowProjectChanges] = useState(false);
     return <div className='projects'>
         <h2><a href={`/sources/${model.id}`} onClick={onSourceClick} style={{fontSize: 'inherit'}}>{model.name}</a></h2>
+        {!!projects && <div>
+            {!!projects.dataChanges ?
+                <span>USGS has <span className={'link'} onClick={() => setShowProjectChanges(s => !s)}>updated projects</span>
+                    {isShowProjectChanges && <span><br/>
+                        {Object.keys(projects.dataChanges).map(k => <span key={k}>{k}: {projects.dataChanges[k]}<br/></span>)}
+                    </span>}
+                </span>:
+                <span>USGS has NOT updated projects since since {projects.dateModified})</span>
+            }
+            <br/>
+            (last checked: {projects.dateChecked})<br/>
+            <button onClick={onScrapeAgainClick}>check for updates</button>
+        </div>}
         <div style={{display: isShow ? '':'none'}}>
             <h3>Scraped Projects</h3>
             {isCurrent && !!scrapedProjectIds &&
