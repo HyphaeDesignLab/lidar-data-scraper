@@ -77,7 +77,9 @@ def projects_list_compare(new_projects, old_projects):
     else:
         return changes
 
-def projects_list_scrape():
+def projects_list_scrape(is_return_json=False):
+    project_dirs_list = os.listdir(projects_dir)
+
     filepath_html = '%s/_index/index.html' % projects_dir
     filepath_json = '%s/_index/index.json' % projects_dir
     backup_dir = '%s/_index/backup' % projects_dir
@@ -109,7 +111,11 @@ def projects_list_scrape():
     if previous_projects:
         changes = projects_list_compare(projects, previous_projects['data'])
         if not changes:
-            previous_projects['dateChecked'] = datetime.now().strftime('%y_%m_%d_%H_%M_%S')
+            for dir in project_dirs_list:
+                if dir[0] == '.' or dir[0] == '_':
+                    continue
+                previous_projects['data'][dir]['hasDownloads'] = True
+            previous_projects['dateChecked'] = datetime.now().strftime('%y-%m-%d %H:%M:%S')
             return previous_projects
         else:
             # make a backup
@@ -124,8 +130,8 @@ def projects_list_scrape():
 
     jsonFile = open(filepath_json, 'w')
     projectsWrapper = {
-        "dateModified": datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
-        "dateChecked": datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
+        "dateModified": datetime.now().strftime('%y-%m-%d %H:%M:%S'),
+        "dateChecked": datetime.now().strftime('%y-%m-%d %H:%M:%S'),
         "data": projects,
         "dataChanges": changes
     }
@@ -133,7 +139,12 @@ def projects_list_scrape():
     jsonFile.write(json.dumps(projectsWrapper))
     jsonFile.close()
 
-    return projectsWrapper
+    for dir in project_dirs_list:
+        if dir[0] == '.' or dir[0] == '_':
+            continue
+        projectsWrapper['data'][dir]['hasDownloads'] = True
+
+    return projectsWrapper if not is_return_json else json.dumps(projectsWrapper)
 
 def metadata_index_get(project_name, project_dataset, index_filename_custom=None):
     index_filename = downloads_dir_get(project_name, project_dataset) + '/'
@@ -522,7 +533,7 @@ def run(cmd, args):
     elif cmd == 'projects_list_get':
         out = projects_list_get(args.options == 'json_only')
     elif cmd == 'projects_list_scrape':
-        out = projects_list_scrape()
+        out = projects_list_scrape(args.options == 'json_only')
 
     print(out)
 
