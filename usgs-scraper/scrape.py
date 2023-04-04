@@ -40,14 +40,22 @@ def project_db_save(project_name, project_dataset, data):
     return charsWritten > 0
 
 def projects_list_get(is_return_json=False):
-    filepath_json = '%s/_index/index.json' % projects_dir
+    index_dir = '%s/_index' % projects_dir
+    if not os.path.isdir(index_dir):
+        os.makedirs(index_dir+'/backup', 0o664, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
+    index_filename = '%s/index.json' % index_dir
 
-    if not os.path.isfile(filepath_json):
-        return None
-
-    jsonFile = open(filepath_json, 'r')
-    projects = json.load(jsonFile)
-    jsonFile.close()
+    projects = None
+    if not os.path.isfile(index_filename):
+        now_text = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        projects = {"dateModified": now_text, "dateChecked": now_text, "data":{}}
+        index_file = open(index_filename, 'w')
+        json.dump(projects, index_file)
+        index_file.close()
+    else:
+        jsonFile = open(index_filename, 'r')
+        projects = json.load(jsonFile)
+        jsonFile.close()
 
     projects_list_add_local_meta_data(projects)
 
@@ -151,7 +159,7 @@ def projects_list_scrape(is_return_json=False):
     # BUT DO NOT SAVE IT to global projects json
     projects_list_add_local_meta_data(projects_wrapper)
 
-    return projectsWrapper if not is_return_json else json.dumps(projectsWrapper)
+    return projects_wrapper if not is_return_json else json.dumps(projects_wrapper)
 
 def metadata_index_get(project_id, subproject_id):
     index_html_filename = downloads_dir_get(project_id) + '/index.html'
