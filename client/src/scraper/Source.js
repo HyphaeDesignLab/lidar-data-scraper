@@ -47,7 +47,7 @@ const Source = ({model, isCurrent, onShow}) => {
         Object.keys(projects.data).forEach(k => {
             projects.data[k].id = k;
         });
-        const sortedIds = Object.keys(projects.data).sort((a, b)=> { return projects.data[a].dateModified > projects.data[b].dateModified ? 1 : -1; })
+        const sortedIds = Object.keys(projects.data).sort((a, b)=> { return projects.data[a].dateModified < projects.data[b].dateModified ? 1 : -1; })
         setMaxPages(Math.ceil(sortedIds.length / pageSize));
 
         setProjectIds(sortedIds.filter(k => !projects.data[k].hasDownloads));
@@ -100,7 +100,7 @@ const Source = ({model, isCurrent, onShow}) => {
         </div>}
         <div style={{display: isShow ? '':'none'}}>
             <h3>Scraped Projects</h3>
-            {isCurrent && !!scrapedProjectIds &&
+            {scrapedProjectIds && scrapedProjectIds.length ?
                 scrapedProjectIds.map(id =>
                     <ScrapedProject
                         key={id} project={projects.data[id]}
@@ -108,15 +108,20 @@ const Source = ({model, isCurrent, onShow}) => {
                         onCollapse={id => setCurrentProjectId(null)}
                         isExpanded={id === currentProjectId}/>
                 )
+                : 'none'
             }
             <h3>All Projects</h3>
             <div><button disabled={page === 0} onClick={gotoPage.bind(null, -1)}>&lt;&lt; Prev</button>
-                &nbsp;
+                &nbsp; {projectIds && (`${page*pageSize}-${(page+1)*pageSize} of ${projectIds.length}`)} &nbsp;
                 <button disabled={page === maxPages - 1} onClick={gotoPage.bind(null, 1)}>Next &gt;&gt;</button>
             </div>
-            {isCurrent && !!projectIds &&
+            {!!projectIds &&
                 projectIdsPaged.map(id =>
-                    <div className={'project'} key={id}>{id} ({projects.data[id].dateModified})</div>)
+                    <div className={'project'} key={id}>
+                        {id} ({projects.data[id].dateModified})
+                        {projects.data[id].isRemovedFromServer ? 'removed from server' :
+                        ''}
+                    </div>)
             }
         </div>
     </div>;
