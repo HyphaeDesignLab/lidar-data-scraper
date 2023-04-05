@@ -120,7 +120,7 @@ def projects_list_scrape(is_return_json=False, parent_dir=''):
     projects_from_usgs_server = {}
     for line in file:
       match = regex.search(line)
-      if match != None:
+      if match != None and ('_' in match.group(1) or '-' in match.group(1)):
         projects_from_usgs_server[match.group(1).replace('/', '')] = {'dateModified': match.group(2), 'dateScraped': None}
 
     file.close()
