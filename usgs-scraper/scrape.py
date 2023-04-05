@@ -17,8 +17,8 @@ def downloads_dir_get(project_id):
        os.makedirs(dir_path)
     return dir_path
 
-def project_db_get(project_name, project_dataset):
-    path = 'projects/%s/%s/data.json' % (project_name, project_dataset)
+def project_db_get(project_id, subproject_id):
+    path = 'projects/%s/%s/data.json' % (project_id, subproject_id)
     data = {}
     if not os.path.isfile(path):
       f = open(path, 'w')
@@ -30,8 +30,8 @@ def project_db_get(project_name, project_dataset):
       f.close()
     return data
 
-def project_db_save(project_name, project_dataset, data):
-    path = 'projects/%s/%s/data.json' % (project_name, project_dataset)
+def project_db_save(project_id, subproject_id, data):
+    path = 'projects/%s/%s/data.json' % (project_id, subproject_id)
     f = open(path, 'w')
     charsWritten = f.write(json.dumps(data))
     f.close()
@@ -267,7 +267,7 @@ def project_metadata_index_scrape(project_id, subproject_id=''):
 def metadata_files_fetch(project_id, subproject_id, index_filename, limit=4):
 
     for meta_filename in meta_filenames:
-      status = metadata_file_fetch(meta_filename, project_name, project_dataset)
+      status = metadata_file_fetch(meta_filename, project_id, subproject_id)
       meta_filenames_status.append( '%s (%s)' % (status, meta_filename) )
       i = i + 1
 
@@ -388,14 +388,14 @@ def find_overlapping_lidar_scans(project_id, city_id):
     for f in file_list:
       if f.find('.xml') < 0:
         continue
-      bounds_and_date = metadata_extract_data(project_name, project_dataset, f)
+      bounds_and_date = metadata_extract_data(project_id, subproject_id, f)
       if bounds_and_date != None:
         if polygon_multipolygon_overlap_check(bounds_and_date[0], city_multi_polygon):
           file_bounds_and_date[f] = bounds_and_date
 
     return file_bounds_and_date
 
-def download_meta_shape_files_from_zip(index_filename, project_name, project_dataset, limit=4):
+def download_meta_shape_files_from_zip(index_filename, project_id, subproject_id, limit=4):
     # download ZIP
     # extract ZIP
     # extract geo info from SHP file => geojson ?!
@@ -451,7 +451,7 @@ def projection_convert(coordinates, projection, geometry_type):
 def laz_file_fetch(project_id, filename):
     status = 'in progress'
     dir_path = downloads_dir_get(project_id)
-    url = '%s/%s/%s/LAZ/%s' % (url_base, project_name, project_dataset, filename)
+    url = '%s/%s/%s/LAZ/%s' % (url_base, project_id, subproject_id, filename)
     download_filepath = '%s/%s' % (dir_path, filename)
 
     i = 9
@@ -470,7 +470,7 @@ def laz_file_fetch(project_id, filename):
 
     return status
 
-def laz_extract_data(project_name, project_dataset, filename, point_limit=0):
+def laz_extract_data(project_id, subproject_id, filename, point_limit=0):
     # Buffered read to extract all dates of individual points
     #  (buffered so that we do not need HUGE RAM and costly VMs)
     import numpy as np
@@ -518,11 +518,11 @@ def laz_extract_data(project_name, project_dataset, filename, point_limit=0):
 
     return data
 
-def laz_meta_extract_data(project_name, project_dataset, filename):
+def laz_meta_extract_data(project_id, subproject_id, filename):
     meta_filename = filename.replace('.laz', '.xml')
     laz_filename = filename.replace('.xml', '.laz')
-    laz_data = laz_extract_data(project_name, project_dataset, laz_filename)
-    meta_data = metadata_extract_data(project_name, project_dataset, meta_filename)
+    laz_data = laz_extract_data(project_id, subproject_id, laz_filename)
+    meta_data = metadata_extract_data(project_id, subproject_id, meta_filename)
 
     converted = projection_convert(laz_data['bbox'][0], meta_data[2], 'point')
     print (laz_data)
@@ -564,7 +564,7 @@ def run(cmd, args):
         projects_list_get
         downloads_dir_get
         downloads_dir_list
-        metadata_index_get
+        project_metadata_index_get
         metadata_files_fetch
         metadata_file_fetch
         metadata_extract_data
@@ -582,28 +582,28 @@ def run(cmd, args):
     elif cmd == 'project_metadata_index_scrape':
         out = project_metadata_index_scrape(args.project_id, args.subproject_id)
     elif cmd == 'metadata_files_fetch':
-        out = metadata_files_fetch(args.project_name, args.project_dataset, args.file, -1)
+        out = metadata_files_fetch(args.project_id, args.subproject_id, args.file, -1)
     elif cmd == 'metadata_file_fetch':
-        out = metadata_file_fetch(args.project_name, args.project_dataset, args.file)
+        out = metadata_file_fetch(args.project_id, args.subproject_id, args.file)
     elif cmd == 'downloads_dir_list':
         out = os.listdir(downloads_dir_get(args.project_id))
     elif cmd == 'metadata_extract_data':
-        out = metadata_extract_data(args.project_name, args.project_dataset, args.file)
+        out = metadata_extract_data(args.project_id, args.subproject_id, args.file)
     elif cmd == 'city_polygon_get':
         out = city_polygon_get(args.city_id)
     elif cmd == 'polygon_multipolygon_overlap_check':
         out = polygon_multipolygon_overlap_check(
-          metadata_extract_data(args.project_name, args.project_dataset, args.file)[0],
+          metadata_extract_data(args.project_id, args.subproject_id, args.file)[0],
           city_polygon_get(args.city_id))
     elif cmd == 'find_overlapping_lidar_scans':
         out = find_overlapping_lidar_scans(
-                args.project_name, args.project_dataset, args.city_id)
+                args.project_id, args.subproject_id, args.city_id)
     elif cmd == 'laz_file_fetch':
-        out = laz_file_fetch(args.project_name, args.project_dataset, args.file)
+        out = laz_file_fetch(args.project_id, args.subproject_id, args.file)
     elif cmd == 'laz_extract_data':
-        out = laz_extract_data(args.project_name, args.project_dataset, args.file)
+        out = laz_extract_data(args.project_id, args.subproject_id, args.file)
     elif cmd == 'laz_and_meta_extract_data':
-        out = laz_meta_extract_data(args.project_name, args.project_dataset, args.file)
+        out = laz_meta_extract_data(args.project_id, args.subproject_id, args.file)
     elif cmd == 'projects_list_get':
         out = projects_list_get(args.options == 'json_only')
     elif cmd == 'projects_list_scrape':
@@ -615,12 +615,13 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--cmd', dest='cmd', type=str, help='Specify command')
 parser.add_argument('--project_id', dest='project_id', type=str, help='Specify project ID')
+parser.add_argument('--subproject_id', dest='subproject_id', type=str, help='Specify sub-project ID')
 parser.add_argument('--file', dest='file', type=str, help='Specify file')
 parser.add_argument('--options', dest='options', type=str, help='Specify options')
 args = parser.parse_args()
 
-sample_project_name = 'CA_NoCAL_3DEP_Supp_Funding_2018_D18'
-sample_project_dataset = 'CA_NoCAL_Wildfires_B5b_2018'
+sample_project_id = 'CA_NoCAL_3DEP_Supp_Funding_2018_D18'
+sample_subproject_id = 'CA_NoCAL_Wildfires_B5b_2018'
 sample_meta_index = 'meta_index_23_03_01_12_29_46__6407.html'
 sample_meta = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.xml'
 sample_laz = 'USGS_LPC_CA_NoCAL_3DEP_Supp_Funding_2018_D18_w2215n1973.laz'
