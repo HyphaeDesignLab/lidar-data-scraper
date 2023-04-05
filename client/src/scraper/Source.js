@@ -87,7 +87,8 @@ const Source = ({model, isCurrent, onShow}) => {
             method: 'GET'
         }).then(resp => resp.json())
         .then(json => {
-            setProjects(json);
+            projects[model.id].data[projectId] = json;
+            setProjects({...projects});
         }).finally(() => {
             setNewScrapeLoading(false);
         });
