@@ -11,16 +11,14 @@ from datetime import datetime
 # TODO: run a check on base URL to confirm that it is still viable
 url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
 
-projects_dir = 'projects'
-
 def downloads_dir_get(project_id):
-    dir_path = '%s/%s/downloads' % (projects_dir, project_id)
+    dir_path = 'projects/%s/downloads' % (project_id)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
 
 def project_db_get(project_name, project_dataset):
-    path = '%s/%s/%s/data.json' % (projects_dir, project_name, project_dataset)
+    path = 'projects/%s/%s/data.json' % (project_name, project_dataset)
     data = {}
     if not os.path.isfile(path):
       f = open(path, 'w')
@@ -33,22 +31,22 @@ def project_db_get(project_name, project_dataset):
     return data
 
 def project_db_save(project_name, project_dataset, data):
-    path = '%s/%s/%s/data.json' % (projects_dir, project_name, project_dataset)
+    path = 'projects/%s/%s/data.json' % (project_name, project_dataset)
     f = open(path, 'w')
     charsWritten = f.write(json.dumps(data))
     f.close()
     return charsWritten > 0
 
-def projects_list_get(is_return_json=False):
-    index_dir = '%s/_index' % projects_dir
+def projects_list_get(is_return_json=False, parent_dir=''):
+    index_dir = 'projects/%s/_index' % parent_dir
+
     if not os.path.isdir(index_dir):
         os.makedirs(index_dir+'/backup', 0o664, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
     index_filename = '%s/index.json' % index_dir
 
     projects = None
     if not os.path.isfile(index_filename):
-        now_text = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        projects = {"dateModified": now_text, "dateChecked": now_text, "data":{}}
+        projects = {'dateChecked': None, 'dateModified': None, 'data':{}}
         index_file = open(index_filename, 'w')
         json.dump(projects, index_file)
         index_file.close()
@@ -57,22 +55,28 @@ def projects_list_get(is_return_json=False):
         projects = json.load(jsonFile)
         jsonFile.close()
 
-    projects_list_add_local_meta_data(projects)
+    projects_list_add_local_meta_data(projects, parent_dir)
 
     return projects if not is_return_json else json.dumps(projects)
 
-def projects_list_add_local_meta_data(projects):
-    project_dirs_list = os.listdir(projects_dir)
+
+
+
+def projects_list_add_local_meta_data(projects, parent_dir=''):
+    project_dirs_list = os.listdir('projects/%s' % parent_dir)
     for dir in project_dirs_list:
         if dir[0] == '.' or dir[0] == '_':
             continue
         projects['data'][dir]['hasDownloads'] = True
-        project_meta_data_filepath = projects_dir + '/' + dir + '/meta-data.json'
+        project_meta_data_filepath = 'projects/%s%s/index.json' % (parent_dir+'/' if parent_dir else '', dir)
         if os.path.isfile(project_meta_data_filepath):
             project_meta_data_file = open(project_meta_data_filepath, 'r')
             project_meta_data = json.load(project_meta_data_file)
             projects['data'][dir]['lastScraped'] = project_meta_data['lastScraped']
+            projects['data'][dir]['hasSubprojects'] = project_meta_data['hasSubprojects']
     return projects
+
+
 
 def projects_list_compare(new_projects, old_projects):
     changes = {}
@@ -94,13 +98,11 @@ def projects_list_compare(new_projects, old_projects):
     else:
         return changes
 
-def projects_list_scrape(is_return_json=False):
-    project_dirs_list = os.listdir(projects_dir)
-
-    filepath_html = '%s/_index/index.html' % projects_dir
-    filepath_json = '%s/_index/index.json' % projects_dir
-    backup_dir = '%s/_index/backup' % projects_dir
-    cmd = "wget -S --quiet -t 1 -O %s %s " % (filepath_html, url_base)
+def projects_list_scrape(is_return_json=False, parent_dir=''):
+    filepath_html = 'projects/%s/_index/index.html' % parent_dir
+    filepath_json = 'projects/%s/_index/index.json' % parent_dir
+    backup_dir = 'projects/%s/_index/backup' % parent_dir
+    cmd = "wget -S --quiet -t 1 -O %s %s " % (filepath_html, url_base + parent_dir)
     wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     wget_process_out = str(wget_process.communicate()[0], 'utf-8')
     if wget_process_out != None and wget_process_out != '':
@@ -123,7 +125,9 @@ def projects_list_scrape(is_return_json=False):
 
     file.close()
 
-    current_projects_wrapper = projects_list_get()
+    current_projects_wrapper = projects_list_get(False, parent_dir)
+    current_projects_wrapper['dataChanges'] = None
+
     changes = None
     if current_projects_wrapper:
         changes = projects_list_compare(projects_from_usgs_server, current_projects_wrapper['data'])
@@ -201,7 +205,8 @@ def metadata_files_fetch(project_name, project_dataset, index_filename, limit=4)
       if match != None:
         meta_filenames.append(match.group(0))
 
-    i = 0
+def metadata_files_fetch(project_name, project_dataset, index_filename, limit=4):
+
     for meta_filename in meta_filenames:
       status = metadata_file_fetch(meta_filename, project_name, project_dataset)
       meta_filenames_status.append( '%s (%s)' % (status, meta_filename) )
