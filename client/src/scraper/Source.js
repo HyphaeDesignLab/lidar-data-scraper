@@ -80,6 +80,19 @@ const Source = ({model, isCurrent, onShow}) => {
         });
     };
 
+    const [isNewScrapeLoading, setNewScrapeLoading] = useState(false);
+    const onScrapeNewProjectClick = (projectId) => {
+        setNewScrapeLoading(true);
+        fetch(`/sources/${model.id}/${projectId}/scrape`, {
+            method: 'GET'
+        }).then(resp => resp.json())
+        .then(json => {
+            setProjects(json);
+        }).finally(() => {
+            setNewScrapeLoading(false);
+        });
+    };
+
     const [isShowProjectChanges, setShowProjectChanges] = useState(false);
     return <div className='projects'>
         <h2><a href={`/sources/${model.id}`} onClick={onSourceClick} style={{fontSize: 'inherit'}}>{model.name}</a></h2>
@@ -120,7 +133,7 @@ const Source = ({model, isCurrent, onShow}) => {
                     <div className={'project'} key={id}>
                         {id} ({projects.data[id].dateModified})
                         {projects.data[id].isRemovedFromServer ? 'removed from server' :
-                        ''}
+                            <button disabled={isNewScrapeLoading} onClick={() => onScrapeNewProjectClick(id)}>Scrape</button>}
                     </div>)
             }
         </div>

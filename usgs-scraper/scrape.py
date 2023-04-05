@@ -166,9 +166,43 @@ def projects_list_scrape(is_return_json=False, parent_dir=''):
 
     return projects_wrapper if not is_return_json else json.dumps(projects_wrapper)
 
-def metadata_index_get(project_id, subproject_id):
-    index_html_filename = downloads_dir_get(project_id) + '/index.html'
-    index_url = '%s/%s/%s/metadata/' % (url_base, project_name, project_dataset)
+def project_metadata_index_get(project_id, subproject_id=''):
+    project_id_ = project_id+'/'+subproject_id if subproject_id else project_id
+    downloads_dir = downloads_dir_get(project_id_)
+
+    index_filename = 'projects/%s/index.json' % (project_id_)
+    index = {"lastScraped": None, "hasSubprojects": None}
+    if os.path.isfile(index_filename):
+        index_file = open(index_filename, 'r')
+        index = json.load(meta_file)
+    else:
+        index_file = open(index_filename, 'w')
+        json.load(index, index_file)
+
+    if not index['lastScraped']:
+        return index
+
+
+    cmd = "cat %s/*.scrape" % (downloads_dir)
+    scrape_concat_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    scrape_concat_process_out = str(scrape_concat_process.communicate()[0], 'utf-8')
+    scraped_files_text = '[]'
+    if scrape_concat_process_out != None and scrape_concat_process_out != '':
+        scraped_files_text = '[%s]' % scrape_concat_process_out.replace("\n", ",")
+    scraped_files = json.loads(scraped_files_text)
+    for file_data in scraped_files:
+        if file_data['fileName'] in meta_filenames:
+            meta_filenames[file_data['fileName']]['lastScraped'] = file_data['lastScraped']
+    return None
+
+
+
+def project_metadata_index_scrape(project_id, subproject_id=''):
+    project_id_ = project_id+'/'+subproject_id if subproject_id else project_id
+    downloads_dir = downloads_dir_get(project_id_)
+
+    index_html_filename = downloads_dir + '/index.html'
+    index_url = '%s/%s/%s/metadata/' % (url_base, project_id, subproject_id if subproject_id else '')
 
     i = 9
     while i > 0:
@@ -187,26 +221,50 @@ def metadata_index_get(project_id, subproject_id):
       print('did not fetch xml index')
       return None
 
-    return index_filename
+    index_filename = 'projects/%s/index.json' % (project_id_)
+    index = {"lastScraped": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    if os.path.isfile(index_filename):
+        index_file = open(index_filename, 'r')
+        index = json.load(index_file)
 
-def metadata_files_fetch(project_name, project_dataset, index_filename, limit=4):
-    xml_regex = re.compile('(?<=\>)[\w\.\-]+\.xml', re.IGNORECASE)
+    regex_meta = re.compile('<img[^>]+alt="\[TXT\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
+    regex_dataset = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
+    regex_metazip = re.compile('<img[^>]+compressed.gif[^>]+>\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
     ## TEST
     ##match = xml_regex.search('asdasd>a_a.xml asdas')
     ##print(match)
 
-    dir_path = downloads_dir_get(project_name, project_dataset)
-    index_file = open(dir_path + '/' + index_filename)
+    index_file = open(index_html_filename, 'r')
     index_file.seek(0)
 
-    meta_filenames = []
-    meta_filenames_status = []
+    meta_filenames = {}
+    meta_zipfilenames = {}
+    meta_subprojects = {}
     for line in index_file:
-      match = xml_regex.search(line)
-      if match != None:
-        meta_filenames.append(match.group(0))
+      match_meta = regex_meta.search(line)
+      match_dataset = regex_dataset.search(line)
+      match_metazip = regex_metazip.search(line)
+      if match_meta != None:
+        meta_filenames[match_meta.group(1).replace('.xml', '')] = {'lastModified': match_meta.group(2)}
+      elif match_dataset != None:
+        meta_subprojects[match_dataset.group(1).replace('/', '')] = {'lastModified': match_dataset.group(2)}
+      elif match_metazip != None:
+        meta_zipfilenames[match_metazip.group(1).replace('/', '')] = {'lastModified': match_metazip.group(2)}
 
-def metadata_files_fetch(project_name, project_dataset, index_filename, limit=4):
+    meta = {}
+    if meta_filenames.keys():
+        meta['files'] = meta_filenames
+    elif meta_subprojects.keys():
+        meta['subprojects'] = meta_subprojects
+    elif meta_zipfilenames.keys():
+        meta['zipfiles'] = meta_zipfilenames
+
+    index_file = open(index_filename, 'w')
+    json.dump(meta, index_file)
+
+    return meta
+
+def metadata_files_fetch(project_id, subproject_id, index_filename, limit=4):
 
     for meta_filename in meta_filenames:
       status = metadata_file_fetch(meta_filename, project_name, project_dataset)
@@ -519,8 +577,10 @@ def run(cmd, args):
         '''
     if cmd == 'downloads_dir_get':
         out = downloads_dir_get(args.project_id)
-    elif cmd == 'metadata_index_get':
-        metadata_index_get(args.project_name, args.project_dataset)
+    elif cmd == 'project_metadata_index_get':
+        out = project_metadata_index_get(args.project_id, args.subproject_id)
+    elif cmd == 'project_metadata_index_scrape':
+        out = project_metadata_index_scrape(args.project_id, args.subproject_id)
     elif cmd == 'metadata_files_fetch':
         out = metadata_files_fetch(args.project_name, args.project_dataset, args.file, -1)
     elif cmd == 'metadata_file_fetch':
