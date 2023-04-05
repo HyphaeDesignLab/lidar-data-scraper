@@ -12,7 +12,7 @@ from datetime import datetime
 url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
 
 def downloads_dir_get(project_id):
-    dir_path = 'projects/%s/downloads' % (project_id)
+    dir_path = 'projects/%s/_downloads' % (project_id)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
@@ -55,25 +55,24 @@ def projects_list_get(is_return_json=False, parent_dir=''):
         projects = json.load(jsonFile)
         jsonFile.close()
 
-    projects_list_add_local_meta_data(projects, parent_dir)
+    projects_list_add_meta_data(projects['data'], parent_dir)
 
     return projects if not is_return_json else json.dumps(projects)
 
 
 
 
-def projects_list_add_local_meta_data(projects, parent_dir=''):
+def projects_list_add_meta_data(projects, parent_dir=''):
     project_dirs_list = os.listdir('projects/%s' % parent_dir)
     for dir in project_dirs_list:
         if dir[0] == '.' or dir[0] == '_':
             continue
-        projects['data'][dir]['hasDownloads'] = True
+        projects[dir]['lastScraped'] = None
         project_meta_data_filepath = 'projects/%s%s/index.json' % (parent_dir+'/' if parent_dir else '', dir)
         if os.path.isfile(project_meta_data_filepath):
             project_meta_data_file = open(project_meta_data_filepath, 'r')
             project_meta_data = json.load(project_meta_data_file)
-            projects['data'][dir]['lastScraped'] = project_meta_data['lastScraped']
-            projects['data'][dir]['hasSubprojects'] = project_meta_data['hasSubprojects']
+            projects[dir]['lastScraped'] = project_meta_data['lastScraped']
     return projects
 
 
@@ -134,7 +133,7 @@ def projects_list_scrape(is_return_json=False, parent_dir=''):
         changes = projects_list_compare(projects_from_usgs_server, current_projects_wrapper['data'])
         if not changes:
             # add extra data for each project (from local dir meta)
-            projects_list_add_local_meta_data(current_projects_wrapper)
+            projects_list_add_meta_data(current_projects_wrapper['data'])
 
             current_projects_wrapper['dateChecked'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             return current_projects_wrapper if not is_return_json else json.dumps(current_projects_wrapper)
@@ -162,7 +161,7 @@ def projects_list_scrape(is_return_json=False, parent_dir=''):
 
     # add extra data for each project (from local dir meta)
     # BUT DO NOT SAVE IT to global projects json
-    projects_list_add_local_meta_data(projects_wrapper)
+    projects_list_add_meta_data(projects_wrapper['data'])
 
     return projects_wrapper if not is_return_json else json.dumps(projects_wrapper)
 
