@@ -42,7 +42,7 @@ app.get('/sources/:id', function (req, res) {
         res.status(500).send({error: `no such project: ${req.params.id}`});
         return;
     }
-    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_list_get --options=json_only | cat`)
+    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_get --options=json_only | cat`)
     if (!projects) {
         res.status(500).send({error: `project ${req.params.id} has no index`});
         return;
@@ -64,7 +64,7 @@ app.get('/sources/:id/scrape', function (req, res) {
         res.status(500).send({error: `no such project: ${req.params.id}`});
         return;
     }
-    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_list_scrape --options=json_only | cat`)
+    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_scrape --options=json_only | cat`)
     if (!projects) {
         res.status(500).send({error: `project ${req.params.id} has no index`});
         return;
@@ -87,7 +87,7 @@ app.get('/sources/:id/:project_id/scrape', function (req, res) {
         res.status(500).send({error: `no such project: ${req.params.id}`});
         return;
     }
-    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=project_metadata_index_scrape --project_id='${projectId}' --options=json_only | cat`)
+    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=project_scrape --project_id='${projectId}' --options=json_only | cat`)
     if (!projects) {
         res.status(500).send({error: `project ${req.params.id} has no index`});
         return;
@@ -98,7 +98,7 @@ app.get('/sources/:id/:project_id/scrape', function (req, res) {
 
 app.get('/usgs/scrape', function (req, res) {
     /*
-    projects_list_get
+    projects_get
     downloads_dir_get
     downloads_dir_list
     metadata_index_get
