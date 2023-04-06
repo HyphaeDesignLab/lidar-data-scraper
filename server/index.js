@@ -23,121 +23,104 @@ if (!!env.cors_urls) {
 const childProcess = require("child_process");
 const removeSpaces = s => s.replace(/[^\w]/, '_').replace(/__+/, '_').replace(/^_+|_+$/, '');
 
+const checkSourceIdAndDir = id => {
+    const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
+    const sources = JSON.parse(text);
+    if (!id) {
+        throw new Error('no source id')
+    }
+    if (!sources[id]) {
+        throw new Error(`no such source: ${id}`)
+    }
+    return [id, sources[id].dir];
+}
+const checkCmd = (cmd, allowed) => {
+    const cmdSanitized = cmd.replace(/\W/g, '');
+    if (cmd !== cmdSanitized) {
+        throw new Error(`command can only contain letters and _: ${cmd}`);
+    }
+    if (!allowed.find(i => i === cmdSanitized)) {
+        throw new Error(`${cmd} is not recognized` );
+    }
+    return cmdSanitized;
+}
+const checkProjectId = id => {
+    if (!id) {
+        throw new Error('no project id')
+    }
+    const sanitizedId = id.replace(/[^\w\-]+/g, '');
+    if (id !== sanitizedId) {
+        throw new Error(`id can only contain letters, _ and -: ${id}`)
+    }
+    return sanitizedId;
+}
 app.get('/sources', function (req, res) {
     const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
     res.setHeader("Content-Type", "application/json");
     res.status(200).send(text);
 });
-app.get('/sources/:id', function (req, res) {
+app.get('/source/:id/:cmd', function (req, res) {
     res.setHeader("Content-Type", "application/json");
 
-    const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
-    const sources = JSON.parse(text);
-    const id = req.params.id;
-    if (!id) {
-        res.status(500).send({error: `no project id`});
-        return;
-    }
-    if (!sources[id]) {
-        res.status(500).send({error: `no such project: ${req.params.id}`});
-        return;
-    }
-    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_get --options=json_only | cat`)
-    if (!projects) {
-        res.status(500).send({error: `project ${req.params.id} has no index`});
-        return;
-    }
-
-    res.status(200).send(projects);
-});
-app.get('/sources/:id/scrape', function (req, res) {
-    res.setHeader("Content-Type", "application/json");
-
-    const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
-    const sources = JSON.parse(text);
-    const id = req.params.id;
-    if (!id) {
-        res.status(500).send({error: `no project id`});
-        return;
-    }
-    if (!sources[id]) {
-        res.status(500).send({error: `no such project: ${req.params.id}`});
-        return;
-    }
-    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=projects_scrape --options=json_only | cat`)
-    if (!projects) {
-        res.status(500).send({error: `project ${req.params.id} has no index`});
-        return;
-    }
-
-    res.status(200).send(projects);
-});
-app.get('/sources/:id/:project_id/scrape', function (req, res) {
-    res.setHeader("Content-Type", "application/json");
-
-    const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
-    const sources = JSON.parse(text);
-    const id = req.params.id;
-    const projectId = req.params.project_id;
-    if (!id || !projectId) {
-        res.status(500).send({error: `no project id`});
-        return;
-    }
-    if (!sources[id]) {
-        res.status(500).send({error: `no such project: ${req.params.id}`});
-        return;
-    }
-    const projects = childProcess.execSync(`cd ../${sources[id].dir}/ && python3 scrape.py --cmd=project_scrape --project_id='${projectId}' --options=json_only | cat`)
-    if (!projects) {
-        res.status(500).send({error: `project ${req.params.id} has no index`});
-        return;
-    }
-
-    res.status(200).send(projects);
-});
-
-app.get('/usgs/scrape', function (req, res) {
-    /*
-    projects_get
-    downloads_dir_get
-    downloads_dir_list
-    metadata_index_get
-    metadata_files_fetch
-    metadata_file_fetch
-    metadata_extract_data
-    city_polygon_get
-    polygon_multipolygon_overlap_check
-    find_overlapping_lidar_scans
-    laz_file_fetch
-    laz_extract_data
-    laz_and_meta_extract_data
-    */
-    const cmd = req.query.cmd.replace(/\W/g, '');
-
+    let sourceId, sourceDir, cmd;
     try {
-        const testPath = path.join(__dirname, '..', 'usgs-scraper');
-
-        // to run a file WITHOUT a shell.
-        const testPy = childProcess.spawn('python3',
-            ['test.py', '--cmd', cmd],
-            {'cwd': testPath});
-        testPy.stderr.on('data', data => {
-            console.log('test py error '+data);
-        });
-        testPy.stdout.on('data', data => {
-            console.log('test py out '+ data);
-        });
-        testPy.on('close', code => {
-            console.log('test py exited with '+code);
-        });
-
-        const out = childProcess.execSync('ps aux | grep -i test.py | grep -v grep | cat')
-        res.send(`running in bg:  ${out}`);
-    } catch(error) {
-        const output = JSON.stringify({id: 0, error: error.message})
-        res.status(500).send(output);
+        cmd = checkCmd(req.params.cmd, ['get', 'scrape']);
+        [sourceId, sourceDir] = checkSourceIdAndDir(req.params.id);
+    } catch(e) {
+        res.status(500).send({error: e.message});
+        return;
     }
+
+    const output = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=projects_${cmd} --options=json_only | cat`)
+    if (!output) {
+        res.status(500).send({error: `${sourceId} ${cmd} failed`});
+        return;
+    }
+
+    res.status(200).send(output);
 });
+app.get('/source/:id/:project_id/:cmd', function (req, res) {
+    res.setHeader("Content-Type", "application/json");
+
+    let sourceId, sourceDir, projectId, cmd;
+    try {
+        cmd = checkCmd(req.params.cmd, ['get', 'scrape']);
+        [sourceId, sourceDir] = checkSourceIdAndDir(req.params.id);
+        projectId = checkProjectId(req.params.project_id);
+    } catch(e) {
+        res.status(500).send({error: e.message});
+    }
+
+    const output = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_${cmd} --project_id='${projectId}' --options=json_only | cat`)
+    if (!output) {
+        res.status(500).send({error: `${sourceId} ${projectId} ${cmd} failed`});
+        return;
+    }
+
+    res.status(200).send(output);
+});
+app.get('/source/:id/:project_id/:subproject_id/:cmd', function (req, res) {
+    res.setHeader("Content-Type", "application/json");
+
+    let sourceId, sourceDir, projectId, subprojectId, cmd;
+    try {
+        cmd = checkCmd(req.params.cmd, ['get', 'scrape']);
+        [sourceId, sourceDir] = checkSourceIdAndDir(req.params.id);
+        projectId = checkProjectId(req.params.project_id);
+        subprojectId = checkProjectId(req.params.subproject_id);
+    } catch(e) {
+        res.status(500).send({error: e.message});
+    }
+
+    const output = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_${cmd} --project_id='${projectId}' --subproject_id='${subprojectId}' --options=json_only | cat`)
+    if (!output) {
+        res.status(500).send({error: `${sourceId} ${projectId}/${subprojectId} ${cmd} failed`});
+        return;
+    }
+
+    res.status(200).send(output);
+});
+
 app.get('/scrape/check', function (req, res) {
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'run_in_bg.txt');
@@ -193,6 +176,7 @@ app.get('/test/check', function (req, res) {
 const staticPublicPath = path.join(__dirname, 'public');
 //express.static.mime.define({'text/javascript': ['md']});
 app.use(express.static(staticPublicPath));
+
 
 app.get('/', function (req, res) {
     res.send('ok');
