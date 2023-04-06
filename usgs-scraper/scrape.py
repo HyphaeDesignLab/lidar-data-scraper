@@ -37,9 +37,8 @@ def project_db_save(project_id, subproject_id, data):
     f.close()
     return charsWritten > 0
 
-def projects_list_get(is_return_json=False, parent_dir=''):
-    index_dir = 'projects/%s/_index' % parent_dir
-
+def projects_get(is_return_json=False):
+    index_dir = 'projects/_index'
     if not os.path.isdir(index_dir):
         os.makedirs(index_dir+'/backup', 0o664, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
     index_filename = '%s/index.json' % index_dir
@@ -55,7 +54,7 @@ def projects_list_get(is_return_json=False, parent_dir=''):
         projects = json.load(jsonFile)
         jsonFile.close()
 
-    projects_list_add_meta_data(projects['data'], parent_dir)
+    projects_list_add_meta_data(projects['data'])
 
     return projects if not is_return_json else json.dumps(projects)
 
@@ -97,166 +96,189 @@ def projects_list_compare(new_projects, old_projects):
     else:
         return changes
 
-def projects_list_scrape(is_return_json=False, parent_dir=''):
-    filepath_html = 'projects/%s/_index/index.html' % parent_dir
-    filepath_json = 'projects/%s/_index/index.json' % parent_dir
-    backup_dir = 'projects/%s/_index/backup' % parent_dir
-    cmd = "wget -S --quiet -t 1 -O %s %s " % (filepath_html, url_base + parent_dir)
-    wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    wget_process_out = str(wget_process.communicate()[0], 'utf-8')
-    if wget_process_out != None and wget_process_out != '':
-        status = 'success'
-    else:
-        status = 'failed'
-        # TODO: log miss
+def projects_scrape(is_return_json=False):
+    html_filepath = 'projects/_index/index.html'
+    json_filepath = 'projects/_index/index.json'
+    backup_dir = 'projects/_index/backup'
+#     cmd = "wget -S --quiet -t 1 -O %s %s " % (html_filepath, url_base)
+#     wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+#     wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+#     if wget_process_out != None and wget_process_out != '':
+#         status = 'success'
+#     else:
+#         status = 'failed'
+#         # TODO: log miss
 
-    file = open(filepath_html)
+    file = open(html_filepath)
     file.seek(0)
 
     regex = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
     # <img src="/icons/folder.gif" alt="[DIR]"> <a href="WI_Statewide_2021_B21/">WI_Statewide_2021_B21/</a>  2023-02-10 11:13 -
 
-    projects_from_usgs_server = {}
+    projects_list_scraped = {}
     for line in file:
       match = regex.search(line)
       # project folders always contain an underscore or hyphen
       if match != None and ('_' in match.group(1) or '-' in match.group(1)):
-        projects_from_usgs_server[match.group(1).replace('/', '')] = {'dateModified': match.group(2), 'dateScraped': None}
+        projects_list_scraped[match.group(1).replace('/', '')] = {'dateModified': match.group(2), 'dateScraped': None}
 
     file.close()
 
-    current_projects_wrapper = projects_list_get(False, parent_dir)
-    current_projects_wrapper['dataChanges'] = None
+    projects = projects_get(False)
+    projects['dataChanges'] = None
 
     changes = None
-    if current_projects_wrapper:
-        changes = projects_list_compare(projects_from_usgs_server, current_projects_wrapper['data'])
+    if projects:
+        changes = projects_list_compare(projects_list_scraped, projects['data'])
         if not changes:
             # add extra data for each project (from local dir meta)
-            projects_list_add_meta_data(current_projects_wrapper['data'])
+            projects_list_add_meta_data(projects['data'])
 
-            current_projects_wrapper['dateChecked'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            return current_projects_wrapper if not is_return_json else json.dumps(current_projects_wrapper)
+            projects['dateChecked'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            return projects if not is_return_json else json.dumps(projects)
         else:
             # make a backup
             filepath_json_backup = '%s/%s__%d.json' % (
                     backup_dir,
                     datetime.now().strftime('%y_%m_%d_%H_%M_%S'),
                     random.randint(1000,10000-1))
-            backup_cmd = 'cp %s %s' % (filepath_json,  filepath_json_backup)
+            backup_cmd = 'cp %s %s' % (json_filepath,  filepath_json_backup)
             backup_process = subprocess.Popen(backup_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             backup_process_out = str(backup_process.communicate()[0], 'utf-8')
 
 
-    jsonFile = open(filepath_json, 'w')
-    projects_wrapper = {
+    json_file = open(json_filepath, 'w')
+    projects = {
         "dateModified": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         "dateChecked": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        "data": projects_from_usgs_server,
+        "data": projects_list_scraped,
         "dataChanges": changes
     }
 
-    jsonFile.write(json.dumps(projects_wrapper))
-    jsonFile.close()
+    json_file.write(json.dumps(projects))
+    json_file.close()
 
     # add extra data for each project (from local dir meta)
     # BUT DO NOT SAVE IT to global projects json
-    projects_list_add_meta_data(projects_wrapper['data'])
+    projects_list_add_meta_data(projects['data'])
 
-    return projects_wrapper if not is_return_json else json.dumps(projects_wrapper)
+    return projects if not is_return_json else json.dumps(projects)
 
-def project_metadata_index_get(project_id, subproject_id=''):
-    project_id_ = project_id+'/'+subproject_id if subproject_id else project_id
-    downloads_dir = downloads_dir_get(project_id_)
+def subprojects_get(project_id, is_return_json=False):
+    index_dir = 'projects/%s'
+    if not os.path.isdir(index_dir):
+        os.makedirs(index_dir+'/backup', 0o664, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
+    index_filename = '%s/index.json' % index_dir
 
-    index_filename = 'projects/%s/index.json' % (project_id_)
-    index = {"lastScraped": None, "hasSubprojects": None}
-    if os.path.isfile(index_filename):
-        index_file = open(index_filename, 'r')
-        index = json.load(meta_file)
-    else:
+    projects = None
+    if not os.path.isfile(index_filename):
+        projects = {'dateChecked': None, 'dateModified': None, 'data':{}}
         index_file = open(index_filename, 'w')
-        json.load(index, index_file)
+        json.dump(projects, index_file)
+        index_file.close()
+    else:
+        json_file = open(index_filename, 'r')
+        projects = json.load(json_file)
+        json_file.close()
 
-    if not index['lastScraped']:
-        return index
+    projects_list_add_meta_data(projects['data'])
 
-
-    cmd = "cat %s/*.scrape" % (downloads_dir)
-    scrape_concat_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    scrape_concat_process_out = str(scrape_concat_process.communicate()[0], 'utf-8')
-    scraped_files_text = '[]'
-    if scrape_concat_process_out != None and scrape_concat_process_out != '':
-        scraped_files_text = '[%s]' % scrape_concat_process_out.replace("\n", ",")
-    scraped_files = json.loads(scraped_files_text)
-    for file_data in scraped_files:
-        if file_data['fileName'] in meta_filenames:
-            meta_filenames[file_data['fileName']]['lastScraped'] = file_data['lastScraped']
-    return None
+    return projects if not is_return_json else json.dumps(projects)
 
 
 
-def project_metadata_index_scrape(project_id, subproject_id=''):
-    project_id_ = project_id+'/'+subproject_id if subproject_id else project_id
-    downloads_dir = downloads_dir_get(project_id_)
 
-    index_html_filename = downloads_dir + '/index.html'
-    index_url = '%s/%s/%s/metadata/' % (url_base, project_id, subproject_id if subproject_id else '')
+def project_get(project_id, is_return_json=False):
+    downloads_dir = downloads_dir_get(project_id)
+    index_dir = 'projects/%s' % project_id
+    if not os.path.isdir(index_dir):
+        os.makedirs(index_dir)
+    index_filename = 'projects/%s/index.json' % (project_id)
+    project = {"lastScraped": None, "subprojects": None, "hasMetadata": False, "isMetadataZipped": False, "hasLaz": False, "data": None}
 
-    i = 9
-    while i > 0:
-      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
-      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
-      if wget_process_out != None and wget_process_out != '':
-        status = 'success'
-        break
-      else:
-        status = 'failed'
-        # TODO: log miss
-      i = i - 1
-
-    if status == 'failed':
-      print('did not fetch xml index')
-      return None
-
-    index_filename = 'projects/%s/index.json' % (project_id_)
-    index = {"lastScraped": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     if os.path.isfile(index_filename):
         index_file = open(index_filename, 'r')
         index = json.load(index_file)
+        index_file.close()
+    else:
+        index_file = open(index_filename, 'w')
+        json.dump(project, index_file)
+        index_file.close()
 
-    regex_meta = re.compile('<img[^>]+alt="\[TXT\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
-    regex_dataset = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
-    regex_metazip = re.compile('<img[^>]+compressed.gif[^>]+>\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
-    ## TEST
-    ##match = xml_regex.search('asdasd>a_a.xml asdas')
-    ##print(match)
+    if not project['lastScraped']:
+        return json.dumps(project) if is_return_json else project
 
-    index_file = open(index_html_filename, 'r')
-    index_file.seek(0)
 
-    meta_filenames = {}
-    meta_zipfilenames = {}
-    meta_subprojects = {}
-    for line in index_file:
-      match_meta = regex_meta.search(line)
-      match_dataset = regex_dataset.search(line)
-      match_metazip = regex_metazip.search(line)
-      if match_meta != None:
-        meta_filenames[match_meta.group(1).replace('.xml', '')] = {'lastModified': match_meta.group(2)}
-      elif match_dataset != None:
-        meta_subprojects[match_dataset.group(1).replace('/', '')] = {'lastModified': match_dataset.group(2)}
-      elif match_metazip != None:
-        meta_zipfilenames[match_metazip.group(1).replace('/', '')] = {'lastModified': match_metazip.group(2)}
+    # grab all JSONs in the "download" folder for individual data file info
+    cmd = "cat %s/*.json" % (downloads_dir)
+    scrape_concat_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    scrape_concat_process_out = str(scrape_concat_process.communicate()[0], 'utf-8')
+    scraped_files_text = '[]'
 
-    meta = {}
-    if meta_filenames.keys():
-        meta['files'] = meta_filenames
-    elif meta_subprojects.keys():
-        meta['subprojects'] = meta_subprojects
-    elif meta_zipfilenames.keys():
-        meta['zipfiles'] = meta_zipfilenames
+    # place all files output in an array/list
+    if scrape_concat_process_out != None and scrape_concat_process_out != '':
+        scraped_files_text = '[%s]' % scrape_concat_process_out.replace("\n", ",")
+
+    project_data_list = json.loads(scraped_files_text)
+    project['data'] = {}
+    for item in project_data_list:
+        project['data'][item['name']] = item
+
+    return json.dumps(project) if is_return_json else project
+
+
+
+def project_scrape(project_id, is_return_json=False):
+    project = project_get(project_id)
+    project['lastScraped'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    project_data = project.pop('data') # do not save the data (that lives in separate files)
+
+    downloads_dir = downloads_dir_get(project_id)
+    index_filename = 'projects/%s/index.json' % (project_id)
+    index_html_filename = downloads_dir + '/index.html'
+    index_url = '%s/%s/' % (url_base, project_id)
+
+    i = 9
+    status = 'starting index fetch of %s (%s)' % (project_id, index_url)
+    while i > 0:
+      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
+      print(cmd)
+      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+      if wget_process_out != None and wget_process_out != '':
+        status = True
+        break
+      else:
+        status = 'failed to fetch index of %s (%s)' % (project_id, index_url)
+      i = i - 1
+
+    if status != True:
+        project['error'] = status
+        index_file = open(index_filename, 'w')
+        json.dump(project, index_file)
+        index_file.close()
+        return json.dumps(project) if is_return_json else project
+
+
+    regex_dir = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
+
+    index_html_file = open(index_html_filename, 'r')
+    index_html_file.seek(0)
+
+    dirs = {}
+    for line in index_html_file:
+      match_dir = regex_dir.search(line)
+      if match_dir != None:
+        dir = match_dir.group(1).replace('/', '')
+        dirs[dir] = {'lastModified': match_dir.group(2)}
+
+    if not 'metadata' in dirs:
+        project['subprojects'] = dirs
+    else:
+        project['hasMetadata'] = True
+
+    if 'laz' in dirs:
+        project['hasLaz'] = True
 
     index_file = open(index_filename, 'w')
     json.dump(meta, index_file)
@@ -560,10 +582,10 @@ def laz_meta_extract_data(project_id, subproject_id, filename):
 
 def run(cmd, args):
     out = '''select a Command:
-        projects_list_get
+        projects_get
         downloads_dir_get
         downloads_dir_list
-        project_metadata_index_get
+        project_get
         metadata_files_fetch
         metadata_file_fetch
         metadata_extract_data
@@ -576,10 +598,10 @@ def run(cmd, args):
         '''
     if cmd == 'downloads_dir_get':
         out = downloads_dir_get(args.project_id)
-    elif cmd == 'project_metadata_index_get':
-        out = project_metadata_index_get(args.project_id, args.subproject_id)
-    elif cmd == 'project_metadata_index_scrape':
-        out = project_metadata_index_scrape(args.project_id, args.subproject_id)
+    elif cmd == 'project_get':
+        out = project_get(args.project_id, args.options=='json_only')
+    elif cmd == 'project_scrape':
+        out = project_scrape(args.project_id, args.options=='json_only')
     elif cmd == 'metadata_files_fetch':
         out = metadata_files_fetch(args.project_id, args.subproject_id, args.file, -1)
     elif cmd == 'metadata_file_fetch':
@@ -603,10 +625,10 @@ def run(cmd, args):
         out = laz_extract_data(args.project_id, args.subproject_id, args.file)
     elif cmd == 'laz_and_meta_extract_data':
         out = laz_meta_extract_data(args.project_id, args.subproject_id, args.file)
-    elif cmd == 'projects_list_get':
-        out = projects_list_get(args.options == 'json_only')
-    elif cmd == 'projects_list_scrape':
-        out = projects_list_scrape(args.options == 'json_only')
+    elif cmd == 'projects_get':
+        out = projects_get(args.options == 'json_only')
+    elif cmd == 'projects_scrape':
+        out = projects_scrape(args.options == 'json_only')
 
     print(out)
 
