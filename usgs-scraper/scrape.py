@@ -281,9 +281,81 @@ def project_scrape(project_id, is_return_json=False):
         project['hasLaz'] = True
 
     index_file = open(index_filename, 'w')
-    json.dump(meta, index_file)
+    json.dump(project, index_file)
+    index_file.close()
 
-    return meta
+    if project['hasMetadata']:
+        project_data = project_metadata_index_scrape(project_id, project_data)
+
+    project['data'] = project_data  # still return the data which lives in separate files for each project file/tile
+    return json.dumps(project) if is_return_json else project
+
+def project_metadata_index_scrape(project_id, saved_project_data):
+    downloads_dir = downloads_dir_get(project_id)
+
+    index_filename = 'projects/%s/index.json' % (project_id)
+
+    index_file = open(index_filename, 'r')
+    project = json.load(index_file)
+    index_file.close()
+
+    index_html_filename = downloads_dir + '/meta_index.html'
+    index_url = '%s/%s/metadata' % (url_base, project_id)
+
+    i = 9
+    status = 'starting meta-data index fetch of %s (%s)' % (project_id, index_url)
+    while i > 0:
+      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
+      print(cmd)
+      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+      if wget_process_out != None and wget_process_out != '':
+        status = True
+        break
+      else:
+        status = 'failed to fetch meta-data index of %s (%s)' % (project_id, index_url)
+      i = i - 1
+
+    if status != True:
+        project['error'] = status
+        index_file = open(index_filename, 'w')
+        json.dump(project, index_file)
+        index_file.close()
+        return json.dumps(project) if is_return_json else project
+
+    regex_file = re.compile('<img[^>]+alt="\[TXT\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
+    regex_zip = re.compile('<img[^>]+compressed.gif[^>]+>\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
+
+    index_html_file = open(index_html_filename, 'r')
+    index_html_file.seek(0)
+
+    project_data = {}
+    for line in index_html_file:
+      match_file = regex_file.search(line)
+      match_zip = regex_zip.search(line)
+      if match_file != None:
+        project_data[match_file.group(1).replace('.xml', '')] = {'lastModified': match_file.group(2)}
+      elif match_zip != None:
+        project['isMetadataZipped'] = True
+        project['zippedData'] = {'file': match_zip.group(1), 'lastModified': match_zip.group(2)}
+
+
+    if project_data.keys():
+        for k in saved_project_data:
+            if not projects_data[k]:
+                project_data[k] = saved_project_data[k]
+                project_data[k]['isRemoved'] = True
+        for k in project_data:
+            if not saved_project_data[k]:
+                project_data[k]['isNew'] = True
+            file = open('%s/%s.json' % (downloads_dir, k), 'w')
+            json.load(project_data[k], file)
+
+    index_html_file = open(index_filename, 'w')
+    json.dump(project, index_html_file)
+    index_file.close()
+
+    return project_data
 
 def metadata_files_fetch(project_id, subproject_id, index_filename, limit=4):
 
