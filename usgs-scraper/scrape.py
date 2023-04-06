@@ -39,8 +39,8 @@ def project_db_save(project_id, subproject_id, data):
 
 def projects_get(is_return_json=False):
     index_dir = 'projects/_index'
-    if not os.path.isdir(index_dir):
-        os.makedirs(index_dir+'/backup', 0o664, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
+    if not os.path.isdir(index_dir+'/backup'):
+        os.makedirs(index_dir+'/backup', 0o774, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
     index_filename = '%s/index.json' % index_dir
 
     projects = None
@@ -62,6 +62,9 @@ def projects_get(is_return_json=False):
 
 
 def projects_list_add_meta_data(projects, parent_dir=''):
+    if not projects:
+        return projects
+
     project_dirs_list = os.listdir('projects/%s' % parent_dir)
     for dir in project_dirs_list:
         if dir[0] == '.' or dir[0] == '_':
@@ -166,8 +169,8 @@ def projects_scrape(is_return_json=False):
 
 def subprojects_get(project_id, is_return_json=False):
     index_dir = 'projects/%s'
-    if not os.path.isdir(index_dir):
-        os.makedirs(index_dir+'/backup', 0o664, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
+    if not os.path.isdir(index_dir+'/backup'):
+        os.makedirs(index_dir+'/backup', 0o774, True) # makde {projects_dir}/_index/backup, as that will auto-create _index/
     index_filename = '%s/index.json' % index_dir
 
     projects = None
@@ -198,7 +201,7 @@ def project_get(project_id, is_return_json=False):
 
     if os.path.isfile(index_filename):
         index_file = open(index_filename, 'r')
-        index = json.load(index_file)
+        project = json.load(index_file)
         index_file.close()
     else:
         index_file = open(index_filename, 'w')
@@ -210,7 +213,7 @@ def project_get(project_id, is_return_json=False):
 
 
     # grab all JSONs in the "download" folder for individual data file info
-    cmd = "cat %s/*.json" % (downloads_dir)
+    cmd = "cat %s/*.json 2>/dev/null" % (downloads_dir)
     scrape_concat_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     scrape_concat_process_out = str(scrape_concat_process.communicate()[0], 'utf-8')
     scraped_files_text = '[]'
@@ -242,7 +245,6 @@ def project_scrape(project_id, is_return_json=False):
     status = 'starting index fetch of %s (%s)' % (project_id, index_url)
     while i > 0:
       cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
-      print(cmd)
       wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
       wget_process_out = str(wget_process.communicate()[0], 'utf-8')
       if wget_process_out != None and wget_process_out != '':
@@ -306,7 +308,6 @@ def project_metadata_index_scrape(project_id, saved_project_data):
     status = 'starting meta-data index fetch of %s (%s)' % (project_id, index_url)
     while i > 0:
       cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
-      print(cmd)
       wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
       wget_process_out = str(wget_process.communicate()[0], 'utf-8')
       if wget_process_out != None and wget_process_out != '':
@@ -342,14 +343,14 @@ def project_metadata_index_scrape(project_id, saved_project_data):
 
     if project_data.keys():
         for k in saved_project_data:
-            if not projects_data[k]:
+            if not k in projects_data:
                 project_data[k] = saved_project_data[k]
                 project_data[k]['isRemoved'] = True
         for k in project_data:
-            if not saved_project_data[k]:
+            if not k in saved_project_data:
                 project_data[k]['isNew'] = True
             file = open('%s/%s.json' % (downloads_dir, k), 'w')
-            json.load(project_data[k], file)
+            json.dump(project_data[k], file)
 
     index_html_file = open(index_filename, 'w')
     json.dump(project, index_html_file)
@@ -673,7 +674,7 @@ def run(cmd, args):
     elif cmd == 'project_get':
         out = project_get(args.project_id, args.options=='json_only')
     elif cmd == 'project_scrape':
-        out = project_scrape(args.project_id, args.options=='json_only')
+        out = project_scrape(args.project_id+('/'+args.subproject_id if args.subproject_id else ''), args.options=='json_only')
     elif cmd == 'metadata_files_fetch':
         out = metadata_files_fetch(args.project_id, args.subproject_id, args.file, -1)
     elif cmd == 'metadata_file_fetch':
