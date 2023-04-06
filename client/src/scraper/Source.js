@@ -4,7 +4,6 @@ import ScrapedProject from './ScrapedProject';
 const pageSize = 10;
 const Source = ({model, isCurrent, onShow}) => {
     const onSourceClick = (e) => {
-        console.log(model.id, isCurrent);
         e.preventDefault();
         onShow(model.id);
     }
@@ -23,7 +22,7 @@ const Source = ({model, isCurrent, onShow}) => {
 
         if (!projects) {
             setLoading(true);
-            fetch(`/sources/${model.id}`, {
+            fetch(`/source/${model.id}/get`, {
                 method: 'GET'
             }).then(resp => resp.json())
                 .then(json => {
@@ -70,7 +69,7 @@ const Source = ({model, isCurrent, onShow}) => {
 
     const onScrapeAgainClick = () => {
         setLoading(true);
-        fetch(`/sources/${model.id}/scrape`, {
+        fetch(`/source/${model.id}/scrape`, {
             method: 'GET'
         }).then(resp => resp.json())
             .then(json => {
@@ -83,7 +82,7 @@ const Source = ({model, isCurrent, onShow}) => {
     const [isNewScrapeLoading, setNewScrapeLoading] = useState(false);
     const onScrapeNewProjectClick = (projectId) => {
         setNewScrapeLoading(true);
-        fetch(`/sources/${model.id}/${projectId}/scrape`, {
+        fetch(`/source/${model.id}/${projectId}/scrape`, {
             method: 'GET'
         }).then(resp => resp.json())
         .then(json => {
@@ -96,7 +95,7 @@ const Source = ({model, isCurrent, onShow}) => {
 
     const [isShowProjectChanges, setShowProjectChanges] = useState(false);
     return <div className='projects'>
-        <h2><a href={`/sources/${model.id}`} onClick={onSourceClick} style={{fontSize: 'inherit'}}>{model.name}</a></h2>
+        <h2><span className='link' onClick={onSourceClick} style={{fontSize: 'inherit'}}>{model.name}</span></h2>
         {!projects && isLoading && <div>Loading data... <span className='spinning-loader'></span></div>}
         {!!projects && <div>
             {!!projects.dataChanges ?
