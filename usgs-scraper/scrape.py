@@ -220,7 +220,7 @@ def project_get(project_id, is_return_json=False):
 
     # place all files output in an array/list
     if scrape_concat_process_out != None and scrape_concat_process_out != '':
-        scraped_files_text = '[%s]' % scrape_concat_process_out.replace("\n", ",")
+        scraped_files_text = '[%s]' % (scrape_concat_process_out.replace("}{", "},{"))
 
     project_data_list = json.loads(scraped_files_text)
     project['data'] = {}
@@ -335,7 +335,8 @@ def project_metadata_index_scrape(project_id, saved_project_data):
       match_file = regex_file.search(line)
       match_zip = regex_zip.search(line)
       if match_file != None:
-        project_data[match_file.group(1).replace('.xml', '')] = {'lastModified': match_file.group(2)}
+        meta_name = match_file.group(1).replace('.xml', '')
+        project_data[meta_name] = {'lastModified': match_file.group(2)}
       elif match_zip != None:
         project['isMetadataZipped'] = True
         project['zippedData'] = {'file': match_zip.group(1), 'lastModified': match_zip.group(2)}
@@ -344,11 +345,14 @@ def project_metadata_index_scrape(project_id, saved_project_data):
     if project_data.keys():
         for k in saved_project_data:
             if not k in projects_data:
+                saved_project_data[k]['isRemoved'] = True
                 project_data[k] = saved_project_data[k]
-                project_data[k]['isRemoved'] = True
         for k in project_data:
             if not k in saved_project_data:
-                project_data[k]['isNew'] = True
+                saved_project_data[k] = {'name': k, 'lastScraped': None }
+            saved_project_data[k]['lastModified'] = project_data[k]['lastModified']
+            project_data[k] = saved_project_data[k]
+
             file = open('%s/%s.json' % (downloads_dir, k), 'w')
             json.dump(project_data[k], file)
 
@@ -358,25 +362,37 @@ def project_metadata_index_scrape(project_id, saved_project_data):
 
     return project_data
 
-def metadata_files_fetch(project_id, subproject_id, index_filename, limit=4):
+def metadata_files_fetch(project_id, limit=4):
+    project = project_get(project_id)
+    i = 0
+    for meta_filename in project['data']:
+        meta_meta = project['data'][meta_filename]
+        if not meta_meta['lastScraped'] or meta_meta['lastScrapedStatus'] == 'failed' or meta_meta['lastScraped'] < meta_meta['lastModified']:
+            status = metadata_file_fetch(project_id, meta_filename)
+            print('scraped %s %s' % (meta_filename, status))
+            meta_meta['lastScrapedStatus'] = status
+            meta_meta['lastScraped'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    for meta_filename in meta_filenames:
-      status = metadata_file_fetch(meta_filename, project_id, subproject_id)
-      meta_filenames_status.append( '%s (%s)' % (status, meta_filename) )
-      i = i + 1
+            meta_filepath = '%s/%s.json' % (downloads_dir_get(project_id), meta_filename)
+            meta_file = open(meta_filepath, 'w')
+            json.dump(meta_meta, meta_file)
+            meta_file.close()
+        else:
+            print('already scraped %s' % (meta_filename))
 
-      # Testing
-      if limit > 0 and i > limit:
-       break
+        i = i + 1
 
-    return meta_filenames
+        # Testing
+        if limit > 0 and i > limit:
+            break
 
-def metadata_file_fetch(filename, project_id):
+    return True
+
+def metadata_file_fetch(project_id, filename):
     status = 'in progress'
-    meta_url = '%s/%s/metadata/%s' % (url_base, project_id, filename)
+    meta_url = '%s/%s/metadata/%s.xml' % (url_base, project_id, filename)
     dir_path = downloads_dir_get(project_id)
-    download_filepath = '%s/%s' % (dir_path, filename)
-
+    download_filepath = '%s/%s.xml' % (dir_path, filename)
     j = 9
     while j > 0:
       cmd = "wget -S --quiet -t 1 -O %s %s " % (download_filepath, meta_url)
@@ -676,7 +692,7 @@ def run(cmd, args):
     elif cmd == 'project_scrape':
         out = project_scrape(args.project_id+('/'+args.subproject_id if args.subproject_id else ''), args.options=='json_only')
     elif cmd == 'metadata_files_fetch':
-        out = metadata_files_fetch(args.project_id, args.subproject_id, args.file, -1)
+        out = metadata_files_fetch(args.project_id+('/'+args.subproject_id if args.subproject_id else ''), -1)
     elif cmd == 'metadata_file_fetch':
         out = metadata_file_fetch(args.project_id, args.subproject_id, args.file)
     elif cmd == 'downloads_dir_list':
