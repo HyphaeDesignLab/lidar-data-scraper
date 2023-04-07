@@ -688,7 +688,7 @@ def run(cmd, args):
     if cmd == 'downloads_dir_get':
         out = downloads_dir_get(args.project_id)
     elif cmd == 'project_get':
-        out = project_get(args.project_id, args.options=='json_only')
+        out = project_get(args.project_id+('/'+args.subproject_id if args.subproject_id else ''), args.options=='json_only')
     elif cmd == 'project_scrape':
         out = project_scrape(args.project_id+('/'+args.subproject_id if args.subproject_id else ''), args.options=='json_only')
     elif cmd == 'metadata_files_fetch':
