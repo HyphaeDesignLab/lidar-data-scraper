@@ -69,12 +69,12 @@ def projects_list_add_meta_data(projects, parent_dir=''):
     for dir in project_dirs_list:
         if dir[0] == '.' or dir[0] == '_':
             continue
-        projects[dir]['lastScraped'] = None
+        projects[dir]['dateScraped'] = None
         project_meta_data_filepath = 'projects/%s%s/index.json' % (parent_dir+'/' if parent_dir else '', dir)
         if os.path.isfile(project_meta_data_filepath):
             project_meta_data_file = open(project_meta_data_filepath, 'r')
             project_meta_data = json.load(project_meta_data_file)
-            projects[dir]['lastScraped'] = project_meta_data['lastScraped']
+            projects[dir]['dateScraped'] = project_meta_data['lastScraped']
     return projects
 
 

@@ -49,8 +49,8 @@ const Source = ({model, isCurrent, onShow}) => {
         const sortedIds = Object.keys(projects.data).sort((a, b)=> { return projects.data[a].dateModified < projects.data[b].dateModified ? 1 : -1; })
         setMaxPages(Math.ceil(sortedIds.length / pageSize));
 
-        setProjectIds(sortedIds.filter(k => !projects.data[k].hasDownloads));
-        setScrapedProjectIds(sortedIds.filter(k => !!projects.data[k].hasDownloads));
+        setProjectIds(sortedIds.filter(k => !projects.data[k].dateScraped));
+        setScrapedProjectIds(sortedIds.filter(k => !!projects.data[k].dateScraped));
     }, [projects]);
 
     useEffect(() => {
