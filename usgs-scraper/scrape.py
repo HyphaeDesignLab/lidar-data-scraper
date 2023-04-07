@@ -74,7 +74,7 @@ def projects_list_add_meta_data(projects, parent_dir=''):
         if os.path.isfile(project_meta_data_filepath):
             project_meta_data_file = open(project_meta_data_filepath, 'r')
             project_meta_data = json.load(project_meta_data_file)
-            projects[dir]['dateScraped'] = project_meta_data['lastScraped']
+            projects[dir]['dateScraped'] = project_meta_data['dateScraped']
     return projects
 
 
@@ -197,7 +197,7 @@ def project_get(project_id, is_return_json=False):
     if not os.path.isdir(index_dir):
         os.makedirs(index_dir)
     index_filename = 'projects/%s/index.json' % (project_id)
-    project = {"lastScraped": None, "subprojects": None, "hasMetadata": False, "isMetadataZipped": False, "hasLaz": False, "data": None}
+    project = {"dateScraped": None, "subprojects": None, "hasMetadata": False, "isMetadataZipped": False, "hasLaz": False, "data": None}
 
     if os.path.isfile(index_filename):
         index_file = open(index_filename, 'r')
@@ -208,7 +208,7 @@ def project_get(project_id, is_return_json=False):
         json.dump(project, index_file)
         index_file.close()
 
-    if not project['lastScraped']:
+    if not project['dateScraped']:
         return json.dumps(project) if is_return_json else project
 
 
@@ -233,7 +233,7 @@ def project_get(project_id, is_return_json=False):
 
 def project_scrape(project_id, is_return_json=False):
     project = project_get(project_id)
-    project['lastScraped'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    project['dateScraped'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     project_data = project.pop('data') # do not save the data (that lives in separate files)
 
     downloads_dir = downloads_dir_get(project_id)
@@ -272,7 +272,7 @@ def project_scrape(project_id, is_return_json=False):
       match_dir = regex_dir.search(line)
       if match_dir != None:
         dir = match_dir.group(1).replace('/', '')
-        dirs[dir] = {'lastModified': match_dir.group(2)}
+        dirs[dir] = {'dateModified': match_dir.group(2)}
 
     if not 'metadata' in dirs:
         project['subprojects'] = dirs
@@ -336,10 +336,10 @@ def project_metadata_index_scrape(project_id, saved_project_data):
       match_zip = regex_zip.search(line)
       if match_file != None:
         meta_name = match_file.group(1).replace('.xml', '')
-        project_data[meta_name] = {'lastModified': match_file.group(2)}
+        project_data[meta_name] = {'dateModified': match_file.group(2)}
       elif match_zip != None:
         project['isMetadataZipped'] = True
-        project['zippedData'] = {'file': match_zip.group(1), 'lastModified': match_zip.group(2)}
+        project['zippedData'] = {'file': match_zip.group(1), 'dateModified': match_zip.group(2)}
 
 
     if project_data.keys():
@@ -349,8 +349,8 @@ def project_metadata_index_scrape(project_id, saved_project_data):
                 project_data[k] = saved_project_data[k]
         for k in project_data:
             if not k in saved_project_data:
-                saved_project_data[k] = {'name': k, 'lastScraped': None }
-            saved_project_data[k]['lastModified'] = project_data[k]['lastModified']
+                saved_project_data[k] = {'name': k, 'dateScraped': None }
+            saved_project_data[k]['dateModified'] = project_data[k]['dateModified']
             project_data[k] = saved_project_data[k]
 
             file = open('%s/%s.json' % (downloads_dir, k), 'w')
@@ -367,11 +367,11 @@ def metadata_files_fetch(project_id, limit=4):
     i = 0
     for meta_filename in project['data']:
         meta_meta = project['data'][meta_filename]
-        if not meta_meta['lastScraped'] or meta_meta['lastScrapedStatus'] == 'failed' or meta_meta['lastScraped'] < meta_meta['lastModified']:
+        if not meta_meta['dateScraped'] or meta_meta['scrapedStatus'] == 'failed' or meta_meta['dateScraped'] < meta_meta['dateModified']:
             status = metadata_file_fetch(project_id, meta_filename)
             print('scraped %s %s' % (meta_filename, status))
-            meta_meta['lastScrapedStatus'] = status
-            meta_meta['lastScraped'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            meta_meta['scrapedStatus'] = status
+            meta_meta['dateScraped'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             meta_filepath = '%s/%s.json' % (downloads_dir_get(project_id), meta_filename)
             meta_file = open(meta_filepath, 'w')
