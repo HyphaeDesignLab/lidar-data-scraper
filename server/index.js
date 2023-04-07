@@ -89,6 +89,7 @@ app.get('/source/:id/:project_id/:cmd', function (req, res) {
         projectId = checkProjectId(req.params.project_id);
     } catch(e) {
         res.status(500).send({error: e.message});
+        return;
     }
 
     const output = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_${cmd} --project_id='${projectId}' --options=json_only | cat`)
@@ -104,18 +105,48 @@ app.get('/source/:id/:project_id/:subproject_id/:cmd', function (req, res) {
 
     let sourceId, sourceDir, projectId, subprojectId, cmd;
     try {
-        cmd = checkCmd(req.params.cmd, ['get', 'scrape']);
+        cmd = checkCmd(req.params.cmd, ['get', 'scrape', 'meta_scrape', 'meta_scrape_check']);
         [sourceId, sourceDir] = checkSourceIdAndDir(req.params.id);
         projectId = checkProjectId(req.params.project_id);
         subprojectId = checkProjectId(req.params.subproject_id);
     } catch(e) {
         res.status(500).send({error: e.message});
+        return;
     }
 
-    const output = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_${cmd} --project_id='${projectId}' --subproject_id='${subprojectId}' --options=json_only | cat`)
-    if (!output) {
-        res.status(500).send({error: `${sourceId} ${projectId}/${subprojectId} ${cmd} failed`});
-        return;
+    let output = '';
+    if (cmd === 'meta_scrape') {
+        let activeScrapeProcess = childProcess.execSync('ps aux | grep -i scrape.py | grep metadata_files_fetch | grep -v grep | cat');
+        if (!activeScrapeProcess.toString()) {
+            const scrapeMetaProcess = childProcess.spawn('python3',
+                ['scrape.py',
+                    '--cmd', 'metadata_files_fetch',
+                    '--project_id', projectId,
+                    '--subproject_id', subprojectId,
+                ],
+                {'cwd': `../${sourceDir}/`});
+            scrapeMetaProcess.stderr.on('data', data => {
+                console.log('scrapeMetaProcess error: ' + data);
+            });
+            scrapeMetaProcess.stdout.on('data', data => {
+                console.log('scrapeMetaProcess: ' + data);
+            });
+            scrapeMetaProcess.on('close', code => {
+                console.log('scrapeMetaProcess done: ' + code);
+            });
+        }
+        activeScrapeProcess = childProcess.execSync('ps aux | grep -i scrape.py | grep metadata_files_fetch | grep -v grep | cat')
+
+        output = { status: !!activeScrapeProcess.toString() ? 'started, running' : 'failed to start, not running'};
+    } else if (cmd === 'meta_scrape_check') {
+        let activeScrapeProcess = childProcess.execSync('ps aux | grep -i scrape.py | grep metadata_files_fetch | grep -v grep | cat');
+        output = { status: !!activeScrapeProcess.toString() ? 'running' : 'not running'};
+    } else {
+        output = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_${cmd} --project_id='${projectId}' --subproject_id='${subprojectId}' --options=json_only | cat`)
+        if (!output) {
+            res.status(500).send({error: `${sourceId} ${projectId}/${subprojectId} ${cmd} failed`});
+            return;
+        }
     }
 
     res.status(200).send(output);
