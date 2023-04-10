@@ -9,13 +9,18 @@ const ScrapedProject = ({sourceId, project, isExpanded, onExpand, onCollapse}) =
             console.log('getting scraped project data');
 
             setLoading(true);
-            fetch(`/source/${sourceId}/${project.id}/get`, {
+            let projectIdInUrl = project.id;
+            if (project.parentId) {
+                projectIdInUrl = project.parentId + '/' + project.id;
+            }
+            fetch(`/source/${sourceId}/${projectIdInUrl}/get`, {
                 method: 'GET'
             }).then(resp => resp.json())
                 .then(json => {
                     if (!!json.subprojects) {
                         Object.keys(json.subprojects).forEach(k => {
                             json.subprojects[k].id = k;
+                            json.subprojects[k].parentId = project.id;
                         })
                     }
                     setData(json);
@@ -63,7 +68,7 @@ const ScrapedProject = ({sourceId, project, isExpanded, onExpand, onCollapse}) =
                                 key={subprojectId}
                                 sourceId={sourceId}
                                 project={data.subprojects[subprojectId]}
-                                onExpand={id => setCurrentSubprojectId(subprojectId)}
+                                onExpand={id => setCurrentSubprojectId(id)}
                                 onCollapse={id => setCurrentSubprojectId(null)}
                                 isExpanded={subprojectId === currentSubprojectId}/>
                         )}
