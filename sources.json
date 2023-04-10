@@ -2,7 +2,9 @@
   "usgs": {
     "name": "USGS Data",
     "dir": "usgs-scraper",
-    "projectsIndex": "projects/_index/index.json"
+    "projectsIndex": "projects/_index/index.json",
+    "baseUrl": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects",
+    "commonFileNamePrefix": "USGS_LPC_"
   },
   "fake": {
     "name": "Fake Data",
