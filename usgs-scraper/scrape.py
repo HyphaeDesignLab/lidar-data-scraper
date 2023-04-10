@@ -211,6 +211,13 @@ def project_get(project_id, is_return_json=False):
     if not project['dateScraped']:
         return json.dumps(project) if is_return_json else project
 
+    if project['subprojects']:
+        for subproject_id in project['subprojects']:
+            subproject_filename = 'projects/%s/%s/index.json' % (project_id, subproject_id)
+            if os.path.isfile(subproject_filename):
+                subproject_file = open(subproject_filename, 'r')
+                subproject = json.load(subproject_file)
+                project['subprojects'][subproject_id]['dateScraped'] = subproject['dateScraped']
 
     # grab all JSONs in the "download" folder for individual data file info
     cmd = "cat %s/*.json 2>/dev/null" % (downloads_dir)
