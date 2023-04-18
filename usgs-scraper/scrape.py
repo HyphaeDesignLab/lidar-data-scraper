@@ -248,26 +248,13 @@ def project_scrape(project_id, is_return_json=False):
     index_html_filename = downloads_dir + '/index.html'
     index_url = '%s/%s/' % (url_base, project_id)
 
-    i = 9
-    status = 'starting index fetch of %s (%s)' % (project_id, index_url)
-    while i > 0:
-      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
-      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
-      if wget_process_out != None and wget_process_out != '':
-        status = True
-        break
-      else:
-        status = 'failed to fetch index of %s (%s)' % (project_id, index_url)
-      i = i - 1
-
-    if status != True:
-        project['error'] = status
+    wget_status = wget_fetch(index_url, index_html_filename, 9)
+    if wget_status != True:
+        project['error'] = 'failed to fetch index of %s (%s): %s' % (project_id, index_url, wget_status)
         index_file = open(index_filename, 'w')
         json.dump(project, index_file)
         index_file.close()
         return json.dumps(project) if is_return_json else project
-
 
     regex_dir = re.compile('<img[^>]+alt="\[DIR\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
 
@@ -311,21 +298,9 @@ def project_metadata_index_scrape(project_id, saved_project_data):
     index_html_filename = downloads_dir + '/meta_index.html'
     index_url = '%s/%s/metadata' % (url_base, project_id)
 
-    i = 9
-    status = 'starting meta-data index fetch of %s (%s)' % (project_id, index_url)
-    while i > 0:
-      cmd = "wget -S --quiet -t 1 -O %s %s " % (index_html_filename, index_url)
-      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
-      if wget_process_out != None and wget_process_out != '':
-        status = True
-        break
-      else:
-        status = 'failed to fetch meta-data index of %s (%s)' % (project_id, index_url)
-      i = i - 1
-
-    if status != True:
-        project['error'] = status
+    wget_status = wget_fetch(index_url, index_html_filename, 9)
+    if wget_status != True:
+        project['error'] = 'failed to fetch meta-data index of %s (%s)' % (project_id, index_url)
         index_file = open(index_filename, 'w')
         json.dump(project, index_file)
         index_file.close()
@@ -400,21 +375,9 @@ def metadata_file_fetch(project_id, filename):
     meta_url = '%s/%s/metadata/%s.xml' % (url_base, project_id, filename)
     dir_path = downloads_dir_get(project_id)
     download_filepath = '%s/%s.xml' % (dir_path, filename)
-    j = 9
-    while j > 0:
-      cmd = "wget -S --quiet -t 1 -O %s %s " % (download_filepath, meta_url)
-      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
 
-      if wget_process_out != None and wget_process_out != '':
-        status = 'success'
-        break
-      else:
-        status = 'failed'
-        # TODO: log miss
-      j = j - 1
-
-    return status
+    wget_status = wget_fetch(meta_url, download_filepath, 9)
+    return 'success' if wget_status == True else wget_status
 
 def metadata_extract_data(project_id, filename):
     dir_path = downloads_dir_get(project_id)
@@ -571,21 +534,8 @@ def laz_file_fetch(project_id, filename):
     url = '%s/%s/%s/LAZ/%s' % (url_base, project_id, subproject_id, filename)
     download_filepath = '%s/%s' % (dir_path, filename)
 
-    i = 9
-    while i > 0:
-      cmd = "wget -S --quiet -t 1 -O %s %s " % (download_filepath, url)
-      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
-
-      if wget_process_out != None and wget_process_out != '':
-        status = 'success'
-        break
-      else:
-        status = 'failed'
-        # TODO: log miss
-      i = i - 1
-
-    return status
+    wget_status = wget_fetch(url, download_filepath, 9)
+    return 'success' if wget_status == True else wget_status
 
 def laz_extract_data(project_id, subproject_id, filename, point_limit=0):
     # Buffered read to extract all dates of individual points
@@ -645,6 +595,47 @@ def laz_meta_extract_data(project_id, subproject_id, filename):
     print (laz_data)
     print(laz_data['bbox'][0], meta_data[2], converted)
 
+def test_fetch(url, download_filepath):
+    return wget_fetch(url, download_filepath, 2)
+
+def wget_fetch(url, download_filepath, retries=9):
+    i = retries
+    wget_process_out = None
+    while i > 0:
+      cmd = "wget -S --quiet -t 1 -O %s %s " % (download_filepath, url)
+      wget_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      wget_process_out = str(wget_process.communicate()[0], 'utf-8')
+
+      if wget_process_out != None and wget_process_out != '':
+        break
+      i = i - 1
+
+    return check_wget_response_and_download(wget_process_out, download_filepath)
+
+def check_wget_response_and_download(response, download_filepath):
+    if response == None or response == '':
+        return 'no response'
+
+    if not os.path.isfile(download_filepath):
+        return ''
+
+    file = open(download_filepath, 'r')
+    file_contents = file.read()
+    if len(file_contents) == 0:
+        os.remove(download_filepath)
+        return 'not downloaded'
+
+    response_lines = response.split("\n")
+    if not ' 200 ' in response_lines[0]:
+        os.remove(download_filepath)
+        return response_lines[0]
+
+    return True
+
+def cleanup_download(filepath):
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+
 # check if there is META Data
 # if META DATA is a list of XML files, download them, find bouning box
 # if META DATA is a ZIP file of SHP fileset, try to download and convert with geopandas to a bounding box
@@ -691,6 +682,8 @@ def run(cmd, args):
         laz_file_fetch
         laz_extract_data
         laz_and_meta_extract_data
+        --- test: ----
+        test_fetch
         '''
     if cmd == 'downloads_dir_get':
         out = downloads_dir_get(args.project_id)
@@ -725,6 +718,8 @@ def run(cmd, args):
         out = projects_get(args.options == 'json_only')
     elif cmd == 'projects_scrape':
         out = projects_scrape(args.options == 'json_only')
+    elif cmd == 'test_fetch':
+        out = test_fetch(args.test_url, args.test_download_file)
 
     print(out)
 
@@ -735,6 +730,8 @@ parser.add_argument('--project_id', dest='project_id', type=str, help='Specify p
 parser.add_argument('--subproject_id', dest='subproject_id', type=str, help='Specify sub-project ID')
 parser.add_argument('--file', dest='file', type=str, help='Specify file')
 parser.add_argument('--options', dest='options', type=str, help='Specify options')
+parser.add_argument('--test-url', dest='test_url', type=str, help='Specify TEST URL')
+parser.add_argument('--test-download-file', dest='test_download_file', type=str, help='Specify TEST download file')
 args = parser.parse_args()
 
 sample_project_id = 'CA_NoCAL_3DEP_Supp_Funding_2018_D18'
