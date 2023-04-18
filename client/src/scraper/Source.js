@@ -117,7 +117,7 @@ const Source = ({model, isCurrent, onShow}) => {
                 scrapedProjectIds.map(id =>
                     <ScrapedProject
                         key={id}
-                        sourceId={model.id}
+                        source={model}
                         project={projects.data[id]}
                         onExpand={id => setCurrentProjectId(id)}
                         onCollapse={id => setCurrentProjectId(null)}
