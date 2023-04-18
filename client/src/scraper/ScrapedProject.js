@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 
 const scrpedDivStyle = {maxHeight: '270px', overflow: 'scroll', border: '1px dashed grey', padding: '5px'};
 const ScrapedProject = ({source, project, isExpanded, onExpand, onCollapse}) => {
@@ -76,6 +76,62 @@ const ScrapedProject = ({source, project, isExpanded, onExpand, onCollapse}) => 
         });
     }, [data]);
 
+    const [backgroundScrapeStatus, setBackgroundScrapeStatus] = useState('');
+    const [backgroundScrapeCount, setBackgroundScrapeCount] = useState('');
+    const backgroundScrapeTimeout = useRef(null);
+    const onScrapeClick = e => {
+        setLoading(true);
+        let projectIdInUrl = project.id;
+        if (project.parentId) {
+            projectIdInUrl = project.parentId + '/' + project.id;
+        }
+        fetch(`/source/${source.id}/${projectIdInUrl}/meta_scrape`, {
+            method: 'GET'
+        }).then(resp => resp.json())
+        .then(json => {
+            setBackgroundScrapeStatus(json.message);
+            if (json.is_running) {
+                backgroundScrapeTimeout.current = setTimeout(scrapeCheck, 1000);
+            } else {
+                setLoading(false);
+            }
+        }).catch(e => {
+            setLoading(false);
+        })
+    };
+
+    const scrapeCheck = () => {
+        setLoading(true);
+        let projectIdInUrl = project.id;
+        if (project.parentId) {
+            projectIdInUrl = project.parentId + '/' + project.id;
+        }
+        fetch(`/source/${source.id}/${projectIdInUrl}/meta_scrape_check`, {
+            method: 'GET'
+        }).then(resp => resp.json())
+            .then(json => {
+                setBackgroundScrapeStatus(json.message);
+                setBackgroundScrapeCount(json.count);
+                if (json.is_running && dataIds.length <= json.count) {
+                    backgroundScrapeTimeout.current = setTimeout(scrapeCheck, 1000);
+                } else {
+                    clearTimeout(backgroundScrapeTimeout.current);
+                    backgroundScrapeTimeout.current = null;
+                    setLoading(false);
+                }
+            }).catch(e => {
+            setLoading(false);
+        })
+    }
+
+    useEffect(() => {
+        return () => {
+            if (backgroundScrapeTimeout && backgroundScrapeTimeout.current) {
+                clearTimeout(backgroundScrapeTimeout.current);
+            }
+        }
+    }, []);
+
     return (
         <div>
             <h4>{project.id} </h4>
@@ -108,7 +164,13 @@ const ScrapedProject = ({source, project, isExpanded, onExpand, onCollapse}) => 
                             isExpanded={subprojectId === currentSubprojectId}/>
                     )}
                 </div>:<div>
-                    {!!dataCounts && <div>Total data tiles: {dataCounts.total} total, {dataCounts.scrapedOk} scraped, {dataCounts.scrapedFailed} scrape failed, {dataCounts.total - dataCounts.scraped} NOT scraped yet</div>}
+                    {!!dataCounts && <div>
+                        <div>Total data tiles: {dataCounts.total} total, {dataCounts.scraped} scraped, {dataCounts.scrapedFailed} scrape failed, {dataCounts.total - dataCounts.scraped} NOT scraped yet</div>
+                        {isLoading && <span><span className='spinning-loader'></span> loading</span>}
+                        {!dataCounts.total || dataCounts.total - dataCounts.scraped > 0 || dataCounts.scrapedFailed?1:0}{
+                            <button type={'button'} onClick={onScrapeClick} disabled={backgroundScrapeTimeout.current}>{!!dataCounts.total ? 'Complete Scrape':'Scrape'}</button>}
+                    </div>}
+
                     {!!scrapedOkIds && <div>Scraped OK ({scrapedOkIds.length})</div>}
                     {!!scrapedOkIds && <div style={scrpedDivStyle}>
                         {scrapedOkIds.map(id => <div key={id}>
