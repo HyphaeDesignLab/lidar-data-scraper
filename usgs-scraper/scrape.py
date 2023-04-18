@@ -191,6 +191,15 @@ def subprojects_get(project_id, is_return_json=False):
 
 
 
+def project_metadata_count(project_id):
+    downloads_dir = downloads_dir_get(project_id)
+    # grab all JSONs in the "download" folder for individual data file info
+    cmd = "ls %s/*.json | wc -l | cat" % (downloads_dir)
+    scrape_concat_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    scrape_concat_process_out = str(scrape_concat_process.communicate()[0], 'utf-8')
+    return scrape_concat_process_out
+
+
 def project_get(project_id, is_return_json=False):
     downloads_dir = downloads_dir_get(project_id)
     index_dir = 'projects/%s' % project_id
@@ -318,12 +327,14 @@ def project_metadata_index_scrape(project_id, saved_project_data):
       match_zip = regex_zip.search(line)
       if match_file != None:
         meta_name = match_file.group(1).replace('.xml', '')
+        # project has META DATA (not a zip file)
         project_data[meta_name] = {'dateModified': match_file.group(2)}
       elif match_zip != None:
         project['isMetadataZipped'] = True
         project['zippedData'] = {'file': match_zip.group(1), 'dateModified': match_zip.group(2)}
 
 
+    # project has (META) DATA (not a zip file)
     if project_data.keys():
         for k in saved_project_data:
             if not k in projects_data:
@@ -351,6 +362,13 @@ def metadata_files_fetch(project_id, limit=4):
         meta_meta = project['data'][meta_filename]
         if not meta_meta['dateScraped'] or meta_meta['scrapedStatus'] == 'failed' or meta_meta['dateScraped'] < meta_meta['dateModified']:
             status = metadata_file_fetch(project_id, meta_filename)
+            if status == 'success':
+                (bounds_polygon_coordinates, dates, projection, errors) = metadata_extract_data(project_id, meta_filename)
+                meta_meta['bounds'] = bounds_polygon_coordinates
+                meta_meta['dates'] = dates
+                meta_meta['projection'] = projection
+                meta_meta['errors'] = errors
+
             print('scraped %s %s' % (meta_filename, status))
             meta_meta['scrapedStatus'] = status
             meta_meta['dateScraped'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -381,7 +399,7 @@ def metadata_file_fetch(project_id, filename):
 
 def metadata_extract_data(project_id, filename):
     dir_path = downloads_dir_get(project_id)
-    file_obj = open(dir_path + '/' + filename)
+    file_obj = open(dir_path + '/' + filename + ('.xml' if not '.xml' in filename else ''))
     file_obj.seek(0)
 
     date_seen = False
@@ -392,6 +410,7 @@ def metadata_extract_data(project_id, filename):
     dates = []
     bounds = {}
     projection = ''
+    errors = {}
 
     for line in file_obj:
       if (not date_seen and not date_extracted) or line.find('<rngdates>') >= 0:
@@ -429,17 +448,18 @@ def metadata_extract_data(project_id, filename):
       projection = projection_cleanup_regex.sub('', projection)
       projection = projection.strip()
 
+
     if len(bounds.keys()) < 4:
-      # TODO: log miss
-      return None
+        errors['bounds'] = 'less than 4 vorteces of bbox'
+        bounds_polygon_coordinates = None
+    else:
+        bounds_polygon_coordinates = [
+          [bounds['w'], bounds['n']],
+          [bounds['e'], bounds['n']],
+          [bounds['e'], bounds['s']],
+          [bounds['w'], bounds['s']]]
 
-    bounds_polygon_coordinates = [
-      [bounds['w'], bounds['n']],
-      [bounds['e'], bounds['n']],
-      [bounds['e'], bounds['s']],
-      [bounds['w'], bounds['s']]]
-
-    return (bounds_polygon_coordinates, dates, projection)
+    return (bounds_polygon_coordinates, dates, projection, errors)
 
 
 def polygon_multipolygon_overlap_check(lidar_polygon, city_multi_polygon):
@@ -693,6 +713,8 @@ def run(cmd, args):
         out = project_scrape(args.project_id+('/'+args.subproject_id if args.subproject_id else ''), args.options=='json_only')
     elif cmd == 'metadata_files_fetch':
         out = metadata_files_fetch(args.project_id+('/'+args.subproject_id if args.subproject_id else ''), -1)
+    elif cmd == 'project_metadata_count':
+        out = project_metadata_count(args.project_id+('/'+args.subproject_id if args.subproject_id else ''))
     elif cmd == 'metadata_file_fetch':
         out = metadata_file_fetch(args.project_id, args.subproject_id, args.file)
     elif cmd == 'downloads_dir_list':
