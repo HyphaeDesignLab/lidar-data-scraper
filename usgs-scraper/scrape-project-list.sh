@@ -1,12 +1,19 @@
 cd projects/
 
 projectName="$1"
+subprojectName="$2"
 # if projectName
 if [ $projectName ]; then
   if [ ! -d $projectName ]; then
     mkdir $projectName;
   fi
   cd $projectName
+fi
+if [ $subprojectName ]; then
+  if [ ! -d $subprojectName ]; then
+    mkdir $subprojectName;
+  fi
+  cd $subprojectName
 fi
 
 if [ ! -d _index ]; then
@@ -28,9 +35,14 @@ projectNameForUrl=""
 if [ $projectName ]; then
   projectNameForUrl="$projectName/"
 fi
+subprojectNameForUrl=""
+if [ $subprojectName ]; then
+  subprojectNameForUrl="$subprojectName/"
+fi
 
 ### DOWNLOAD
-curl  https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/$projectNameForUrl > index.html
+base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/
+curl  $base_url$projectNameForUrl$subprojectNameForUrl > index.html
 
 sed -E \
   -e '/<img[^>]+alt="\[DIR\]">/ !d' \
@@ -50,7 +62,6 @@ echo
 
 ### MAKE STATS / DIFF with previous (currents)
 current_dir_path=../../current
-echo $current_dir_path
 
 if [ -d $current_dir_path ]; then
   diff $current_dir_path/index.txt index.txt | grep -E '^<' | sed -E -e 's/^< //' > removed.txt
@@ -97,6 +108,9 @@ fi
 cd ../../
 
 if [ "$projectName" != "" ]; then
+  cd ..
+fi
+if [ "$subprojectName" != "" ]; then
   cd ..
 fi
 cd ../../
