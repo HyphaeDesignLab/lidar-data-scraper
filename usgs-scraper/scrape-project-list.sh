@@ -68,54 +68,52 @@ fi
 
 rm tmp.txt
 
-### START OF STATS
+### START DIFF/STATS
 ### MAKE STATS / DIFF with previous (currents)
 current_dir_path=../../current
-
+mkdir diff
 if [ -d $current_dir_path ]; then
-  diff $current_dir_path/index.txt index.txt | grep -E '^<' | sed -E -e 's/^< //' > removed.txt
-  diff $current_dir_path/index.txt index.txt | grep -E '^>' | sed -E -e 's/^> //' > added.txt
+  diff $current_dir_path/index.txt index.txt | grep -E '^<' | sed -E -e 's/^< //' > diff/removed.txt
+  diff $current_dir_path/index.txt index.txt | grep -E '^>' | sed -E -e 's/^> //' > diff/added.txt
 
   sed -E \
    -e 's/~20[0-9]{2}.+$//' \
    -e 's/^.*(20[0-9]{2}).*$/\1/' \
    -e '/20[0-9]/ !s/.+/unknown/' \
-   removed.txt | sort | uniq > removed-years.txt
+   diff/removed.txt | sort | uniq > diff/removed-years.txt
 
   sed -E \
    -e 's/~20[0-9]{2}.+$//' \
    -e 's/.*(20[0-9]{2}).*/\1/' \
    -e '/20[0-9]/ !s/.+/unknown/' \
-   added.txt | sort | uniq > added-years.txt
+   diff/added.txt | sort | uniq > diff/added-years.txt
 
-  echo $(wc -l index.txt | sed -E 's/^ *([0-9]+) .*$/\1/') total project > stats.txt
-  echo $(wc -l $current_dir_path/index.txt | sed -E 's/^ *([0-9]+) .*$/\1/') old total projects >> stats.txt
-  echo $(wc -l removed.txt)  >> stats.txt
-  echo $(wc -l added.txt) >> stats.txt
-  echo >> stats.txt
+  echo $(wc -l index.txt | sed -E 's/^ *([0-9]+) .*$/\1/') total project > diff.txt
+  echo $(wc -l $current_dir_path/index.txt | sed -E 's/^ *([0-9]+) .*$/\1/') old total projects >> diff.txt
+  echo $(wc -l diff/removed.txt)  >> diff.txt
+  echo $(wc -l diff/added.txt) >> diff.txt
+  echo >> diff.txt
 
-  echo 'removed years counts:' >> stats.txt
-  for year in $(cat removed-years.txt); do
-    echo -n " $year:" >> stats.txt
-    grep -Ec "[^~]$year" removed.txt >> stats.txt
+  echo 'removed years counts:' >> diff.txt
+  for year in $(cat diff/removed-years.txt); do
+    echo -n " $year:" >> diff.txt
+    grep -Ec "[^~]$year" diff/removed.txt >> diff.txt
   done;
   echo
 
-  echo 'added years counts:' >>stats.txt
-  for year in $(cat added-years.txt); do
-    echo -n " $year:" >> stats.txt
-    grep -c "[^~]$year" added.txt >> stats.txt
+  echo 'added years counts:' >>diff.txt
+  for year in $(cat diff/added-years.txt); do
+    echo -n " $year:" >> diff.txt
+    grep -c "[^~]$year" diff/added.txt >> diff.txt
   done;
 
-
   rm -rf $current_dir_path
-  cp -r . $current_dir_path
 else
-  echo 'first time scraping' > stats.txt
-  cp -r . $current_dir_path
+  echo 'first time scraping' > diff.txt
 fi
+cp -r . $current_dir_path
 cd ../../
-### END OF STATS
+### END DIFF/STATS
 
 if [ "$projectName" != "" ]; then
   cd ..
