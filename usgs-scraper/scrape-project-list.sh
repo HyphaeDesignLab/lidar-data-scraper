@@ -48,18 +48,27 @@ sed -E \
   -e '/<img[^>]+alt="\[DIR\]">/ !d' \
   -e 's@<img[^>]+alt="\[DIR\]"> *<a href="([^"]+)">[^<]+</a> +([0-9]{4}-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]).+@\1~\2@' \
   -e 's@/@@' \
-  -e '/_/ !d' \
- index.html > index.txt
+ index.html > tmp.txt
+grep '_' tmp.txt > index.txt
 
-
-has_index=$(grep -cvE 'metadata~' index.html)
-if [ "$projectName" ] && [ ! $has_index ]; then
-  #  NO subprojects in this project
-  echo NO subprojects in this project > info.txt
+if [ "$projectName" ]; then
+  metadata_dir=$(grep -oE '^metadata~' tmp.txt | sed -e 's/~//' | xargs echo -n)
+  if [ $metadata_dir ]; then
+    echo $metadata_dir > metadata_dir.txt
+  fi
+  laz_dir=$(grep -ioE '^laz~' tmp.txt | sed -e 's/~//' | xargs echo -n)
+  if [ $laz_dir ]; then
+    echo $laz_dir > laz_dir.txt
+  fi
+  las_dir=$(grep -ioE '^las~' tmp.txt | sed -e 's/~//' | xargs echo -n)
+  if [ $las_dir ]; then
+    echo $las_dir > las_dir.txt
+  fi
 fi
 
-echo
+rm tmp.txt
 
+### START OF STATS
 ### MAKE STATS / DIFF with previous (currents)
 current_dir_path=../../current
 
@@ -106,6 +115,7 @@ else
   cp -r . $current_dir_path
 fi
 cd ../../
+### END OF STATS
 
 if [ "$projectName" != "" ]; then
   cd ..
