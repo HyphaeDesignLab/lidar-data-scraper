@@ -46,7 +46,7 @@ curl  $base_url$projectNameForUrl$subprojectNameForUrl > index.html
 
 sed -E \
   -e '/<img[^>]+alt="\[DIR\]">/ !d' \
-  -e 's@<img[^>]+alt="\[DIR\]"> *<a href="([^"]+)">[^<]+</a> +([0-9]{4}-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]).+@\1~\2@' \
+  -e 's@<img[^>]+alt="\[DIR\]"> *<a href="([^"]+)">[^<]+</a> +([0-9]{4}-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]).+@\1@' \
   -e 's@/@@' \
  index.html > tmp.txt
 grep '_' tmp.txt > index.txt
