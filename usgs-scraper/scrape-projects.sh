@@ -7,7 +7,7 @@ if [ ! -d projects/_index/current ] || [ ! -f projects/_index/current/index.txt 
 fi
 
 projects_count=$(wc -l projects/_index/current/index.txt | sed -E -e 's/^ *([0-9]+) *.*/\1/')
-projects=$(cat projects/_index/current/index.txt | sed -E -e 's/^([^~]+).+/\1/' | xargs echo -n)
+projects=$(cat projects/_index/current/index.txt)
 
 echo
 echo "Scraping USGS PROJECTS!"
@@ -37,6 +37,14 @@ check_scrape_count_and_rest() {
 }
 project_i=0
 for project in $projects; do
+  project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
+  project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
+
+  # skip states that are NOT in STATES to SCRAPE
+  if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
+    continue
+  fi
+
   project_i=$(expr $project_i + 1)
   echo
   echo "==========  $project (project $project_i of $projects_count) ============"

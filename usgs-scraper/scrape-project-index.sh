@@ -1,3 +1,8 @@
+original_dir=$(pwd)
+if [ ! -d projects ]; then
+  mkdir projects;
+fi
+
 cd projects/
 
 projectName="$1"
@@ -50,7 +55,7 @@ sed -E \
   -e 's@/@@' \
  index.html > tmp.txt
 grep '_' tmp.txt > index.txt
-
+python3 $original_dir/get-project-year-and-state.py $projectName > index_with_year_and_state.txt
 if [ "$projectName" ]; then
   metadata_dir=$(grep -oE '^metadata~' tmp.txt | sed -e 's/~//' | xargs echo -n)
   if [ $metadata_dir ]; then
