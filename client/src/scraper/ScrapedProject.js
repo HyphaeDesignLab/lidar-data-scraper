@@ -91,7 +91,7 @@ const ScrapedProject = ({source, project, isExpanded, onExpand, onCollapse}) => 
         .then(json => {
             setBackgroundScrapeStatus(json.message);
             if (json.is_running) {
-                backgroundScrapeTimeout.current = setTimeout(scrapeCheck, 1000);
+                backgroundScrapeTimeout.current = setTimeout(scrapeCheck, 5000);
             } else {
                 setLoading(false);
             }
@@ -111,8 +111,13 @@ const ScrapedProject = ({source, project, isExpanded, onExpand, onCollapse}) => 
         }).then(resp => resp.json())
             .then(json => {
                 setBackgroundScrapeStatus(json.message);
-                setBackgroundScrapeCount(json.count);
-                if (json.is_running && dataIds.length <= json.count) {
+                let leftToScrapeCount = 0;
+                if (!!json.project) {
+                    setData(json.project);
+                    leftToScrapeCount = Object.keys(json.project)
+                        .filter(k => !json.project[k].dateScraped || json.project[k].scrapedStatus === 'success').length;
+                }
+                if (json.is_running && leftToScrapeCount) {
                     backgroundScrapeTimeout.current = setTimeout(scrapeCheck, 1000);
                 } else {
                     clearTimeout(backgroundScrapeTimeout.current);
@@ -167,7 +172,7 @@ const ScrapedProject = ({source, project, isExpanded, onExpand, onCollapse}) => 
                     {!!dataCounts && <div>
                         <div>Total data tiles: {dataCounts.total} total, {dataCounts.scraped} scraped, {dataCounts.scrapedFailed} scrape failed, {dataCounts.total - dataCounts.scraped} NOT scraped yet</div>
                         {isLoading && <span><span className='spinning-loader'></span> loading</span>}
-                        {!dataCounts.total || dataCounts.total - dataCounts.scraped > 0 || dataCounts.scrapedFailed?1:0}{
+                        {(!dataCounts.total || dataCounts.total - dataCounts.scraped > 0 || dataCounts.scrapedFailed) &&
                             <button type={'button'} onClick={onScrapeClick} disabled={backgroundScrapeTimeout.current}>{!!dataCounts.total ? 'Complete Scrape':'Scrape'}</button>}
                     </div>}
 
