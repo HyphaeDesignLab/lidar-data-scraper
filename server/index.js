@@ -140,12 +140,8 @@ app.get('/source/:id/:project_id/:subproject_id/:cmd', function (req, res) {
         output = { is_running: !!activeScrapeProcess.toString(), message: !!activeScrapeProcess.toString() ? 'started, running' : 'failed to start, not running'};
     } else if (cmd === 'meta_scrape_check') {
         let activeScrapeProcess = childProcess.execSync('ps aux | grep -i scrape.py | grep metadata_files_fetch | grep -v grep | cat');
-        let count = null;
-
-        if (!!activeScrapeProcess.toString()) {
-            count = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_metadata_count --project_id='${projectId}' --subproject_id='${subprojectId}' --options=json_only | cat`).toString();
-        }
-        output = { is_running: !!activeScrapeProcess.toString(), message: !!activeScrapeProcess.toString() ? 'running' : 'not running', count: parseInt(count)};
+        let project = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_get --project_id='${projectId}' --subproject_id='${subprojectId}' --options=json_only | cat`).toString();
+        output = { is_running: !!activeScrapeProcess.toString(), message: !!activeScrapeProcess.toString() ? 'running' : 'not running', project: JSON.parse(project)};
     } else {
         output = childProcess.execSync(`cd ../${sourceDir}/ && python3 scrape.py --cmd=project_${cmd} --project_id='${projectId}' --subproject_id='${subprojectId}' --options=json_only | cat`)
         if (!output) {
