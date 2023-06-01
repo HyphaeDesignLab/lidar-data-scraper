@@ -478,7 +478,7 @@ def city_polygon_get(city_id):
     multipolygon = bounds.get('geometries')[0].get('coordinates')
     return multipolygon
 
-def find_overlapping_lidar_scans(project_id, city_id):
+def find_overlapping_lidar_scans(project_id, subproject_id, city_id):
     city_multi_polygon = city_polygon_get(city_id)
 
     dir_path = downloads_dir_get(project_id)
@@ -518,6 +518,7 @@ projections_aliases = {
 
 def projection_convert(coordinates, projection, geometry_type):
     import geopandas
+
     # CAlifornia projection 6420 (ID is the SW corner of the tile "w123123n123123")
     # "EPSG:6420"
     # [[6051000,2130000], [6051000,2133000], [6054000,2133000], [6054000,2130000]]
@@ -548,7 +549,7 @@ def projection_convert(coordinates, projection, geometry_type):
     return geo_data_frame_EPSG4326.geometry[0]
 
 
-def laz_file_fetch(project_id, filename):
+def laz_file_fetch(project_id, subproject_id, filename):
     status = 'in progress'
     dir_path = downloads_dir_get(project_id)
     url = '%s/%s/%s/LAZ/%s' % (url_base, project_id, subproject_id, filename)
