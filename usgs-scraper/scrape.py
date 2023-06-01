@@ -313,7 +313,7 @@ def project_metadata_index_scrape(project_id, saved_project_data):
         index_file = open(index_filename, 'w')
         json.dump(project, index_file)
         index_file.close()
-        return json.dumps(project) if is_return_json else project
+        return project
 
     regex_file = re.compile('<img[^>]+alt="\[TXT\]">\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
     regex_zip = re.compile('<img[^>]+compressed.gif[^>]+>\s*<a href="([^"]+)">[^<]+</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)', re.IGNORECASE)
@@ -337,7 +337,7 @@ def project_metadata_index_scrape(project_id, saved_project_data):
     # project has (META) DATA (not a zip file)
     if project_data.keys():
         for k in saved_project_data:
-            if not k in projects_data:
+            if not k in project_data:
                 saved_project_data[k]['isRemoved'] = True
                 project_data[k] = saved_project_data[k]
         for k in project_data:
