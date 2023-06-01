@@ -54,8 +54,10 @@ sed -E \
   -e 's@<img[^>]+alt="\[DIR\]"> *<a href="([^"]+)">[^<]+</a> +([0-9]{4}-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]).+@\1@' \
   -e 's@/@@' \
  index.html > tmp.txt
+
 grep '_' tmp.txt > index.txt
 python3 $original_dir/get-project-year-and-state.py $projectName > index_with_year_and_state.txt
+
 if [ "$projectName" ]; then
   metadata_dir=$(grep -oE '^metadata~' tmp.txt | sed -e 's/~//' | xargs echo -n)
   if [ $metadata_dir ]; then
