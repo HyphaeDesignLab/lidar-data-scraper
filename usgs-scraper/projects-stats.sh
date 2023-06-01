@@ -1,68 +1,208 @@
 base_dir=$(dirname $0)
-cd $base_dir/projects
 
-projects=$(cat _index/current/index.txt | sed -E -e 's/^([^~]+).+/\1/' | xargs echo -n)
+. ./utils.sh
+init_has_arg $@
 
 base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
 
-func_args="$@";
-has_arg () {
-  for arg in $func_args; do
-    if [ "$1" = "$arg" ]; then
-      echo 1;
-      return
+started_scrape() {
+    projects_path=projects
+    if [ "$1" ]; then
+        projects_path=projects/$project
     fi
-  done;
+    # find returns a list of dirs ending on /
+    find $projects_path -type d -mindepth 1 -maxdepth 1 ! -name '_index' ! -name 'meta' | sed -e "s@$projects_path/@@" | sort;
+}
+project_index() {
+    projects_path=projects
+    if [ "$1" ]; then
+        projects_path=projects/$project
+    fi
+
+    cat $projects_path/_index/current/index.txt | grep -v '^$' | sort
+}
+index_bad_chars() {
+    grep '[^0-9a-zA-Z_\-]' projects/_index/current/index.txt | sort
 }
 
-get_meta_info() {
-  project="$1"
-  subproject="$2"
-  if [ -f  metadata_dir.txt ]; then
-    echo '  metadata: ' $base_url/$project/$subproject/$(cat metadata_dir.txt | xargs echo -n)
-    echo '   XML files to download '$(wc -l ../../meta/xml_files.txt | sed -E -e 's/^ *([0-9]+) .+/\1/')
-    echo '   ZIP files to download '$(wc -l ../../meta/zip_files.txt | sed -E -e 's/^ *([0-9]+) .+/\1/')
-  fi
-  if [ -f  las_dir.txt ]; then
-    echo '  LAS files: ' $base_url/$project/$subproject/$(cat las_dir.txt | xargs echo -n)
-  fi
-  if [ -f  laz_dir.txt ]; then
-    echo '  LAZ files: ' $base_url/$project/$subproject/$(cat laz_dir.txt | xargs echo -n)
-  fi
+not_started_scrape() {
+    for project in $(project_index); do
+        if [ ! -d projects/$project ]; then
+            echo $project;
+        fi
+    done
 }
 
-if [ $(has_arg general) ]; then
- echo "projects started scraping: " $(find . -type d -d 1 | grep -vE 'meta|_index' | wc -l)
- echo "project+subprojects started scraping: " $(find . -type d -d 2 | grep -vE 'meta|_index' | wc -l)
+started_scrape_not_in_index() {
+    started_scrape_out=__tmp_project_dirs_$(date +%s).txt
+    started_scrape > $started_scrape_out
+
+    index_out=__tmp_project_index_$(date +%s).txt
+    project_index > $index_out
+
+    diff_out=__tmp_diff$(date +%s).txt
+    diff $started_scrape_out $index_out > $diff_out
+    not_in_index=$(grep '^< ' $diff_out | cut -c '3-')
+    for project in $not_in_index; do
+        echo $project
+        if [ "$1" = "remove_dirs" ]; then
+            rm -rf projects/$project
+        fi
+    done
+
+    rm $index_out
+    rm $started_scrape_out
+    rm $diff_out
+}
+started_scrape_subproject_not_in_index() {
+    for project in $(started_scrape); do
+        subproject_list_file=__tmp_subprojects_list_$(date +%s).txt
+        started_scrape $project > $subproject_list_file
+
+        subproject_index_file=__tmp_subprojects_index_$(date +%s).txt
+        project_index $project > $subproject_index_file
+
+        not_in_index=$(diff $subproject_list_file $subproject_index_file | grep '^< ' | cut -c '3-')
+        for subproject in $not_in_index; do
+            echo $project/$subproject
+            if [ "$1" = "remove_dirs" ]; then
+                rm -rf projects/$project/$subproject
+            fi
+        done
+        rm __tmp_subprojects_*
+    done
+}
+cache_stats() {
+    project=$1
+    if [ "$project" ]; then
+        project_info $project > projects/$project/_stats.txt
+        for subproject in $(started_scrape $project); do
+            project_info $project $subproject > projects/$project/$subproject/_stats.txt
+        done
+        return
+    fi
+
+    for project in $(started_scrape); do
+        project_info $project > projects/$project/_stats.txt
+        for subproject in $(started_scrape $project); do
+            project_info $project $subproject > projects/$project/$subproject/_stats.txt
+        done
+    done
+}
+started_scrape_no_index_or_meta() {
+   grep -l no_subprojects_meta_laz_or_las projects/*/_stats.txt 2>/dev/null
+}
+
+projects_with_no_meta_xml() {
+    grep -l 'meta_xml:0' projects/*/_stats.txt 2>/dev/null | sed -E -e 's@/_stats.txt@@' -e 's@.+/@@'
+}
+subprojects_with_no_meta_xml() {
+    grep -l 'meta_xml:0' projects/*/*/_stats.txt 2>/dev/null | sed -E -e 's@/_stats.txt@@' -e 's@.+/@@'
+}
+projects_with_meta_xml() {
+    grep -l 'meta_xml:[^0]' projects/*/_stats.txt 2>/dev/null | sed -E -e 's@/_stats.txt@@' -e 's@.+/@@'
+}
+subprojects_with_meta_xml() {
+    grep -l 'meta_xml:[^0]' projects/*/*/_stats.txt 2>/dev/null | sed -E -e 's@/_stats.txt@@' -e 's@.+/@@'
+}
+
+project_info() {
+    project=$1
+    subproject=$2
+    project_path=$project
+    if [ "$subproject" ]; then
+        project_path=$project/$subproject
+    fi
+
+    index_count=$(get_line_count projects/$project_path/_index/current/index.txt)
+    metadata_dir=$(cat projects/$project_path/_index/current/metadata_dir.txt 2>/dev/null | xargs echo -n)
+    laz_dir=$(cat projects/$project_path/_index/current/laz_dir.txt 2>/dev/null | xargs echo -n)
+    las_dir=$(cat projects/$project_path/_index/current/las_dir.txt 2>/dev/null | xargs echo -n)
+
+    if [ "$index_count" = "0" ]; then
+      if [ "$metadata_dir" ]; then
+        echo "meta_dir";
+        if [ ! -d projects/$project_path/meta ]; then
+            echo 'meta_not_scraped';
+        else
+            xml_file_count=$(get_line_count projects/$project_path/meta/xml_files.txt)
+            echo "meta_xml:$xml_file_count"
+            xml_file_downloaded_count=$(ls -1 projects/$project_path/meta/*.xml 2>/dev/null | get_line_count)
+            echo "meta_xml_downloaded:$xml_file_downloaded_count"
+            zip_file_count=$(get_line_count projects/$project_path/meta/zip_files.txt)
+            echo "meta_zip:$zip_file_count"
+        fi
+      fi
+      if [ "$laz_dir" ]; then
+        echo 'laz_dir';
+      fi
+      if [ "$las_dir" ]; then
+        echo 'las_dir';
+      fi
+      if [ ! "$metadata_dir" ] && [ ! "$laz_dir" ] && [ ! "$las_dir" ]; then
+        echo 'no_subprojects_meta_laz_or_las';
+      fi
+    else
+       echo "subprojects:$index_count"
+    fi
+}
+
+######### MAIN  ###########
+
+if [ "$1" = "cache_stats" ]; then
+ cache_stats $2;
+fi;
+
+if [ $(has_arg size) ] || [ $(has_arg all) ]; then
  echo "size on disk: " $(du -h -d 0 .)
 fi;
 
-if [ $(has_arg projects) ]; then
-  for project in $projects; do
-    cd $project/_index/current/
-
+if [ $(has_arg index_errors) ] || [ $(has_arg all) ]; then
+    echo -n "project Index with BAD chars: ";
+    index_bad_chars | get_line_count
     echo
+fi
+if [ $(has_arg index) ] || [ $(has_arg all) ]; then
+    echo -n "projects in index: "
+    project_index | get_line_count
     echo
-    echo "------$project-------"
-    echo ' url: '$base_url/$project/
+fi
 
-    subprojects_count=$(wc -l index.txt | sed -E -e 's/^ *([0-9]+) .+/\1/' -e 's/^0$//' | xargs echo -n)
+if [ $(has_arg started_scrape) ] || [ $(has_arg all) ]; then
+    echo -n "projects started scraping: "
+    started_scrape | get_line_count
+    echo
+fi
 
-    if [ ! $subprojects_count ]; then
-      get_meta_info $project
-      cd ../..
-    else
-      echo ' subprojects (' $subprojects_count '):'
-      subprojects=$(cat index.txt | sed -E -e 's/^([^~]+).+/\1/' | xargs echo -n)
-      cd ../..
-      if [ $(has_arg subprojects) ]; then
-        for subproject in $subprojects; do
-          cd $subproject/_index/current/
-            get_meta_info $project $subproject
-          cd ../../..
-        done;
-      fi
-    fi
-    cd ..
-  done
+if [ $(has_arg not_started_scrape) ] || [ $(has_arg all) ]; then
+    echo -n "projects NOT started scraping: "
+    not_started_scrape | get_line_count
+    echo
+fi
+
+if [ $(has_arg started_scrape_not_in_index) ] || [ $(has_arg all) ]; then
+    echo -n "projects started scraping NOT IN INDEX: "
+    started_scrape_not_in_index $(has_arg remove_dirs) | get_line_count
+    echo
+fi
+if [ $(has_arg started_scrape_not_in_index) ]; then
+    echo -n "projects + SUBprojects started scraping but WITH NO INDEX: ";
+    started_scrape_no_index_or_meta | get_line_count
+    started_scrape_subproject_not_in_index $(has_arg remove_dirs) | get_line_count
+    echo
+fi
+
+if [ $(has_arg meta_xml_to_download) ]; then
+
+    echo "projects with NO XML to download $(projects_with_no_meta_xml | get_line_count)"
+    projects_with_no_meta_xml | sed -e 's/^/  /'
+    echo "projects with XML to download $(projects_with_meta_xml | get_line_count)"
+    echo "SUBprojects with NO XML to download $(subprojects_with_no_meta_xml | get_line_count)"
+    subprojects_with_no_meta_xml | sed -e 's/^/  /'
+    echo "SUBprojects with XML to download $(subprojects_with_meta_xml | get_line_count)"
+fi
+
+if [ $(has_arg project_info) ]; then
+    echo $2 $3
+    project_info $2 $3;
 fi
