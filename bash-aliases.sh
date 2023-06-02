@@ -1,4 +1,4 @@
-HOME_DIR_SENSORS=$HOME/sensor-network-data-ingestor
+HOME_DIR_SENSORS=$HOME/lai-algorithm-training-scraper
 function hyphae-github-help {
   echo "Copy and paste these commands to init GITHUB"
   echo 'eval "$(ssh-agent -s)"'
