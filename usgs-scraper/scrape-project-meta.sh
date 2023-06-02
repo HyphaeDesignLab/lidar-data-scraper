@@ -1,55 +1,70 @@
-cd projects
+original_dir=$(pwd)
+. ./utils-stats.sh
 
-projectName="$1"
-subprojectName="$2"
-if [ ! -d $projectName ]; then
-  mkdir $projectName;
-fi
-cd $projectName
+scrape_project_meta() {
 
-if [ $subprojectName ]; then
-  if [ ! -d $subprojectName ]; then
-    mkdir $subprojectName;
-  fi
-  cd $subprojectName
-fi
+    if [ ! -d projects ]; then
+      mkdir projects;
+    fi
 
-if [ ! -d meta ]; then
-  mkdir meta
-fi
+    cd projects
 
-cd meta
+    projectName="$1"
+    subprojectName="$2"
+    if [ ! -d $projectName ]; then
+      mkdir $projectName;
+    fi
+    cd $projectName
 
-projectNameForUrl=""
-if [ $projectName ]; then
-  projectNameForUrl="$projectName"
-fi
-subprojectNameForUrl=""
-if [ $subprojectName ]; then
-  subprojectNameForUrl="/$subprojectName"
-fi
+    if [ $subprojectName ]; then
+      if [ ! -d $subprojectName ]; then
+        mkdir $subprojectName;
+      fi
+      cd $subprojectName
+    fi
 
-### DOWNLOAD
-base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-curl  $base_url/$projectNameForUrl$subprojectNameForUrl/metadata/ > _index.html
+    if [ ! -d meta ]; then
+      mkdir meta
+    fi
 
-grep -E '<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">' _index.html |
- sed -E -e 's@<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">.+@\1@' \
- > zip_files.txt
+    cd meta
 
-grep -E '<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">' _index.html |
- sed -E \
-  -e 's@<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">.+@\1@' \
-  -e 's@/@@' \
-  > xml_files.txt
+    project_path=""
+    if [ $projectName ]; then
+      project_path="$projectName"
+    fi
+    if [ $subprojectName ]; then
+      project_path="$projectName/$subprojectName"
+    fi
 
-cd .. # /cd meta
+    ### DOWNLOAD
+    base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
+    url=$base_url/$project_path/metadata/
+    echo curl -s -S --retry 4 --retry-connrefused $url 2>__errors.txt > _index.html
+    exit
+    if [ $(get_line_count_or_empty __errors.txt) ]; then
+        date | xargs echo -n >> _errors.txt
+        cat __errors.txt >> _errors.txt
+        rm __errors.txt
+    fi
 
-if [ "$subprojectName" != "" ]; then
-  cd .. # /cd $subprojectName
-fi
+    grep -E '<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">' _index.html |
+     sed -E -e 's@<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">.+@\1@' \
+     > zip_files.txt
 
-cd .. # /cd $projectName
+    grep -E '<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">' _index.html |
+     sed -E \
+      -e 's@<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">.+@\1@' \
+      -e 's@/@@' \
+      > xml_files.txt
 
-cd .. # /cd projects
+    cd .. # /cd meta
 
+    if [ "$subprojectName" != "" ]; then
+      cd .. # /cd $subprojectName
+    fi
+
+    cd .. # /cd $projectName
+
+    cd .. # /cd projects
+}
