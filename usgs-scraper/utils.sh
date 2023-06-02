@@ -21,7 +21,7 @@ get_line_count_or_empty() {
     else
         local i=0
         while read -r data; do
-            i=$(expr $i+1)
+            i=$(expr $i + 1)
         done
         if [ "$i" = "0" ]; then
             echo -n ''
@@ -36,7 +36,7 @@ get_line_count() {
     else
         local i=0
         while read -r data; do
-            i=$(expr $i+1)
+            i=$(expr $i + 1)
         done
         echo -n $i
     fi
