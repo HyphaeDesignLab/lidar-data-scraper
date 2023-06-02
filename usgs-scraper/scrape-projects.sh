@@ -113,11 +113,11 @@ scrape_projects() {
 }
 
 if [ "$1" = "all" ]; then
-    echo scrape_projects;
+    scrape_projects;
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
         scrape_project $1;
     else
-        echo scrape_subproject $1 $2;
+        scrape_subproject $1 $2;
     fi
 fi
