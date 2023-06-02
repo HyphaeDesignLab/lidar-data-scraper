@@ -60,7 +60,7 @@ scrape_project_index() {
 
     grep '_' $backup_dir/tmp.txt > $backup_dir/index.txt
     if [ ! "$subproject" ]; then
-        python3 $script_base_dir/get-project-year-and-state.py > $backup_dir/index_with_year_and_state.txt
+        python3 $script_base_dir/get-project-year-and-state.py $backup_dir/index.txt > $backup_dir/index_with_year_and_state.txt
     fi
 
     if [ "$project" ]; then

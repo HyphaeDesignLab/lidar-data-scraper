@@ -3,7 +3,7 @@ import sys
 
 base_dir=os.path.dirname(__file__)
 
-index_file_path=f'{base_dir}/projects/_index/current/index.txt'
+index_file_path=sys.argv[1]
 
 file=open(index_file_path, 'r')
 
