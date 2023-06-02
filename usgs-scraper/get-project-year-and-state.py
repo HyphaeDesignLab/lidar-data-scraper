@@ -3,11 +3,7 @@ import sys
 
 base_dir=os.path.dirname(__file__)
 
-project=sys.argv[1] if len(sys.argv) > 1 else None
-
 index_file_path=f'{base_dir}/projects/_index/current/index.txt'
-if project:
-    index_file_path=f'{base_dir}/projects/{project}/_index/current/index.txt'
 
 file=open(index_file_path, 'r')
 
