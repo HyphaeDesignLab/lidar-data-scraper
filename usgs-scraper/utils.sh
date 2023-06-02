@@ -16,28 +16,14 @@ has_arg () {
 
 
 get_line_count_or_empty() {
-    if [ "$1" ]; then
-        wc -l $1 | sed -E -e 's/^ *([0-9]+) .+/\1/' -e 's/^0$//' | xargs echo -n;
-    else
-        local i=0
-        while read -r data; do
-            i=$(expr $i + 1)
-        done
-        if [ "$i" = "0" ]; then
-            echo -n ''
-        else
-            echo -n $i
-        fi
-    fi
+  wc -l $1 | sed -E -e 's/^ *([0-9]+).*$/\1/' -e 's/^0$//' | xargs echo -n;
+}
+format_line_count_or_empty() {
+  echo $1 | sed -E -e 's/^ *([0-9]+).*$/\1/' -e 's/^0$//' | xargs echo -n;
 }
 get_line_count() {
-    if [ "$1" ]; then
-        wc -l $1 | sed -E -e 's/^ *([0-9]+) .+/\1/' | xargs echo -n;
-    else
-        local i=0
-        while read -r data; do
-            i=$(expr $i + 1)
-        done
-        echo -n $i
-    fi
+  wc -l $1 | sed -E -e 's/^ *([0-9]+).*$/\1/'  | xargs echo -n;
+}
+format_line_count() {
+  echo $1 | sed -E -e 's/^ *([0-9]+).*$/\1/' | xargs echo -n;
 }

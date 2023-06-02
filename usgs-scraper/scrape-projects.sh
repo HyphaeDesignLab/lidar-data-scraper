@@ -40,7 +40,7 @@ scrape_project() {
     fi
 
     subprojects=$(project_index $project)
-    subprojects_count=$(project_index $project | get_line_count)
+    subprojects_count=$(project_index $project | wc -l)
     if [ "$subprojects" ]; then
         subproject_i=0
         for subproject in $subprojects; do
@@ -96,7 +96,7 @@ scrape_projects() {
     fi
 
     projects=$(project_index)
-    projects_count=$(project_index | get_line_count)
+    projects_count=$(project_index | wc -l)
 
     project_i=0
     for project in $projects; do

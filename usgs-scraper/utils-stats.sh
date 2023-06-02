@@ -127,7 +127,7 @@ project_info() {
         else
             xml_file_count=$(get_line_count projects/$project_path/meta/xml_files.txt)
             echo "meta_xml:$xml_file_count"
-            xml_file_downloaded_count=$(ls -1 projects/$project_path/meta/*.xml 2>/dev/null | get_line_count)
+            xml_file_downloaded_count=$(ls -1 projects/$project_path/meta/*.xml 2>/dev/null | wc -l)
             echo "meta_xml_downloaded:$xml_file_downloaded_count"
             zip_file_count=$(get_line_count projects/$project_path/meta/zip_files.txt)
             echo "meta_zip:$zip_file_count"
