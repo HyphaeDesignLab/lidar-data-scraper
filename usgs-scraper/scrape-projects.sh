@@ -113,6 +113,9 @@ scrape_projects() {
         echo -n "(prj) $project ($project_i/$projects_count): "
         scrape_project $project in_loop
     done
+    if [ -f projects/STOP_SCRAPE.txt ]; then
+      rm projects/STOP_SCRAPE.txt
+    fi;
 }
 
 if [ "$1" = "all" ]; then

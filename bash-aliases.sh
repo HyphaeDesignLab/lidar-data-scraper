@@ -4,6 +4,14 @@ function hyphae-github-help {
   echo 'eval "$(ssh-agent -s)"'
   echo 'ssh-add ~/.ssh/lai-algorithm-training-scraper'
 }
+hyphae-check-scrapes() {
+  ps aux | grep scrape
+}
+hyphae-stop-scrapes() {
+  for projects_dir in $(find ./ -mindepth 2 -maxdepth 2 -type d -name 'projects' ); do
+    echo > $projects_dir/STOP_SCRAPE.txt
+  done;
+}
 
 function hyphae-github-repo-init {
   hyphae-github-help;
