@@ -1,5 +1,5 @@
 
-has_arg_search_args=()
+has_arg_search_args=''
 init_has_arg () {
   has_arg_search_args=$@
 }
