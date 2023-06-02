@@ -51,7 +51,7 @@ scrape_project() {
             scrape_subproject $project $subproject in_loop
         done;
     else
-        if [ ! -f  projects/$project/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/meta/_index.html ]; then
+        if [ ! -f  projects/$project_path/_index/current/metadata_dir.txt ] && [ ! -f projects/$project_path/meta/_index.html ]; then
             echo " metadata scraping";
             scrape_project_meta $project
             check_scrape_count_and_rest
@@ -59,6 +59,7 @@ scrape_project() {
             echo " metadata already scraped";
         fi
     fi
+    project_info $project > projects/$project_path/_stats.txt
 }
 
 scrape_subproject() {
@@ -85,6 +86,7 @@ scrape_subproject() {
     else
         echo " metadata already scraped";
     fi
+    project_info $project $subproject > projects/$project_path/_stats.txt
 }
 
 
