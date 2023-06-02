@@ -78,7 +78,7 @@ scrape_subproject() {
         echo " index already scraped";
     fi
 
-    if [ ! -f  projects/$project/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/meta/_index.html ]; then
+    if [ ! -f  projects/$project_path/_index/current/metadata_dir.txt ] && [ ! -f projects/$project_path/meta/_index.html ]; then
         echo " metadata scraping";
         scrape_project_meta $project $subproject
         check_scrape_count_and_rest
