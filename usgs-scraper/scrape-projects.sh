@@ -29,7 +29,7 @@ scrape_project() {
     is_in_loop=$2
 
     if [ ! "$is_in_loop" ]; then
-        echo -n "$project: "
+        echo -n "(prj) $project: "
     fi
 
     if [ ! -d projects/$project_path/_index/current ] || [ ! -f projects/$project_path/_index/current/index.txt ]; then
@@ -45,16 +45,16 @@ scrape_project() {
         subproject_i=0
         for subproject in $subprojects; do
             subproject_i=$(expr $subproject_i + 1)
-            echo -n "    $subproject ($subproject_i/$subprojects_count): "
-            scrape_subproject $project $subproject
+            echo -n "(subprj) $subproject ($subproject_i/$subprojects_count): "
+            scrape_subproject $project $subproject in_loop
         done;
     else
         if [ ! -f  projects/$project/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/meta/_index.html ]; then
-            echo "metadata scraping";
+            echo " metadata scraping";
             scrape_project_meta $project
             check_scrape_count_and_rest
         else
-            echo "metadata already scraped";
+            echo " metadata already scraped";
         fi
     fi
 }
@@ -66,7 +66,7 @@ scrape_subproject() {
     project_path="$project/$subproject"
 
     if [ ! "$is_in_loop" ]; then
-        echo -n "$project: $subproject: "
+        echo -n "(subprj) $project: $subproject: "
     fi
 
     if [ ! -d projects/$project_path/_index/current ] || [ ! -f projects/$project_path/_index/current/index.txt ]; then
@@ -77,11 +77,11 @@ scrape_subproject() {
     fi
 
     if [ ! -f  projects/$project/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/meta/_index.html ]; then
-        echo "metadata scraping";
+        echo " metadata scraping";
         scrape_project_meta $project $subproject
         check_scrape_count_and_rest
     else
-        echo "metadata already scraped";
+        echo " metadata already scraped";
     fi
 }
 
@@ -107,8 +107,8 @@ scrape_projects() {
         fi
 
         project_i=$(expr $project_i + 1)
-        echo -n "$project ($project_i/$projects_count): "
-        scrape_project $project '' in_loop
+        echo -n "(prj) $project ($project_i/$projects_count): "
+        scrape_project $project in_loop
     done
 }
 
