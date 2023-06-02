@@ -1,86 +1,123 @@
 base_dir=$(dirname $0)
 cd $base_dir
-
-if [ ! -d projects/_index/current ] || [ ! -f projects/_index/current/index.txt ]; then
-  echo "Scraping projects list";
-  ./scrape-project-index.sh
-fi
-
-projects_count=$(wc -l projects/_index/current/index.txt | sed -E -e 's/^ *([0-9]+) *.*/\1/')
-projects=$(cat projects/_index/current/index.txt)
-
-echo
-echo "Scraping USGS PROJECTS!"
+. ./utils-stats.sh
+. ./scrape-project-index.sh
+. ./scrape-project-meta.sh
 
 scrape_count=0
 check_scrape_count_and_rest() {
-  scrape_count=$(expr $scrape_count + 1)
+    scrape_count=$(expr $scrape_count + 1)
 
-  if [ "$(expr $scrape_count % 250)" = "0" ]; then
-    echo "  scrape #$scrape_count / resting 60s every 250 scrapes"
-    sleep 60
-  elif [ "$(expr $scrape_count % 50)" = "0" ]; then
-    echo "  scrape #$scrape_count / resting 20s every 50 scrapes"
-    sleep 20
-  elif [ "$(expr $scrape_count % 20)" = "0" ]; then
-    echo "  scrape #$scrape_count / resting 10s every 20 scrapes"
-    sleep 10
-  elif [ "$(expr $scrape_count % 10)" = "0" ]; then
-    echo "  scrape #$scrape_count / resting 3 every 10 scrapes"
-    sleep 3
-  elif [ "$(expr $scrape_count % 5)" = "0" ]; then
-    echo "  scrape #$scrape_count / resting 2 every 5 scrapes"
-    sleep 2
-  else
-    sleep .5
-  fi
-}
-project_i=0
-for project in $projects; do
-  project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
-  project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
-
-  # skip states that are NOT in STATES to SCRAPE
-  if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
-    continue
-  fi
-
-  project_i=$(expr $project_i + 1)
-  echo
-  echo "==========  $project (project $project_i of $projects_count) ============"
-  if [ ! -d projects/$project/_index/current ] || [ ! -f projects/$project/_index/current/index.txt ]; then
-    echo " Scraping ...";
-    ./scrape-project-index.sh $project 2>&1
-  fi
-  subprojects_count=$(wc -l projects/$project/_index/current/index.txt | sed -E -e 's/^ *([0-9]+) *.*/\1/')
-  subprojects=$(cat projects/$project/_index/current/index.txt | sed -E -e 's/^([^~]+).+/\1/' | xargs echo -n)
-  if [ "$subprojects" ]; then
-    echo ' Subprojects: ';
-    subproject_i=0
-    for subproject in $subprojects; do
-      subproject_i=$(expr $subproject_i + 1)
-      echo " -----  $subproject (subproject $subproject_i of $subprojects_count) ------"
-      if [ ! -d projects/$project/$subproject/_index/current ] || [ ! -f projects/$project/$subproject/_index/current/index.txt ]; then
-        echo "  Scraping ...";
-        ./scrape-project-index.sh $project $subproject 2>&1
-        check_scrape_count_and_rest
-      fi
-      if [ -f  projects/$project/$subproject/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/$subproject/meta/_index.html ]; then
-        echo "  Scraping subproject metadata";
-        ./scrape-project-meta.sh $project $subproject 2>&1
-        check_scrape_count_and_rest;
-      fi
-    done;
-
-  else
-    if [ -f  projects/$project/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/meta/_index.html ]; then
-      echo " Scraping project metadata";
-      ./scrape-project-meta.sh $project 2>&1
-      check_scrape_count_and_rest
+    if [ "$(expr $scrape_count % 250)" = "0" ]; then
+        sleep 60
+    elif [ "$(expr $scrape_count % 50)" = "0" ]; then
+        sleep 20
+    elif [ "$(expr $scrape_count % 20)" = "0" ]; then
+        sleep 10
+    elif [ "$(expr $scrape_count % 10)" = "0" ]; then
+        sleep 3
+    elif [ "$(expr $scrape_count % 5)" = "0" ]; then
+        sleep 2
+    else
+        sleep .5
     fi
-  fi
-done
+}
+
+scrape_project() {
+    project=$1
+    project_path="$project"
+    is_in_loop=$2
+
+    if [ ! "$is_in_loop" ]; then
+        echo -n "$project: "
+    fi
+
+    if [ ! -d projects/$project_path/_index/current ] || [ ! -f projects/$project_path/_index/current/index.txt ]; then
+        echo " index scraping";
+        scrape_project_index $project
+    else
+        echo " index already scraped";
+    fi
+
+    subprojects=$(project_index $project)
+    subprojects_count=$(project_index $project | get_line_count)
+    if [ "$subprojects" ]; then
+        subproject_i=0
+        for subproject in $subprojects; do
+            subproject_i=$(expr $subproject_i + 1)
+            echo -n "    $subproject ($subproject_i/$subprojects_count): "
+            scrape_subproject $project $subproject
+        done;
+    else
+        if [ ! -f  projects/$project/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/meta/_index.html ]; then
+            echo "metadata scraping";
+            scrape_project_meta $project
+            check_scrape_count_and_rest
+        else
+            echo "metadata already scraped";
+        fi
+    fi
+}
+
+scrape_subproject() {
+    project=$1
+    subproject=$2
+    is_in_loop=$3
+    project_path="$project/$subproject"
+
+    if [ ! "$is_in_loop" ]; then
+        echo -n "$project: $subproject: "
+    fi
+
+    if [ ! -d projects/$project_path/_index/current ] || [ ! -f projects/$project_path/_index/current/index.txt ]; then
+        echo " index scraping";
+        scrape_project_index $project $subproject
+    else
+        echo " index already scraped";
+    fi
+
+    if [ ! -f  projects/$project/_index/current/metadata_dir.txt ] && [ ! -f projects/$project/meta/_index.html ]; then
+        echo "metadata scraping";
+        scrape_project_meta $project $subproject
+        check_scrape_count_and_rest
+    else
+        echo "metadata already scraped";
+    fi
+}
 
 
-echo
-echo
+scrape_projects() {
+
+    if [ ! -d projects/_index/current ] || [ ! -f projects/_index/current/index.txt ]; then
+      echo "scraping USGS projects list";
+      scrape_project_index
+    fi
+
+    projects=$(project_index)
+    projects_count=$(project_index | get_line_count)
+
+    project_i=0
+    for project in $projects; do
+        project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
+        project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
+
+        # skip states that are NOT in STATES to SCRAPE
+        if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
+            continue
+        fi
+
+        project_i=$(expr $project_i + 1)
+        echo -n "$project ($project_i/$projects_count): "
+        scrape_project $project '' in_loop
+    done
+}
+
+if [ "$1" = "all" ]; then
+    echo scrape_projects;
+elif [ "$1" != "" ]; then
+    if [ "$2" = "" ]; then
+        scrape_project $1;
+    else
+        echo scrape_subproject $1 $2;
+    fi
+fi
