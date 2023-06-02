@@ -97,7 +97,9 @@ scrape_projects() {
     projects_count=$(project_index | get_line_count)
 
     project_i=0
+    echo $projects
     for project in $projects; do
+      echo $project;
         project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
         project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
 
