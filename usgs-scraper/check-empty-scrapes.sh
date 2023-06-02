@@ -1,3 +1,5 @@
+#!/bin/bash
+
 wc -l ./projects/*/*/_index/current/index.txt ./projects/*/_index/current/index.txt \
  | grep -E '^ *0 ' \
  | sort > scrape-check-empty-index.txt

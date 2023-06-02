@@ -1,3 +1,5 @@
+#!/bin/bash
+
 . ./utils-stats.sh
 
 scrape_project_meta() {

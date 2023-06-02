@@ -1,3 +1,5 @@
+#!/bin/bash
+
 base_dir=$(dirname $0)
 
 . ./utils.sh

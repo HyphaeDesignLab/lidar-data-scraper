@@ -1,3 +1,4 @@
+#!/bin/bash
 
 has_arg_search_args=''
 init_has_arg () {
