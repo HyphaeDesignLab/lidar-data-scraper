@@ -39,11 +39,14 @@ scrape_project_meta() {
     base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
     url=$base_url/$project_path_url/metadata/
     curl -s -S --retry 4 --retry-connrefused $url 2> $meta_dir/__errors.txt > $meta_dir/_index.html
+    if [ "$(grep '404 Not Found' $meta_dir/_index.html)" ]; then
+      echo '404 not found' >> $meta_dir/__errors.txt
+    fi
     if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
         date | xargs echo -n >> $meta_dir/_errors.txt
         cat $meta_dir/__errors.txt >> $meta_dir/_errors.txt
-        rm $meta_dir/__errors.txt
     fi
+    rm $meta_dir/__errors.txt
 
     grep -E '<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">' $meta_dir/_index.html |
      sed -E -e 's@<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">.+@\1@' \
@@ -53,6 +56,8 @@ scrape_project_meta() {
      sed -E \
       -e 's@<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">.+@\1@' \
       -e 's@/@@' \
+      -e "s/USGS_LPC_/{u}/" \
+      -e "s/$project/{prj}/" \
       > $meta_dir/xml_files.txt
 }
 
