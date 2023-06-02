@@ -1,132 +1,110 @@
 original_dir=$(pwd)
-if [ ! -d projects ]; then
+. ./utils-stats.sh
+
+if [ ! -d projects/ ]; then
   mkdir projects;
 fi
 
-cd projects/
-
-projectName="$1"
-subprojectName="$2"
-# if projectName
-if [ $projectName ]; then
-  if [ ! -d $projectName ]; then
-    mkdir $projectName;
+project_path="projects"
+project="$1"
+subproject="$2"
+if [ $project ]; then
+    project_path="projects/$project"
+  if [ ! -d $project_path ]; then
+    mkdir $project_path;
   fi
-  cd $projectName
 fi
-if [ $subprojectName ]; then
-  if [ ! -d $subprojectName ]; then
-    mkdir $subprojectName;
+if [ $subproject ]; then
+    project_path="projects/$project/$subproject"
+  if [ ! -d $project_path ]; then
+    mkdir $project_path;
   fi
-  cd $subprojectName
 fi
 
-if [ ! -d _index ]; then
-  mkdir _index
+if [ ! -d $project_path/_index ]; then
+  mkdir $project_path/_index
 fi
 
-cd _index
-
-
-if [ ! -d backup ]; then
-  mkdir backup
+if [ ! -d $project_path/_index/backup ]; then
+  mkdir $project_path/_index/backup
 fi
 #backup_dir=backup/2023-05-29---15-56-46
-backup_dir=backup/$(date +%Y-%m-%d---%H-%M-%S)
+backup_dir=$project_path/_index/backup/$(date +%Y-%m-%d---%H-%M-%S)
 mkdir $backup_dir
-cd $backup_dir
 
-projectNameForUrl=""
-if [ $projectName ]; then
-  projectNameForUrl="$projectName/"
+project_path_url=""
+if [ $project ]; then
+  project_path_url="$project/"
 fi
-subprojectNameForUrl=""
-if [ $subprojectName ]; then
-  subprojectNameForUrl="$subprojectName/"
+if [ $subproject ]; then
+  project_path_url="$project/$subproject/"
 fi
 
 ### DOWNLOAD
-base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/
-curl  $base_url$projectNameForUrl$subprojectNameForUrl > index.html
+base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
+url=$base_url/$project_path_url
+curl -s -S --retry 4 --retry-connrefused $url 2> $backup_dir/__errors.txt > $backup_dir/_index.html
+if [ $(get_line_count_or_empty $backup_dir/__errors.txt) ]; then
+    date | xargs echo -n >> $backup_dir/_errors.txt
+    cat $backup_dir/__errors.txt >> $backup_dir/_errors.txt
+    rm $backup_dir/__errors.txt
+fi
 
 sed -E \
   -e '/<img[^>]+alt="\[DIR\]">/ !d' \
   -e 's@<img[^>]+alt="\[DIR\]"> *<a href="([^"]+)">[^<]+</a> +([0-9]{4}-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]).+@\1@' \
   -e 's@/@@' \
- index.html > tmp.txt
+ $backup_dir/_index.html > $backup_dir/tmp.txt
 
-grep '_' tmp.txt > index.txt
-python3 $original_dir/get-project-year-and-state.py $projectName > index_with_year_and_state.txt
+grep '_' $backup_dir/tmp.txt > $backup_dir/index.txt
+if [ ! "$project" ] && [ ! "$subproject" ]; then
+    python3 $original_dir/get-project-year-and-state.py > index_with_year_and_state.txt
+fi
 
-if [ "$projectName" ]; then
-  metadata_dir=$(grep -oE '^metadata~' tmp.txt | sed -e 's/~//' | xargs echo -n)
-  if [ $metadata_dir ]; then
-    echo $metadata_dir > metadata_dir.txt
+if [ "$project" ]; then
+  if [ "$(grep -o '^metadata$' $backup_dir/tmp.txt)" ]; then
+    echo metadata > metadata_dir.txt
   fi
-  laz_dir=$(grep -ioE '^laz~' tmp.txt | sed -e 's/~//' | xargs echo -n)
-  if [ $laz_dir ]; then
-    echo $laz_dir > laz_dir.txt
+  if [ "$(grep -io '^laz$' $backup_dir/tmp.txt)" ]; then
+    echo laz > laz_dir.txt
   fi
-  las_dir=$(grep -ioE '^las~' tmp.txt | sed -e 's/~//' | xargs echo -n)
-  if [ $las_dir ]; then
-    echo $las_dir > las_dir.txt
+  if [ "$(grep -io '^las$' $backup_dir/tmp.txt)" ]; then
+    echo las > las_dir.txt
   fi
 fi
 
-rm tmp.txt
+rm $backup_dir/tmp.txt
 
 ### START DIFF/STATS
 ### MAKE STATS / DIFF with previous (currents)
-current_dir_path=../../current
-mkdir diff
+current_dir_path=$backup_dir/../../current
+mkdir $backup_dir/diff
 if [ -d $current_dir_path ]; then
-  diff $current_dir_path/index.txt index.txt | grep -E '^<' | sed -E -e 's/^< //' > diff/removed.txt
-  diff $current_dir_path/index.txt index.txt | grep -E '^>' | sed -E -e 's/^> //' > diff/added.txt
+  diff $current_dir_path/index.txt $backup_dir/index.txt | grep -E '^<' | sed -E -e 's/^< //' > $backup_dir/diff/removed.txt
+  diff $current_dir_path/index.txt $backup_dir/index.txt | grep -E '^>' | sed -E -e 's/^> //' > $backup_dir/diff/added.txt
 
   sed -E \
    -e 's/~20[0-9]{2}.+$//' \
    -e 's/^.*(20[0-9]{2}).*$/\1/' \
    -e '/20[0-9]/ !s/.+/unknown/' \
-   diff/removed.txt | sort | uniq > diff/removed-years.txt
+   $backup_dir/diff/removed.txt | sort | uniq > $backup_dir/diff/removed-years.txt
 
   sed -E \
    -e 's/~20[0-9]{2}.+$//' \
    -e 's/.*(20[0-9]{2}).*/\1/' \
    -e '/20[0-9]/ !s/.+/unknown/' \
-   diff/added.txt | sort | uniq > diff/added-years.txt
+   $backup_dir/diff/added.txt | sort | uniq > $backup_dir/diff/added-years.txt
 
-  echo $(wc -l index.txt | sed -E 's/^ *([0-9]+) .*$/\1/') total project > diff.txt
-  echo $(wc -l $current_dir_path/index.txt | sed -E 's/^ *([0-9]+) .*$/\1/') old total projects >> diff.txt
-  echo $(wc -l diff/removed.txt)  >> diff.txt
-  echo $(wc -l diff/added.txt) >> diff.txt
-  echo >> diff.txt
-
-  echo 'removed years counts:' >> diff.txt
-  for year in $(cat diff/removed-years.txt); do
-    echo -n " $year:" >> diff.txt
-    grep -Ec "[^~]$year" diff/removed.txt >> diff.txt
-  done;
-  echo
-
-  echo 'added years counts:' >>diff.txt
-  for year in $(cat diff/added-years.txt); do
-    echo -n " $year:" >> diff.txt
-    grep -c "[^~]$year" diff/added.txt >> diff.txt
-  done;
+  echo $(get_line_count $backup_dir/index.txt) total project > $backup_dir/diff.txt
+  echo $(get_line_count $current_dir_path/index.txt) old total projects >> $backup_dir/diff.txt
+  echo $(get_line_count $backup_dir/diff/removed.txt) removed >> $backup_dir/diff.txt
+  echo $(get_line_count $backup_dir/diff/added.txt) added >> $backup_dir/diff.txt
+  echo >> $backup_dir/diff.txt
 
   rm -rf $current_dir_path
 else
   echo 'first time scraping' > diff.txt
 fi
-cp -r . $current_dir_path
-cd ../../
+cp -r $backup_dir $current_dir_path
 ### END DIFF/STATS
-
-if [ "$projectName" != "" ]; then
-  cd ..
-fi
-if [ "$subprojectName" != "" ]; then
-  cd ..
-fi
-cd ../../
 
