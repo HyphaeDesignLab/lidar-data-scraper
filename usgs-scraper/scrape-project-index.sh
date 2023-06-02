@@ -1,5 +1,3 @@
-#!/bin/bash
-
 script_base_dir=$(pwd)
 . ./utils-stats.sh
 

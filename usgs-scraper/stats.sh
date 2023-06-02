@@ -1,5 +1,3 @@
-#!/bin/bash
-
 . ./utils-stats.sh
 
 ######### MAIN  ###########

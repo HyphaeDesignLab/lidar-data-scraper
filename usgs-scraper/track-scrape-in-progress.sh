@@ -1,5 +1,3 @@
-#!/bin/bash
-
 scrape_log="$1"
 only_once="$2"
 for i in $(seq 1 2000); do
