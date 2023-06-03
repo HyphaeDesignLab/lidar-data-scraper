@@ -11,8 +11,12 @@ started_scrape() {
         projects_path=projects/$project
     fi
     # find returns a list of dirs ending on /
-    find $projects_path -type d -mindepth 1 -maxdepth 1 ! -name '_index' ! -name 'meta' | sed -e "s@$projects_path/@@" | sort;
+    find $projects_path -mindepth 1 -maxdepth 1 -type d ! -name '_index' ! -name 'meta' | sed -e "s@$projects_path/@@" | sort;
 }
+started_scrape_with_subprojects() {
+  find projects/ -mindepth 1 -maxdepth 2 -type d ! -name '_index' ! -name 'meta' ! -name 'backup' ! -name 'current' | sed -E -e "s@^.+/@@" | sort;
+}
+
 project_index() {
     projects_path=projects
     if [ "$1" ]; then
@@ -104,6 +108,25 @@ projects_with_meta_xml() {
 }
 subprojects_with_meta_xml() {
     grep -l 'meta_xml:[^0]' projects/*/*/_stats.txt 2>/dev/null | sed -E -e 's@/_stats.txt@@' -e 's@.+/@@'
+}
+
+scrape_errors() {
+  find projects/ -type f -name '_errors.txt' | grep -v backup | wc -l
+}
+
+scrape_errors_uncaught() {
+  wc -l scrape*.error
+}
+scrape_stat_files() {
+  find projects/ -mindepth 1 -maxdepth 2 -type f -name '_stats.txt' | grep -v backup
+
+}
+
+xml_file_count() {
+  head -1 --quiet projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l
+}
+zip_file_count() {
+  head -1 --quiet projects/*/meta/zip_files.txt projects/*/*/meta/zip_files.txt | wc -l
 }
 
 project_info() {
