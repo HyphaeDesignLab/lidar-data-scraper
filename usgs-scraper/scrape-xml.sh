@@ -101,11 +101,11 @@ scrape_projects_xml() {
 }
 
 if [ "$1" = "all" ]; then
-    scrape_projects;
+    scrape_projects_xml;
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
-        scrape_project $1;
+        scrape_project_xml $1;
     else
-        scrape_subproject $1 $2;
+        scrape_subproject_xml $1 $2;
     fi
 fi
