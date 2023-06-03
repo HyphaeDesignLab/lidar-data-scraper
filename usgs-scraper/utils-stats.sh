@@ -122,10 +122,14 @@ scrape_stat_files() {
 
 }
 
-xml_file_count() {
+projects_with_xml_count() {
   head -1 --quiet projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l
 }
-zip_file_count() {
+xml_files_count() {
+  cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l
+}
+
+projects_with_zip_count() {
   head -1 --quiet projects/*/meta/zip_files.txt projects/*/*/meta/zip_files.txt | wc -l
 }
 

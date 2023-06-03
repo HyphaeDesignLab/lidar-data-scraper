@@ -20,8 +20,8 @@ if [ $(has_arg index) ] || [ $(has_arg all) ]; then
 fi
 
 if [ $(has_arg started_scrape) ] || [ $(has_arg all) ]; then
-    echo -n "projects started scraping: "
-    started_scrape | wc -l
+    echo -n "projects scraped: " && started_scrape | wc -l
+    echo -n "projects with subprojects: " && started_scrape_with_subprojects | wc -l
 fi
 
 if [ $(has_arg not_started_scrape) ] || [ $(has_arg all) ]; then
@@ -47,6 +47,14 @@ if [ $(has_arg meta_xml_to_download) ]; then
     echo "SUBprojects with NO XML to download $(subprojects_with_no_meta_xml | wc -l)"
     subprojects_with_no_meta_xml | sed -e 's/^/  /'
     echo "SUBprojects with XML to download $(subprojects_with_meta_xml | wc -l)"
+fi
+
+if [ $(has_arg xml_count) ] || [ $(has_arg all) ]; then
+    echo "Projects with XML: " && $(projects_with_xml_count)
+    echo "XML total count: " && $(xml_files_count)
+fi
+if [ $(has_arg zip_count) ] || [ $(has_arg all) ]; then
+    echo "Projects with ZIP files: " && $(projects_with_zip_count)
 fi
 
 if [ $(has_arg project_info) ]; then
