@@ -99,5 +99,9 @@ scrape_project_meta_xml() {
 }
 
 if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
+  if [ $1 = 'index' ]; then
     scrape_project_meta $1 $2
+  elif [ $1 = 'xml' ]; then
+    scrape_project_meta_xml $1 $2
+  fi
 fi
