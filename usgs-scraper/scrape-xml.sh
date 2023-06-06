@@ -176,9 +176,9 @@ extract_xml_data() {
 
 if [ "$1" = "all" ]; then
   scrape_projects_xml;
-elif [ $1 = 'xml' ]; then
+elif [ "$1" = 'xml' ]; then
   scrape_project_meta_xml $2 $3
-elif [ $1 = 'xml_extract_data' ]; then
+elif [ "$1" = 'xml_extract_data' ]; then
   extract_xml_data $2 $3
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
