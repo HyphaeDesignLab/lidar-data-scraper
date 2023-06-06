@@ -151,7 +151,7 @@ scrape_project_xml_file() {
     base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
     url=$base_url/$project_path_url/metadata/$xml_file.xml
     curl -s -S --retry 4 --retry-connrefused $url 2>$meta_dir/__errors.txt >$meta_dir/$xml_file.xml
-    if [ "$(grep '404 Not Found' $meta_dir/$first_xml_file.xml)" ]; then
+    if [ "$(grep '404 Not Found' $meta_dir/$xml_file.xml)" ]; then
       echo '404 not found' >>$meta_dir/__errors.txt
     fi
     if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
@@ -161,11 +161,9 @@ scrape_project_xml_file() {
     fi
     rm $meta_dir/__errors.txt
     rm $meta_dir/$xml_file.xml.scraping  # remove marker file
-  fi
-
-  #if [ ! -f $meta_dir/$xml_file.xml.txt ]; then
+  else
     extract_xml_data $meta_dir $xml_file
-  #fi
+  fi
 }
 
 extract_xml_data() {
