@@ -170,7 +170,7 @@ extract_xml_data() {
   dir=$1
   xml_file=$2
   grep -E '(rngdates|begdate|enddate|westbc|eastbc|northbc|southbc|mapprojn)' $dir/$xml_file.xml |
-    sed -E -e 's/^ +//' -e 's@</.+>.*$@@' -e 's/^<([^>]+)> */\1:/' -e 's/ +$//' \
+    sed -E -e 's/^ +//' -e 's@</.+>.*$@@' -e 's/^<([^>]+)> */\1:/' -e 's/ +$//' -e '/^$/ d' \
     > $dir/$xml_file.xml.txt
 }
 
