@@ -50,8 +50,7 @@ scrape_project_xml() {
     else
         if [ -f projects/$project_path/_index/current/metadata_dir.txt ] && [ -f projects/$project_path/meta/_index.html ]; then
             echo " metadata scraping";
-            scrape_project_meta_xml $project
-            check_xml_scrape_count_and_rest
+            scrape_project_xml_files $project
         else
             echo " NO metadata to scrape";
         fi
@@ -71,8 +70,7 @@ scrape_subproject_xml() {
 
     if [ -f projects/$project_path/_index/current/metadata_dir.txt ] && [ -f projects/$project_path/meta/_index.html ]; then
         echo " metadata scraping";
-        scrape_project_meta_xml $project $subproject
-        check_xml_scrape_count_and_rest
+        scrape_project_xml_files $project $subproject
     else
         echo " metadata already scraped";
     fi
@@ -100,8 +98,71 @@ scrape_projects_xml() {
     fi;
 }
 
+scrape_project_xml_files() {
+  project_path="projects"
+  project="$1"
+  subproject="$2"
+  if [ $project ]; then
+    project_path="projects/$project"
+  fi
+  if [ $subproject ]; then
+    project_path="projects/$project/$subproject"
+  fi
+
+  meta_dir=$project_path/meta
+
+  project_path_url=""
+  if [ $project ]; then
+    project_path_url="$project/"
+  fi
+  if [ $subproject ]; then
+    project_path_url="$project/$subproject/"
+  fi
+
+  xml_files_count=$(get_line_count $meta_dir/xml_files.txt)
+  xml_files_middle_i=$(expr $xml_files_count / 2)
+  xml_files=$(sed -e 's/{u}/USGS_LPC_/' -e "s/{prj}/$project/" $meta_dir/xml_files.txt 2>/dev/null)
+
+  xml_file_i='0'
+  for xml_file in $xml_files; do
+    xml_file_i=$(expr $xml_file_i + 1)
+    if [ $xml_files_i != '1' ] || [ $xml_files_i != $xml_files_count ] || [ $xml_files_i != $xml_files_middle_i ]; then
+      continue;
+    fi
+    scrape_project_xml_file $meta_dir $project_path_url $xml_file
+  done
+}
+
+scrape_project_xml_file() {
+  meta_dir=$1
+  project_path_url=$2
+  xml_file=$3
+
+  # do not scrape if TXT info already extracted or XML is downloaded or has started scrape
+  if [ -f $meta_dir/$xml_file.txt ] || [ -f $meta_dir/$xml_file.xml ] || [ -f $meta_dir/$xml_file.xml.scraping ]; then
+    return;
+  fi
+  echo > $meta_dir/$xml_file.xml.scraping # mark as "started scraping" for other threads or scrapers
+
+  check_xml_scrape_count_and_rest
+  ### DOWNLOAD
+  base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
+  url=$base_url/$project_path_url/metadata/$xml_file.xml
+  curl -s -S --retry 4 --retry-connrefused $url 2>$meta_dir/__errors.txt >$meta_dir/$xml_file.xml
+  if [ "$(grep '404 Not Found' $meta_dir/$first_xml_file.xml)" ]; then
+    echo '404 not found' >>$meta_dir/__errors.txt
+  fi
+  if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
+    echo $(date) $($meta_dir/__errors.txt) >>$meta_dir/_errors.txt
+  fi
+  rm $meta_dir/__errors.txt
+  rm $meta_dir/$xml_file.xml.scraping  # remove marker file
+}
+
 if [ "$1" = "all" ]; then
     scrape_projects_xml;
+elif [ $1 = 'xml' ]; then
+  scrape_project_meta_xml $2 $3
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
         scrape_project_xml $1;
