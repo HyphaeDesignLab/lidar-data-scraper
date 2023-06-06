@@ -1,3 +1,4 @@
+#!/bin/bash
 base_dir=$(dirname $0)
 cd $base_dir
 . ./utils-stats.sh
@@ -125,8 +126,8 @@ scrape_project_xml_files() {
 
   xml_file_i='0'
   for xml_file in $xml_files; do
-    xml_file_i=$(expr $xml_file_i + 1)
-    if [ $xml_files_i != '1' ] || [ $xml_files_i != $xml_files_count ] || [ $xml_files_i != $xml_files_middle_i ]; then
+    ((xml_file_i++))
+    if [ "$xml_file_i" != '1' ] && [ "$xml_file_i" != "$xml_files_count" ] && [ "$xml_file_i" != "$xml_files_middle_i" ]; then
       continue;
     fi
     scrape_project_xml_file $meta_dir $project_path_url $xml_file
@@ -139,30 +140,48 @@ scrape_project_xml_file() {
   xml_file=$3
 
   # do not scrape if TXT info already extracted or XML is downloaded or has started scrape
-  if [ -f $meta_dir/$xml_file.txt ] || [ -f $meta_dir/$xml_file.xml ] || [ -f $meta_dir/$xml_file.xml.scraping ]; then
+  if [ -f $meta_dir/$xml_file.xml.scraping ]; then
     return;
   fi
-  echo > $meta_dir/$xml_file.xml.scraping # mark as "started scraping" for other threads or scrapers
 
-  check_xml_scrape_count_and_rest
-  ### DOWNLOAD
-  base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-  url=$base_url/$project_path_url/metadata/$xml_file.xml
-  curl -s -S --retry 4 --retry-connrefused $url 2>$meta_dir/__errors.txt >$meta_dir/$xml_file.xml
-  if [ "$(grep '404 Not Found' $meta_dir/$first_xml_file.xml)" ]; then
-    echo '404 not found' >>$meta_dir/__errors.txt
+  if [ ! -f $meta_dir/$xml_file.xml ]; then
+    echo > $meta_dir/$xml_file.xml.scraping # mark as "started scraping" for other threads or scrapers
+    check_xml_scrape_count_and_rest
+    ### DOWNLOAD
+    base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
+    url=$base_url/$project_path_url/metadata/$xml_file.xml
+    curl -s -S --retry 4 --retry-connrefused $url 2>$meta_dir/__errors.txt >$meta_dir/$xml_file.xml
+    if [ "$(grep '404 Not Found' $meta_dir/$first_xml_file.xml)" ]; then
+      echo '404 not found' >>$meta_dir/__errors.txt
+    fi
+    if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
+      echo $(date) $($meta_dir/__errors.txt) >>$meta_dir/_errors.txt
+    else
+      extract_xml_data $meta_dir $xml_file
+    fi
+    rm $meta_dir/__errors.txt
+    rm $meta_dir/$xml_file.xml.scraping  # remove marker file
   fi
-  if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
-    echo $(date) $($meta_dir/__errors.txt) >>$meta_dir/_errors.txt
-  fi
-  rm $meta_dir/__errors.txt
-  rm $meta_dir/$xml_file.xml.scraping  # remove marker file
+
+  #if [ ! -f $meta_dir/$xml_file.xml.txt ]; then
+    extract_xml_data $meta_dir $xml_file
+  #fi
+}
+
+extract_xml_data() {
+  dir=$1
+  xml_file=$2
+  grep -E '(rngdates|begdate|enddate|westbc|eastbc|northbc|southbc|mapprojn)' $dir/$xml_file.xml |
+    sed -E -e 's/^ +//' -e 's@</.+>.*$@@' -e 's/^<([^>]+)> */\1:/' -e 's/ +$//' \
+    > $dir/$xml_file.xml.txt
 }
 
 if [ "$1" = "all" ]; then
-    scrape_projects_xml;
+  scrape_projects_xml;
 elif [ $1 = 'xml' ]; then
   scrape_project_meta_xml $2 $3
+elif [ $1 = 'xml_extract_data' ]; then
+  extract_xml_data $2 $3
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
         scrape_project_xml $1;
