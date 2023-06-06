@@ -32,7 +32,7 @@ check_xml_scrape_count_and_rest() {
 
 scrape_project_xml() {
     project=$1
-    project_path="$project"
+    local project_path="$project"
     is_in_loop=$2
 
     if [ ! "$is_in_loop" ]; then
@@ -63,7 +63,7 @@ scrape_subproject_xml() {
     project=$1
     subproject=$2
     is_in_loop=$3
-    project_path="$project/$subproject"
+    local project_path="$project/$subproject"
 
     if [ ! "$is_in_loop" ]; then
         echo -n "(subprj) $project: $subproject: "
@@ -100,7 +100,7 @@ scrape_projects_xml() {
 }
 
 scrape_project_xml_files() {
-  project_path="projects"
+  local project_path="projects"
   project="$1"
   subproject="$2"
   if [ $project ]; then
@@ -112,7 +112,7 @@ scrape_project_xml_files() {
 
   meta_dir=$project_path/meta
 
-  project_path_url=""
+  local project_path_url=""
   if [ $project ]; then
     project_path_url="$project/"
   fi
@@ -136,7 +136,7 @@ scrape_project_xml_files() {
 
 scrape_project_xml_file() {
   meta_dir=$1
-  project_path_url=$2
+  local project_path_url=$2
   xml_file=$3
 
   # do not scrape if TXT info already extracted or XML is downloaded or has started scrape

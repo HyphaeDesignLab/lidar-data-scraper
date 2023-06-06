@@ -5,7 +5,7 @@ scrape_project_meta() {
       mkdir projects;
     fi
 
-    project_path="projects"
+    local project_path="projects"
     project="$1"
     subproject="$2"
     if [ $project ]; then
@@ -26,7 +26,7 @@ scrape_project_meta() {
     fi
     meta_dir=$project_path/meta
 
-    project_path_url=""
+    local project_path_url=""
     if [ $project ]; then
       project_path_url="$project/"
     fi
