@@ -131,7 +131,11 @@ scrape_project_xml_files() {
       continue;
     fi
     scrape_project_xml_file $meta_dir $project_path_url $xml_file
+    if [ -f projects/STOP_SCRAPE.txt ]; then break; fi;
   done
+  if [ -f projects/STOP_SCRAPE.txt ]; then
+    rm projects/STOP_SCRAPE.txt
+  fi;
 }
 
 scrape_project_xml_file() {
