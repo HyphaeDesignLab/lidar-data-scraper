@@ -159,7 +159,7 @@ scrape_project_xml_file() {
       echo '404 not found' >>$meta_dir/__errors.txt
     fi
     if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
-      echo $(date) $($meta_dir/__errors.txt) >>$meta_dir/_errors.txt
+      echo $(date) $(cat $meta_dir/__errors.txt) >>$meta_dir/_errors.txt
     else
       extract_xml_data $meta_dir $xml_file
     fi
