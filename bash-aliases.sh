@@ -5,7 +5,7 @@ function hyphae-github-help {
   echo 'ssh-add ~/.ssh/lai-algorithm-training-scraper'
 }
 hyphae-check-scrapes() {
-  ps aux | grep scrape
+  ps aux | grep scrape | grep -v grep
 }
 hyphae-stop-scrapes() {
   for projects_dir in $(find ./ -mindepth 2 -maxdepth 2 -type d -name 'projects' ); do
