@@ -82,26 +82,25 @@ scrape_project_meta_xml() {
       project_path_url="$project/$subproject/"
     fi
 
-    first_xml_file=$(ls -1 $meta_dir | head -1 | sed -e 's/{u}/USGS_LPC_/' -e "s/{prj}/$project/");
+    first_xml_file=$(cat $meta_dir/xml_files.txt 2>/dev/null | head -1 | sed -e 's/{u}/USGS_LPC_/' -e "s/{prj}/$project/");
 
     ### DOWNLOAD
     base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-    url=$base_url/$project_path_url/metadata/$first_xml_file
+    url=$base_url/$project_path_url/metadata/$first_xml_file.xml
     curl -s -S --retry 4 --retry-connrefused $url 2> $meta_dir/__errors.txt > $meta_dir/$first_xml_file.xml
     if [ "$(grep '404 Not Found' $meta_dir/$first_xml_file.xml)" ]; then
       echo '404 not found' >> $meta_dir/__errors.txt
     fi
     if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
-        date | xargs echo -n >> $meta_dir/_errors.txt
-        cat $meta_dir/__errors.txt >> $meta_dir/_errors.txt
+        echo $(date) $($meta_dir/__errors.txt) >> $meta_dir/_errors.txt
     fi
     rm $meta_dir/__errors.txt
 }
 
 if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
   if [ $1 = 'index' ]; then
-    scrape_project_meta $1 $2
+    scrape_project_meta $2 $3
   elif [ $1 = 'xml' ]; then
-    scrape_project_meta_xml $1 $2
+    scrape_project_meta_xml $2 $3
   fi
 fi
