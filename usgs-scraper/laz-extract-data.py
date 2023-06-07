@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 import numpy as np
 import laspy
+import json
 
 def laz_extract_data(file_path, point_limit=0):
     # Buffered read to extract all dates of individual points
@@ -42,10 +43,14 @@ def laz_extract_data(file_path, point_limit=0):
         if point_limit > 0 and i <= 0:
           break
 
-    #now turn the unix timstamp to a local timestamp:
-    data['date_range_local'] = [datetime.fromtimestamp(data['date_range'][0]), datetime.fromtimestamp(data['date_range'][1])]
 
-    return data
+
+    return '\n'.join([
+        'bbox:'+json.dumps(data['bbox']),
+        'bbox_poly:'+json.dumps(data['bbox_polygon']),
+        'date_start:'+datetime.fromtimestamp(data['date_range'][0]).strftime('%Y%m%d%H%M%S'), #now turn the unix timstamp to a local timestamp:
+        'date_end:'+datetime.fromtimestamp(data['date_range'][1]).strftime('%Y%m%d%H%M%S')
+    ])
 
 if (__name__ == '__main__'):
     print(laz_extract_data(sys.argv[1]))
