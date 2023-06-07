@@ -164,8 +164,15 @@ scrape_project_xml_file() {
 extract_xml_data() {
   dir=$1
   xml_file=$2
-  grep -E '(rngdates|begdate|enddate|westbc|eastbc|northbc|southbc|mapprojn)' $dir/$xml_file.xml |
-    sed -E -e 's/^ +//' -e 's@</.+>.*$@@' -e 's/^<([^>]+)> */\1:/' -e 's/ +$//' -e '/^$/ d' \
+  grep -E '(begdate|enddate|westbc|eastbc|northbc|southbc|mapprojn)' $dir/$xml_file.xml |
+    sed -E -e 's/^ +//' \
+     -e 's/^<begdate> */date_start:/' \
+     -e 's/^<enddate> */date_end:/' \
+     -e 's/^<(\w+)bc> */\1:/' \
+     -e 's/^<mapprojn> */map_proj:/' \
+     -e 's@</?[^>]+>@@' \
+     -e 's/ +$//' \
+     -e '/^$/ d' \
     > $dir/$xml_file.xml.txt
 }
 
