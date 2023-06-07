@@ -48,4 +48,4 @@ def laz_extract_data(file_path, point_limit=0):
     return data
 
 if (__name__ == '__main__'):
-    print(laz_extract_data(argv[1]))
+    print(laz_extract_data(sys.argv[1]))
