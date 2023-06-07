@@ -54,11 +54,11 @@ if [ $(has_arg xml_count) ] || [ $(has_arg all) ]; then
     echo "XML total count: " && $(xml_files_count)
 fi
 if [ $(has_arg xml_data_count) ]; then
-    echo "XMLs containing: $1: " && $(xml_data_search count $1)
+    echo "XMLs containing: $2: " && $(xml_data_search count $2)
 fi
 
 if [ $(has_arg xml_data_search) ]; then
-    echo "XMLs containing: $1: " && $(xml_data_search search $1)
+    echo "XMLs containing: $2: " && $(xml_data_search search $2)
 fi
 
 if [ $(has_arg zip_count) ] || [ $(has_arg all) ]; then
