@@ -53,6 +53,14 @@ if [ $(has_arg xml_count) ] || [ $(has_arg all) ]; then
     echo "Projects with XML: " && $(projects_with_xml_count)
     echo "XML total count: " && $(xml_files_count)
 fi
+if [ $(has_arg xml_data_count) ]; then
+    echo "XMLs containing: $1: " && $(xml_data_search count $1)
+fi
+
+if [ $(has_arg xml_data_search) ]; then
+    echo "XMLs containing: $1: " && $(xml_data_search search $1)
+fi
+
 if [ $(has_arg zip_count) ] || [ $(has_arg all) ]; then
     echo "Projects with ZIP files: " && $(projects_with_zip_count)
 fi

@@ -173,3 +173,16 @@ project_info() {
        echo "subprojects:$index_count"
     fi
 }
+
+xml_data_search() {
+  if [ "$1" = "" ]; then
+    echo "Usage: count|details  <xml_search_string>"
+    return
+  fi
+
+  if [ "$1" = "count" ]; then
+    grep -E "$2" projects/*/meta/*xml.txt  projects/*/*/meta/*xml.txt | wc -l | format_line_count
+  else
+    grep -E "$2" projects/*/meta/*xml.txt  projects/*/*/meta/*xml.txt
+  fi
+}
