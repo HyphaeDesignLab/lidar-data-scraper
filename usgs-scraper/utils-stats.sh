@@ -181,7 +181,7 @@ xml_data_search() {
   fi
 
   if [ "$1" = "count" ]; then
-    grep -E "$2" projects/*/meta/*xml.txt  projects/*/*/meta/*xml.txt | wc -l | format_line_count
+    grep -E "$2" projects/*/meta/*xml.txt  projects/*/*/meta/*xml.txt | wc -l
   else
     grep -E "$2" projects/*/meta/*xml.txt  projects/*/*/meta/*xml.txt
   fi
