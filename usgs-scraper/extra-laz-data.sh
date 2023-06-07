@@ -13,6 +13,12 @@ extract_laz_data() {
   if [ -f STOP-LAZ-DATA-EXTRACT.txt ]; then
     return;
   fi
+  sleep 10
+  echo
+  echo
+  echo
+  date
+  echo "trying to find more LAZ files...."
   extract_laz_data;
 }
 
