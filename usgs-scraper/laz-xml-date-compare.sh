@@ -12,9 +12,11 @@ compare_xml_to_laz_date() {
 }
 
 check_xml_dates_within_project() {
-  for fff in projects/*/*/meta/*xml.txt projects/*/meta/*xml.txt; do
-    echo $fff | sed -E -e 's@.+/(.+/.+)/meta/[^/]+@\1@' -e 's@.+/(.+)/meta/[^/]+@\1@'
-    sed -nE -e '/date_start:/ {s/date_start://;N;s/\n/-/;s/date_end://;p;}' $fff
+  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta'); do
+    echo $ddd;
+    for fff in $ddd/*xml.txt; do
+      sed -nE -e '/date_start:/ {s/date_start://;N;s/\n/-/;s/date_end://;p;}' $fff
+    done 2>/dev/null
   done
 
 }
