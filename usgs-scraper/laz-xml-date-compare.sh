@@ -27,4 +27,7 @@ check_xml_dates_within_project() {
 
 }
 
-check_xml_dates_within_project $1
+if [ "$(basename $0)" = "laz-xml-date-compare.sh" ]; then
+  $1 $2 $3
+fi
+
