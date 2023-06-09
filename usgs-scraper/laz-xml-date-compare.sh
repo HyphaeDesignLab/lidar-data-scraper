@@ -12,10 +12,20 @@ compare_xml_to_laz_date() {
 }
 
 check_xml_dates_within_project() {
-  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta'); do
-    echo $ddd;
+  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' ); do
+    last_dates='';
+    has_dir_printed=''
     for fff in $ddd/*xml.txt; do
-      sed -nE -e '/date_start:/ {s/date_start://;N;s/\n/-/;s/date_end://;p;}' $fff
+      curr_dates=$(sed -nE -e '/(date_start|begdate):/ {s/(date_start|begdate)://;N;s/\n/-/;s/(date_end|enddate)://;p;}' $fff)
+      if [ "$last_dates" != "" ] && [ "$last_dates" != "$curr_dates" ]; then
+        if [ ! "$has_dir_printed" ]; then echo $ddd; has_dir_printed=1; fi
+        echo dates differ $curr_dates '==>' $last_dates
+      fi
+      last_dates=$curr_dates
+      if [ "$(echo $curr_dates | sed -nE -e '/^-|-$/ p')" ]; then
+        if [ ! "$has_dir_printed" ]; then echo $ddd; has_dir_printed=1; fi
+        echo some date is missing "($curr_dates)"
+      fi
     done 2>/dev/null
   done
 
