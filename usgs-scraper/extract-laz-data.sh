@@ -1,6 +1,6 @@
 
 extract_laz_data() {
-  for fff in $(ls projects/*/meta/*xml.laz projects/*/*/meta/*.xml.laz); do
+  for fff in projects/*/meta/*xml.laz projects/*/*/meta/*.xml.laz; do
     if [ -f $fff.txt ]; then
       continue
     fi;
