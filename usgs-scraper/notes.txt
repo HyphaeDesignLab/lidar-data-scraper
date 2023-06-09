@@ -1,0 +1,5 @@
+
+6/8/2023
+Are all XML files within a project the same begdate-enddate?
+
+Make a report of all XML project lengths
