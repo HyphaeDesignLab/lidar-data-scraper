@@ -64,7 +64,18 @@ make_xml_date_report() {
 
 }
 
-if [ "$(basename $0)" = "laz-xml-date-compare.sh" ]; then
+get_laz_areas() {
+  path_search='';
+  if [ "$1" ]; then path_search="-path *$1*"; fi
+  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
+    for fff in $(ls -1 $ddd/*.xml.txt); do
+      python3 calculate-area.py $fff > $(sed -e 's/.xml.txt/.area.txt/' <<< $fff)
+    done 2>/dev/null
+  done
+
+}
+
+if [ "$(basename $0)" = "laz-xml-misc.sh" ]; then
   $1 $2 $3
 fi
 
