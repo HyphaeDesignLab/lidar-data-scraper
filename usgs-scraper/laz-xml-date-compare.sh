@@ -51,10 +51,12 @@ make_xml_date_report() {
   for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
     last_dates='';
     has_dir_printed='';
-    for fff in $ddd/*xml.txt; do
+    for fff in $(ls -1 $ddd/*.xml.txt); do
       curr_dates=$(extract_xml_dates_on_one_line $fff);
-      if [ "${#$curr_dates}" -gt '8' ]; then
-        get_days_of_date_range $curr_dates > $ddd/project-length-days.txt
+      if [ "${#curr_dates}" -gt '8' ]; then
+        echo 'dates:'$curr_dates > $ddd/project-length-days.txt;
+        echo -n 'days:' >> $ddd/project-length-days.txt;
+        get_days_of_date_range $curr_dates >> $ddd/project-length-days.txt
         break
       fi
     done 2>/dev/null
