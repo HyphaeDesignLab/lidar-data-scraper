@@ -156,12 +156,17 @@ project_info() {
             echo "meta_xml:$xml_file_count"
             xml_file_downloaded_count=$(ls -1 projects/$project_path/meta/*.xml 2>/dev/null | wc -l)
             echo "meta_xml_downloaded:$xml_file_downloaded_count"
+            xml_file_processed_count=$(ls -1 projects/$project_path/meta/*.xml.txt 2>/dev/null | wc -l)
+            echo "meta_xml_processed:$xml_file_processed_count"
             zip_file_count=$(get_line_count projects/$project_path/meta/zip_files.txt)
             echo "meta_zip:$zip_file_count"
         fi
       fi
       if [ "$laz_dir" ]; then
         echo 'laz_dir';
+        laz_files_downloaded=$(ls -1 projects/$project_path/meta/*.xml.txt 2>/dev/null | wc -l)
+        echo "laz_downloaded:$laz_files_downloaded"
+
       fi
       if [ "$las_dir" ]; then
         echo 'las_dir';
