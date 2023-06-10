@@ -1,6 +1,6 @@
 
 extract_laz_data() {
-  for fff in projects/*/meta/*xml.laz projects/*/*/meta/*.xml.laz; do
+  for fff in projects/*/laz/*.laz projects/*/*/laz/*.laz; do
     if [ -f $fff.txt ]; then
       continue
     fi;
@@ -13,7 +13,7 @@ extract_laz_data() {
   if [ -f STOP-LAZ-DATA-EXTRACT.txt ]; then
     return;
   fi
-  sleep 10
+  sleep 1
   echo
   echo
   echo
