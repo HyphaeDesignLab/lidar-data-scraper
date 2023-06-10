@@ -24,7 +24,7 @@ def laz_extract_data(file_path, point_limit=0):
 
 
       i = point_limit
-      for point in f.chunk_iterator(100):
+      for point in f.chunk_iterator(500):
         gps_times = list(point.point_format.dimension_names)
         gps_times_index = gps_times.index('gps_time')
         #gps_time is often used in the laz 1.4 standard. However, the lidar operator may do something weird here so be careful!
