@@ -69,10 +69,12 @@ get_laz_areas() {
   if [ "$1" ]; then path_search="-path *$1*"; fi
   for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
     for fff in $(ls -1 $ddd/*.xml.txt); do
-      python3 calculate-area.py $fff > $(sed -e 's/.xml.txt/.area.txt/' <<< $fff)
+      echo $fff
+      grep -E '(south|north|east|west)' $fff
     done 2>/dev/null
-  done
-
+  done > tmp123456789.txt
+  python3 calculate-areas.py tmp123456789.txt
+  rm tmp123456789.txt
 }
 
 if [ "$(basename $0)" = "laz-xml-misc.sh" ]; then
