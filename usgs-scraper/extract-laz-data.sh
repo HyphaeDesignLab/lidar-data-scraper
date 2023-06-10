@@ -1,6 +1,6 @@
 
 extract_laz_data() {
-  for fff in projects/*/laz/*.laz projects/*/*/laz/*.laz; do
+  for fff in $(ls projects/*/laz/*.laz projects/*/*/laz/*.laz); do
     if [ -f $fff.txt ]; then
       continue
     fi;
