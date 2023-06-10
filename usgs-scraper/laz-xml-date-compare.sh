@@ -16,9 +16,11 @@ extract_xml_dates_on_one_line() {
 }
 
 check_xml_dates_within_project() {
-  for ddd in $(find projects/$1 -mindepth 2 -maxdepth 3 -type d -name 'meta' ); do
+  path_search='';
+  if [ "$1" ]; then path_search="-path *$1*"; fi
+  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
     last_dates='';
-    has_dir_printed=''
+    has_dir_printed='';
     for fff in $ddd/*xml.txt; do
       curr_dates=$(extract_xml_dates_on_one_line $fff);
       if [ "$last_dates" != "" ] && [ "$last_dates" != "$curr_dates" ]; then
