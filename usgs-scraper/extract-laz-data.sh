@@ -9,7 +9,7 @@ extract_laz_data() {
     python3 laz-extract-data.py $fff > $fff.txt
 
     if [ -f STOP-LAZ-DATA-EXTRACT.txt ]; then
-      return;
+      break;
     fi
 
     sleep 1
