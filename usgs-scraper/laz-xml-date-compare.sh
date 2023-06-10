@@ -11,12 +11,16 @@ compare_xml_to_laz_date() {
 
 }
 
+extract_xml_dates_on_one_line() {
+  sed -nE  -e '/(date_start|begdate):/ {s/(date_start|begdate)://;N;s/\x0a/-/g;s/\n/-/g;s/(date_end|enddate)://;p;}' $@
+}
+
 check_xml_dates_within_project() {
-  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' ); do
+  for ddd in $(find projects/$1 -mindepth 2 -maxdepth 3 -type d -name 'meta' ); do
     last_dates='';
     has_dir_printed=''
     for fff in $ddd/*xml.txt; do
-      curr_dates=$(sed -nE -e '/(date_start|begdate):/ {s/(date_start|begdate)://;N;s/\n/-/;s/(date_end|enddate)://;p;}' $fff)
+      curr_dates=$(extract_xml_dates_on_one_line $fff);
       if [ "$last_dates" != "" ] && [ "$last_dates" != "$curr_dates" ]; then
         if [ ! "$has_dir_printed" ]; then echo $ddd; has_dir_printed=1; fi
         echo dates differ $curr_dates '==>' $last_dates
