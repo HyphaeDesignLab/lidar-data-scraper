@@ -16,7 +16,6 @@ def get_area(project):
     poly = wkt.loads(poly_str)
 
     area = abs(geod.geometry_area_perimeter(poly)[0])
-    file_out=project['path']+'/'+project['filename']
     return '{:.3f}'.format(area/pow(10,6)) # square km
 
 file_path = sys.argv[1]
@@ -28,8 +27,7 @@ project=None
 for line in file:
     line = line.replace('\n', '')
     if '/' in line:
-        path_pieces = line.split('/')
-        project = {'bounds':{}, 'path':'/'.join(path_pieces[:-1]), 'filename':path_pieces[-1].replace('.xml.txt', '.area.txt') }
+        project = {'bounds':{}, 'path': line }
     if 'south:' in line:
         project['bounds']['south'] = float(line.replace('south:', ''))
     if 'north:' in line:
@@ -40,5 +38,9 @@ for line in file:
         project['bounds']['west'] = float(line.replace('west:', ''))
     if len(project['bounds']) == 4:
         area = get_area(project)
-        print(project['path'], area)
+        file_out = open(project['path'].replace('.xml.txt', '.area.txt'), 'w')
+        file_out.write(area)
+        file_out.close()
+
+file.close()
 
