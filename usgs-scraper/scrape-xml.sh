@@ -81,6 +81,14 @@ scrape_projects_xml() {
     for project in $projects; do
         if [ -f projects/STOP_SCRAPE.txt ]; then break; fi;
 
+        project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
+        project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
+
+        # skip states that are NOT in STATES to SCRAPE
+        if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
+            continue
+        fi
+
         project_i=$(expr $project_i + 1)
         echo -n "(prj) $project ($project_i/$projects_count): "
         scrape_project_xml $project in_loop
