@@ -119,14 +119,18 @@ scrape_project_xml_files() {
     project_path_url="$project/$subproject/"
   fi
 
-  xml_files_count=$(get_line_count $meta_dir/xml_files.txt)
-  xml_files_middle_i=$(expr $xml_files_count / 2)
+  if [ "$ZENV_SAMPLE_XML_ONLY" ]; then
+    xml_files_count=$(get_line_count $meta_dir/xml_files.txt)
+    xml_files_middle_i=$(expr $xml_files_count / 2)
+  fi;
   xml_files=$(sed -e 's/{u}/USGS_LPC_/' -e "s/{prj}/$project/" $meta_dir/xml_files.txt 2>/dev/null)
 
   xml_file_i='0'
   for xml_file in $xml_files; do
-    ((xml_file_i++))
-    if [ "$xml_file_i" != '1' ] && [ "$xml_file_i" != "$xml_files_count" ] && [ "$xml_file_i" != "$xml_files_middle_i" ]; then
+    if [ "$ZENV_SAMPLE_XML_ONLY" ]; then
+      ((xml_file_i++))
+    fi;
+    if [ "$ZENV_SAMPLE_XML_ONLY" ] && [ "$xml_file_i" != '1' ] && [ "$xml_file_i" != "$xml_files_count" ] && [ "$xml_file_i" != "$xml_files_middle_i" ]; then
       continue;
     fi
     scrape_project_xml_file $meta_dir $project_path_url $xml_file
