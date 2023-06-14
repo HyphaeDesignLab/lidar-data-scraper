@@ -128,6 +128,13 @@ projects_with_xml_count() {
 xml_files_count() {
   cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l
 }
+xml_files_downloaded_count() {
+  find  projects/ -mindepth 3 -maxdepth 4 -type f -path '*/meta/*' -name '*.xml' | wc -l
+}
+
+xml_file_download_in_progress() {
+  find  projects/ -mindepth 3 -maxdepth 4 -type f -path '*/meta/*' -name '*xml.scraping'
+}
 
 projects_with_zip_count() {
   head -1 --quiet projects/*/meta/zip_files.txt projects/*/*/meta/zip_files.txt | wc -l

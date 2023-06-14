@@ -1,3 +1,5 @@
+#!/bin/bash
+
 . ./utils-stats.sh
 
 ######### MAIN  ###########
@@ -8,6 +10,35 @@ fi;
 
 if [ $(has_arg size) ] || [ $(has_arg all) ]; then
  echo "size on disk: " $(du -h -d 0 .)
+fi;
+
+if [ $(has_arg general) ]; then
+  echo -n 'XML downloaded: '
+  xml_files_downloaded_count;
+  echo -n 'XML in progress: '
+  xml_file_download_in_progress;
+fi
+
+if [ $(has_arg disk_usage_changes) ] || [ $(has_arg general) ]; then
+  #du -d3 > disk_usage_changes-$(date +%s).txt
+  file_count=$(ls disk_usage_changes*.txt 2>/dev/null | wc -l | xargs echo -n)
+  if [ "$file_count" -gt "5" ]; then
+   rm $(ls -1tr disk_usage_changes*.txt | head -1)
+   ((file_count--))
+  fi
+  if [ "$file_count" -lt "2" ]; then
+    echo 'run this again to get at least two disk usages to compare';
+  else
+    echo "Which disk changes would you like to compare? Pick two numbers between 1 (latest) and $file_count (earliest)"
+    read -p "One: " zzz1;
+    read -p "Two: " zzz2;
+    file1=$(ls -1t disk_usage_changes*.txt | head -$zzz1 | tail -1)
+    file2=$(ls -1rt disk_usage_changes*.txt | head -$zzz2 | tail -1)
+    diff $file1 $file2 |
+     grep -E '^(<|>)' |
+     grep -Ev '\.(/projects)?$' |
+     sed -En -e 's/^< ([0-9]+)[^0-9].+/\1/;/^[0-9]/ {N;s/\n//g;s/([0-9]+)> ([0-9]+)(.+)$/\3:   \1 -> \2/;p;};'
+  fi;
 fi;
 
 if [ $(has_arg index_errors) ] || [ $(has_arg all) ]; then
