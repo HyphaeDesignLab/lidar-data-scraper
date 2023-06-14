@@ -30,10 +30,10 @@ if [ $(has_arg disk_usage_changes) ] || [ $(has_arg general) ]; then
     echo 'run this again to get at least two disk usages to compare';
   else
     echo "Which disk changes would you like to compare? Pick two numbers between 1 (latest) and $file_count (earliest)"
-    read -p "One: " zzz1;
-    read -p "Two: " zzz2;
-    file1=$(ls -1t disk_usage_changes*.txt | head -$zzz1 | tail -1)
-    file2=$(ls -1rt disk_usage_changes*.txt | head -$zzz2 | tail -1)
+    read -p "One: " zzz_latest;
+    read -p "Two: " zzz_earliest;
+    file2=$(ls -1t disk_usage_changes*.txt | head -$zzz_latest | tail -1)
+    file1=$(ls -1rt disk_usage_changes*.txt | head -$zzz_earliest | tail -1)
     diff $file1 $file2 |
      grep -E '^(<|>)' |
      grep -Ev '\.(/projects)?$' |
