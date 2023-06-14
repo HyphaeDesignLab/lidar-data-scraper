@@ -20,7 +20,7 @@ if [ $(has_arg general) ]; then
 fi
 
 if [ $(has_arg disk_usage_changes) ] || [ $(has_arg general) ]; then
-  #du -d3 > disk_usage_changes-$(date +%s).txt
+  du -d3 > disk_usage_changes-$(date +%s).txt
   file_count=$(ls disk_usage_changes*.txt 2>/dev/null | wc -l | xargs echo -n)
   if [ "$file_count" -gt "5" ]; then
    rm $(ls -1tr disk_usage_changes*.txt | head -1)
