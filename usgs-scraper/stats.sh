@@ -111,3 +111,7 @@ if [ $(has_arg project_info) ]; then
     echo $2 $3
     project_info $2 $3;
 fi
+
+if [ "$1" = "raw" ]; then
+  $2;
+fi
