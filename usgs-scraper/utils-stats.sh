@@ -128,6 +128,21 @@ projects_with_xml_count() {
 xml_files_count() {
   cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l
 }
+xml_extracted_data_files_count() {
+  ls projects/*/meta/*xml.txt projects/*/*/meta/*xml.txt | wc -l
+}
+xml_extracted_data_files() {
+  ls projects/*/meta/*xml.txt projects/*/*/meta/*xml.txt
+}
+xml_extracted_data_files_contents() {
+  cat projects/*/meta/*xml.txt projects/*/*/meta/*xml.txt
+}
+xml_leaves_off_files_contents() {
+  ls projects/*/meta/leaves-off.txt projects/*/*/meta/leaves-off.txt 2>/dev/null
+}
+xml_leaves_on_files_contents() {
+  ls projects/*/meta/leaves-on.txt projects/*/*/meta/leaves-on.txt 2>/dev/null
+}
 xml_files_downloaded_count() {
   project=$1
   subproject=$2
@@ -155,7 +170,6 @@ xml_file_downloaded_vs_todownload() {
   for project in $projects; do
     project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
     project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
-
 
     if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
         continue
