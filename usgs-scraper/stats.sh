@@ -19,6 +19,17 @@ if [ $(has_arg general) ]; then
   xml_file_download_in_progress;
 fi
 
+if [ $(has_arg xml_files_downloaded_count) ]; then
+  echo -n 'XML downloaded: '
+  xml_files_downloaded_count;
+  echo -n 'XML in progress: '
+  xml_file_download_in_progress;
+fi
+if [ $(has_arg xml_file_downloaded_vs_todownload) ]; then
+  echo -n 'XML downloaded vs to-download: '
+  xml_file_downloaded_vs_todownload;
+fi
+
 if [ $(has_arg disk_usage_changes) ] || [ $(has_arg general) ]; then
   du -d3 > disk_usage_changes-$(date +%s).txt
   file_count=$(ls disk_usage_changes*.txt 2>/dev/null | wc -l | xargs echo -n)

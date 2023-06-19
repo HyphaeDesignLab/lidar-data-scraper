@@ -129,11 +129,58 @@ xml_files_count() {
   cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l
 }
 xml_files_downloaded_count() {
-  find  projects/ -mindepth 3 -maxdepth 4 -type f -path '*/meta/*' -name '*.xml' | wc -l
+  project=$1
+  subproject=$2
+  project_path=''
+
+  if [ "$subproject" ]; then
+    project_path="-path \*$project\*"
+  fi
+  if [ "$subproject" ]; then
+      project_path="-path \*$project/$subproject\*"
+  fi
+
+  find  projects/ -mindepth 3 -maxdepth 4 -type f -path '*/meta/*' $project_path -name '*.xml' | wc -l
 }
 
 xml_file_download_in_progress() {
   find  projects/ -mindepth 3 -maxdepth 4 -type f -path '*/meta/*' -name '*xml.scraping'
+}
+
+xml_file_downloaded_vs_todownload() {
+  projects=$(started_scrape)
+  local xml_downloaded_count="0"
+  xml_downloaded_project_names_filename=__xml_downloaded_projects.txt
+  echo > $xml_downloaded_project_names_filename
+  for project in $projects; do
+    project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
+    project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
+
+
+    if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
+        continue
+    fi
+    echo $project >> $xml_downloaded_project_names_filename
+
+    if [ -f projects/$project/meta/xml_files.txt ]; then
+      project_xml_downloaded=$(xml_files_downloaded_count $project)
+      #echo $project expr $xml_downloaded_count + $project_xml_downloaded
+      ((xml_downloaded_count = xml_downloaded_count + project_xml_downloaded))
+    else
+      subprojects_count=$(started_scrape $project | wc -l | xargs echo -n)
+      if [ "$subprojects_count" != "0" ]; then
+        for subproject in $(started_scrape $projects); do
+          if [ -f projects/$project/$subproject/meta/xml_files.txt ]; then
+            #echo '__' $subproject $xml_downloaded_count \+ $subproject_xml_downloaded
+            subproject_xml_downloaded=$(xml_files_downloaded_count $project $subproject)
+            xml_downloaded_count=$((xml_downloaded_count + subproject_xml_downloaded))
+          fi
+        done;
+      fi
+    fi
+
+  done
+  echo $xml_downloaded_count
 }
 
 projects_with_zip_count() {
