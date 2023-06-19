@@ -23,6 +23,36 @@ get_days_of_date_range() {
   day2=$(echo $1 | cut -c 16,17)
   expr \( $year2 - $year1 \) \* 365 + \( $month2 - $month1 \) \* 30 + $day2 - $day1
 }
+is_date_leaves_on() {
+  monthday1=$(echo $1 | cut -c 5-8)
+  monthday2=$(echo $1 | cut -c 14-17)
+
+  # if between may 1 and sept 30 (incl), leaves are ON)
+  diff_start=$(expr $monthday1 - 0430)
+  diff_end=$(expr $monthday2 - 1001)
+
+  # check the diff with day before start and day after end
+  if [ "$diff_start" -gt "0" ] && [ "$diff_end" -le "0" ]; then
+    echo 1
+  fi
+}
+is_date_leaves_off() {
+  monthday1=$(echo $1 | cut -c 5-8)
+  monthday2=$(echo $1 | cut -c 14-17)
+  # if between nov 1 and mar 31 (incl), leaves are off)
+
+  diff_start=$(expr $monthday1 - 0331)
+  diff_end=$(expr $monthday2 - 1101)
+
+  # reverse interval: if between apr 1 and oct 30 (incl), then NOT leaves are off
+  if [ "$diff_start" -gt "0" ] && [ "$diff_end" -le "0" ]; then
+    echo -n
+    return;
+  fi
+
+  # else leaves ARE off
+  echo 1;
+}
 
 check_xml_dates_within_project() {
   path_search='';
@@ -57,6 +87,9 @@ make_xml_date_report() {
         echo 'dates:'$curr_dates > $ddd/project-length-days.txt;
         echo -n 'days:' >> $ddd/project-length-days.txt;
         get_days_of_date_range $curr_dates >> $ddd/project-length-days.txt
+
+        if [ "$(is_date_leaves_on $curr_dates)" ]; then echo > $ddd/leaves-on.txt; fi;
+        if [ "$(is_date_leaves_off $curr_dates)" ]; then echo > $ddd/leaves-off.txt; fi;
         break
       fi
     done 2>/dev/null
