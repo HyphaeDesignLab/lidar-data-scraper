@@ -162,7 +162,7 @@ xml_file_download_in_progress() {
   find  projects/ -mindepth 3 -maxdepth 4 -type f -path '*/meta/*' -name '*xml.scraping'
 }
 
-xml_file_downloaded_vs_todownload() {
+xml_file_downloaded_vs_todownload_by_project() {
   projects=$(started_scrape)
   local xml_downloaded_count="0"
   xml_downloaded_project_names_filename=__xml_downloaded_projects.txt
@@ -195,6 +195,27 @@ xml_file_downloaded_vs_todownload() {
 
   done
   echo $xml_downloaded_count
+}
+
+xml_file_downloaded_vs_todownload() {
+  projects=$(started_scrape)
+  local xml_downloaded_count="0"
+  local xml_to_download_count="0"
+  for project in $projects; do
+    project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
+    project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
+
+    if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
+        continue
+    fi
+    xml_to_download_count_i=$(cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l)
+    ((xml_to_download_count = xml_to_download_count + xml_to_download_count_i))
+
+    xml_downloaded_count_i=$(xml_files_downloaded_count $project)
+    #echo $project expr $xml_downloaded_count + $project_xml_downloaded
+    ((xml_downloaded_count = xml_downloaded_count + xml_downloaded_count_i))
+  done
+  echo $xml_downloaded_count '/' $xml_to_download_count
 }
 
 projects_with_zip_count() {
