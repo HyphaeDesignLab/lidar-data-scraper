@@ -8,13 +8,15 @@ def run():
     leaves_on_projects_file=open('leaves-on.txt', 'r')
     leaves_off_projects_file=open('leaves-off.txt', 'r')
 
+    geojson_file = open('leaves.geojson', 'w')
     for line in leaves_on_projects_file:
         project=line.replace('\n', '').replace('projects/', '').replace('meta/leaves-on.txt', '')
         project_name_bits=project.split('/')
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
         data = get_geojson_feature_collectoin(project_name, 'on')
-        print(project_name, 'on', data)
+        geojson_file.write(json.dumps(data)+'\n')
+
 
 
     leaves_on_projects_file.close()
@@ -25,9 +27,11 @@ def run():
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
         data = get_geojson_feature_collectoin(project_name, 'off')
-        print(project_name, 'off', data)
+        geojson_file.write(json.dumps(data)+'\n')
 
     leaves_off_projects_file.close()
+
+    geojson_file.close()
 
 def get_geojson_feature_collectoin(project, leaves_on_off):
     dir = 'projects/'+project+'/meta/'
