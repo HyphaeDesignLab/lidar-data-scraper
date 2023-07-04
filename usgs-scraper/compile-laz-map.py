@@ -56,7 +56,7 @@ def get_files_data(project):
           [bounds['east'], bounds['north']],
           [bounds['east'], bounds['south']],
           [bounds['west'], bounds['south']]]
-        tiles.push(polygon)
+        tiles.append(polygon)
 
     return { 'tiles': tiles, 'date_start': date_start, 'date_end': date_end }
 
