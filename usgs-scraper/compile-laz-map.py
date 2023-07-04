@@ -30,7 +30,7 @@ def run():
     leaves_off_projects_file.close()
 
 def get_files_data(project):
-    dir = 'projects/'+dir+'/meta/'
+    dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
     files = os.listdir(dir)
     # Print the file names
