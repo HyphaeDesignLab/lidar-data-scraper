@@ -19,4 +19,4 @@ def run():
         print ('%s: %s' % (project_name, leaves_on_or_off))
 
 if (__name__ == '__main__'):
-    run(args.cmd, args)
+    run()
