@@ -30,36 +30,33 @@ def run():
     leaves_off_projects_file.close()
 
 def get_files_data(dir):
-    # Create a Path object for the directory
-    path = Path(dir)
-
     # Get the list of files in the directory
-    files = path.glob('*.xml.txt')
+    files = os.listdir(dir)
 
     # Print the file names
     tiles=[]
     date_start=None
     date_end=None
-    for file in files:
-        print(file)
-        if file.is_file():
-            bounds = {}
-            for line in file:
-                print(line)
-                line_pieces=line.split(':')
-                if line_pieces[0] == 'date_start':
-                    date_start=line_pieces[1]
-                elif line_pieces[0] == 'date_end':
-                    date_end=line_pieces[1]
-                else:
-                    bounds[line_pieces[0]]=float(line_pieces[1])
+    for file_name in files:
+        if not '.xml.txt' in file_name:
+            continue
+        bounds = {}
+        for line in file:
+            print(line)
+            line_pieces=line.split(':')
+            if line_pieces[0] == 'date_start':
+                date_start=line_pieces[1]
+            elif line_pieces[0] == 'date_end':
+                date_end=line_pieces[1]
+            else:
+                bounds[line_pieces[0]]=float(line_pieces[1])
 
-            polygon = [
-              [bounds['west'], bounds['north']],
-              [bounds['east'], bounds['north']],
-              [bounds['east'], bounds['south']],
-              [bounds['west'], bounds['south']]]
-            tiles.push(polygon)
+        polygon = [
+          [bounds['west'], bounds['north']],
+          [bounds['east'], bounds['north']],
+          [bounds['east'], bounds['south']],
+          [bounds['west'], bounds['south']]]
+        tiles.push(polygon)
 
     return { 'tiles': tiles, 'date_start': date_start, 'date_end': date_end }
 
