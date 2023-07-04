@@ -13,7 +13,7 @@ def run():
         project_name_bits=project.split('/')
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
-        data = get_files_data(project_name)
+        data = get_geojson_feature_collectoin(project_name, 'on')
         print(project_name, 'on', data)
 
 
@@ -24,12 +24,12 @@ def run():
         project_name_bits=project.split('/')
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
-        data = get_files_data(project_name)
+        data = get_geojson_feature_collectoin(project_name, 'off')
         print(project_name, 'off', data)
 
     leaves_off_projects_file.close()
 
-def get_files_data(project):
+def get_geojson_feature_collectoin(project, leaves_on_off):
     dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
     files = os.listdir(dir)
@@ -43,6 +43,7 @@ def get_files_data(project):
         bounds = {}
         file=open(dir+file_name, 'r')
         for line in file:
+            line=line.replace('\n', '')
             line_pieces=line.split(':')
             if line_pieces[0] == 'date_start':
                 date_start=line_pieces[1]
@@ -58,8 +59,18 @@ def get_files_data(project):
           [bounds['west'], bounds['south']]]
         tiles.append(polygon)
 
-    return { 'tiles': tiles, 'date_start': date_start, 'date_end': date_end }
-
+    return {
+          "type": "Feature",
+          "geometry": {
+            "type": "MultiPolygon",
+            "coordinates": tiles
+          },
+          "properties": {
+            "date_start": date_start,
+            "date_end": date_end,
+            "leaves": leaves_on_off
+          }
+        }
 
 if (__name__ == '__main__'):
     run()
