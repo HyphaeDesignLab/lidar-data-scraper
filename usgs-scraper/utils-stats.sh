@@ -213,13 +213,13 @@ xml_file_downloaded_vs_todownload() {
         continue
       fi
     fi
-    cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l > ${file_path_prefix}-xml-to-download-count.txt
+    cat projects/$project/meta/xml_files.txt projects/$project/*/meta/xml_files.txt | wc -l > ${file_path_prefix}-xml-to-download-count.txt
     read -r xml_to_download_count_i < ${file_path_prefix}-xml-to-download-count.txt
-    #((xml_to_download_count = xml_to_download_count + xml_to_download_count_i))
+    ((xml_to_download_count = xml_to_download_count + xml_to_download_count_i))
 
     xml_files_downloaded_count $project > ${file_path_prefix}-xml-downloaded-count.txt
     read -r xml_downloaded_count_i < ${file_path_prefix}-xml-downloaded-count.txt
-    #((xml_downloaded_count = xml_downloaded_count + xml_downloaded_count_i))
+    ((xml_downloaded_count = xml_downloaded_count + xml_downloaded_count_i))
   done
   echo $xml_downloaded_count '/' $xml_to_download_count
 }
