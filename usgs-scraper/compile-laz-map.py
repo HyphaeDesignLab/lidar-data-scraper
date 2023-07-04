@@ -31,14 +31,14 @@ def run():
 
 def get_files_data(dir):
     # Get the list of files in the directory
-    files = os.listdir('projects/'+dir)
+    files = os.listdir('projects/'+dir+'/meta')
 
     # Print the file names
     tiles=[]
     date_start=None
     date_end=None
     for file_name in files:
-        if not '.xml.txt' in file_name:
+        if '.xml.txt' not in file_name:
             continue
         bounds = {}
         for line in file:
