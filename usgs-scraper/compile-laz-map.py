@@ -31,7 +31,7 @@ def run():
 
 def get_files_data(dir):
     # Get the list of files in the directory
-    files = os.listdir(dir)
+    files = os.listdir('projects/'+dir)
 
     # Print the file names
     tiles=[]
