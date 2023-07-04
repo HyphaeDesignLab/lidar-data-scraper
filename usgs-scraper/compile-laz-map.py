@@ -41,9 +41,11 @@ def get_files_data(dir):
     date_start=None
     date_end=None
     for file in files:
+        print(file)
         if file.is_file():
             bounds = {}
             for line in file:
+                print(line)
                 line_pieces=line.split(':')
                 if line_pieces[0] == 'date_start':
                     date_start=line_pieces[1]
@@ -51,6 +53,7 @@ def get_files_data(dir):
                     date_end=line_pieces[1]
                 else:
                     bounds[line_pieces[0]]=float(line_pieces[1])
+
             polygon = [
               [bounds['west'], bounds['north']],
               [bounds['east'], bounds['north']],
