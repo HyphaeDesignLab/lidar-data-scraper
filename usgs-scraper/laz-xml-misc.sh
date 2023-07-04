@@ -92,6 +92,7 @@ make_xml_date_report() {
         if [ "$(is_date_leaves_off $curr_dates)" ]; then echo > $ddd/leaves-off.txt; fi;
         break
       fi
+      break; # run only ONCE
     done 2>/dev/null
   done
 
