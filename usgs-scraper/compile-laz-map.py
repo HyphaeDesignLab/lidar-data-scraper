@@ -29,9 +29,10 @@ def run():
 
     leaves_off_projects_file.close()
 
-def get_files_data(dir):
+def get_files_data(project):
+    dir = 'projects/'+dir+'/meta/'
     # Get the list of files in the directory
-    files = os.listdir('projects/'+dir+'/meta')
+    files = os.listdir(dir)
     # Print the file names
     tiles=[]
     date_start=None
@@ -40,7 +41,7 @@ def get_files_data(dir):
         if '.xml.txt' not in file_name:
             continue
         bounds = {}
-        file=open(file_name, 'r')
+        file=open(dir+file_name, 'r')
         for line in file:
             line_pieces=line.split(':')
             if line_pieces[0] == 'date_start':
