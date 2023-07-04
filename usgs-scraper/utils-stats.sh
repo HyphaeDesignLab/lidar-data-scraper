@@ -201,18 +201,24 @@ xml_file_downloaded_vs_todownload() {
   projects=$(started_scrape)
   local xml_downloaded_count="0"
   local xml_to_download_count="0"
-  for project in $projects; do
-    project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
-    project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
 
-    if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
+  file_path_prefix=/tmp/lidar-scrape-$(date +%s);
+  for project in $projects; do
+    grep "${project}~" projects/_index/current/index_with_year_and_state.txt > ${file_path_prefix}-year-state.txt
+    sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/' ${file_path_prefix}-year-state.txt > ${file_path_prefix}-year.txt
+    read -r project_state < ${file_path_prefix}-year.txt
+    if  [ "$project_state" ] && [ "$project_state" != "none" ]; then
+      grep $project_state states-to-scrape.txt
+      if [ "$?" -ne "0" ]; then
         continue
+      fi
     fi
-    xml_to_download_count_i=$(cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l)
+    cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l > ${file_path_prefix}-xml-to-download-count.txt
+    read -r xml_to_download_count_i < ${file_path_prefix}-xml-to-download-count.txt
     ((xml_to_download_count = xml_to_download_count + xml_to_download_count_i))
 
-    xml_downloaded_count_i=$(xml_files_downloaded_count $project)
-    #echo $project expr $xml_downloaded_count + $project_xml_downloaded
+    xml_files_downloaded_count $project > ${file_path_prefix}-xml-downloaded-count.txt
+    read -r xml_downloaded_count_i < ${file_path_prefix}-xml-downloaded-count.txt
     ((xml_downloaded_count = xml_downloaded_count + xml_downloaded_count_i))
   done
   echo $xml_downloaded_count '/' $xml_to_download_count
