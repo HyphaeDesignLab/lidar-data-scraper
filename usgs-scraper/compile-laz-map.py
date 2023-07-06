@@ -52,7 +52,7 @@ def get_geojson_feature_collection(project, leaves_on_off, feature_tiles):
                 date_end=line_pieces[1]
             else:
                 bounds[line_pieces[0]]=float(line_pieces[1])
-        if 'east' not in bound or 'west' not in bounds or 'south' not in bound or 'north' not in bounds:
+        if 'east' not in bounds or 'west' not in bounds or 'south' not in bounds or 'north' not in bounds:
             print('%s missing bounds' % file_name)
             continue
 
