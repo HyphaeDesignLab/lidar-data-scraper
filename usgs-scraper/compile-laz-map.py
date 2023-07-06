@@ -40,7 +40,7 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
     date_end=None
 
     bbox = { "west": None, "east": None, "north": None, "south":  None}
-    project_tiles_file = open (dir = 'projects/tiles.geojson', 'w')
+    project_tiles_file = open ('projects/'+project+'/xml_tiles.geojson', 'w')
     project_tiles_file.write('{"type": "FeatureCollection", "features": [')
 
     is_first_tile=True
