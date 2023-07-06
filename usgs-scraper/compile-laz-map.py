@@ -51,7 +51,11 @@ def get_geojson_feature_collection(project, leaves_on_off, feature_tiles):
             elif line_pieces[0] == 'date_end':
                 date_end=line_pieces[1]
             else:
-                bounds[line_pieces[0]]=float(line_pieces[1])
+                try:
+                    bounds[line_pieces[0]]=float(line_pieces[1])
+                except Exception as e:
+                    print ('%s has error: %s' % (file_name, e))
+
         if 'east' not in bounds or 'west' not in bounds or 'south' not in bounds or 'north' not in bounds:
             print('%s missing bounds' % file_name)
             continue
