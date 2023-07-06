@@ -50,7 +50,7 @@ def get_geojson_feature_collection(project, leaves_on_off, feature_tiles):
                 date_start=line_pieces[1]
             elif line_pieces[0] == 'date_end':
                 date_end=line_pieces[1]
-            else:
+            elif line_pieces[0] in ['south', 'north', 'east', 'west']:
                 try:
                     bounds[line_pieces[0]]=float(line_pieces[1])
                 except Exception as e:
