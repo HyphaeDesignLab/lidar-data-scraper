@@ -8,16 +8,13 @@ def run():
     leaves_on_projects_file=open('leaves-on.txt', 'r')
     leaves_off_projects_file=open('leaves-off.txt', 'r')
 
-    geojson_file = open('leaves.geojson', 'w')
+    feature_tiles = []
     for line in leaves_on_projects_file:
         project=line.replace('\n', '').replace('projects/', '').replace('meta/leaves-on.txt', '')
         project_name_bits=project.split('/')
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
-        data = get_geojson_feature_collectoin(project_name, 'on')
-        geojson_file.write(json.dumps(data)+'\n')
-
-
+        get_geojson_feature_collection(project_name, 'on', feature_tiles)
 
     leaves_on_projects_file.close()
 
@@ -26,19 +23,19 @@ def run():
         project_name_bits=project.split('/')
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
-        data = get_geojson_feature_collectoin(project_name, 'off')
-        geojson_file.write(json.dumps(data)+'\n')
+        get_geojson_feature_collection(project_name, 'off', feature_tiles)
 
     leaves_off_projects_file.close()
 
+    geojson_file = open('leaves.geojson', 'w')
+    geojson_file.write(json.dumps({"type": "FeatureCollection", "features": feature_tiles}))
     geojson_file.close()
 
-def get_geojson_feature_collectoin(project, leaves_on_off):
+def get_geojson_feature_collection(project, leaves_on_off, feature_tiles):
     dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
     files = os.listdir(dir)
     # Print the file names
-    tiles=[]
     date_start=None
     date_end=None
     for file_name in files:
@@ -60,21 +57,24 @@ def get_geojson_feature_collectoin(project, leaves_on_off):
           [bounds['west'], bounds['north']],
           [bounds['east'], bounds['north']],
           [bounds['east'], bounds['south']],
-          [bounds['west'], bounds['south']]]
-        tiles.append(polygon)
+          [bounds['west'], bounds['south']],
+          [bounds['west'], bounds['north']]]
 
-    return {
-          "type": "Feature",
-          "geometry": {
-            "type": "MultiPolygon",
-            "coordinates": tiles
-          },
-          "properties": {
-            "date_start": date_start,
-            "date_end": date_end,
-            "leaves": leaves_on_off
-          }
-        }
+        feature_tiles.append({
+           "type": "Feature",
+           "geometry": {
+             "type": "Polygon",
+             "coordinates": [polygon]
+           },
+           "properties": {
+             "project": project,
+             "date_start": date_start,
+             "date_end": date_end,
+             "leaves": leaves_on_off
+           }
+         })
+
+    return feature_tiles
 
 if (__name__ == '__main__'):
     run()
