@@ -8,13 +8,16 @@ def run():
     leaves_on_projects_file=open('leaves-on.txt', 'r')
     leaves_off_projects_file=open('leaves-off.txt', 'r')
 
-    feature_tiles = []
+    geojson_file = open('leaves.geojson', 'w')
+    geojson_file.write('{"type": "FeatureCollection", "features": [')
+    is_first_line = True
     for line in leaves_on_projects_file:
         project=line.replace('\n', '').replace('projects/', '').replace('meta/leaves-on.txt', '')
         project_name_bits=project.split('/')
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
-        get_geojson_feature_collection(project_name, 'on', feature_tiles)
+        get_geojson_feature_collection(project_name, 'on', geojson_file, is_first_line)
+        is_first_line = False
 
     leaves_on_projects_file.close()
 
@@ -23,15 +26,12 @@ def run():
         project_name_bits=project.split('/')
         project_name_bits.pop()
         project_name='/'.join(project_name_bits)
-        get_geojson_feature_collection(project_name, 'off', feature_tiles)
+        get_geojson_feature_collection(project_name, 'off', geojson_file)
 
     leaves_off_projects_file.close()
-
-    geojson_file = open('leaves.geojson', 'w')
-    geojson_file.write(json.dumps({"type": "FeatureCollection", "features": feature_tiles}))
     geojson_file.close()
 
-def get_geojson_feature_collection(project, leaves_on_off, feature_tiles):
+def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_first_feature=False):
     dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
     files = os.listdir(dir)
@@ -67,7 +67,7 @@ def get_geojson_feature_collection(project, leaves_on_off, feature_tiles):
           [bounds['west'], bounds['south']],
           [bounds['west'], bounds['north']]]
 
-        feature_tiles.append({
+        geojson_file.write( ('' if is_first_feature else ',' ) + json.dumps({
            "type": "Feature",
            "geometry": {
              "type": "Polygon",
@@ -79,9 +79,7 @@ def get_geojson_feature_collection(project, leaves_on_off, feature_tiles):
              "date_end": date_end,
              "leaves": leaves_on_off
            }
-         })
-
-    return feature_tiles
+         }))
 
 if (__name__ == '__main__'):
     run()
