@@ -75,6 +75,15 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
         if 'east' not in bounds or 'west' not in bounds or 'south' not in bounds or 'north' not in bounds:
             continue
 
+        if bounds['west'] > 0 and bounds['south'] < 0:
+            tmp = bounds['south']
+            bounds['south'] = bounds['west']
+            bounds['west'] = tmp
+        if bounds['east'] > 0 and bounds['north'] < 0:
+            tmp = bounds['north']
+            bounds['north'] = bounds['east']
+            bounds['east'] = tmp
+
         polygon = [
           [bounds['west'], bounds['north']],
           [bounds['east'], bounds['north']],
@@ -94,6 +103,7 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
              "coordinates": [polygon]
            },
            "properties": {
+             "is_bbox": false,
              "project": project,
              "date_start": date_start,
              "date_end": date_end,
@@ -119,6 +129,8 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
                 ]]
                },
                "properties": {
+                 "tile_count": file_count,
+                 "is_bbox": false,
                  "project": project,
                  "date_start": date_start,
                  "date_end": date_end,
