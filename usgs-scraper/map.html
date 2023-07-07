@@ -42,12 +42,16 @@
         zoom: 12
     });
 
-    let mapPopup = null;
-    let layersIds = [];
-    function loadTiles(project) {
+    function loadTiles(project, parentFeatureId) {
         fetch(`projects/${project}/xml_tiles.geojson`)
             .then(response => response.json())
             .then(data => {
+                if (!data.features[0].id) {
+                    const baseNumber = parentFeatureId * Math.pow(10, String(data.features.length).length)
+                    data.features.forEach((feature, i) => {
+                        feature.id =  baseNumber + (i+1);
+                    })
+                }
                 layersIds.push(project);
                 map.addSource(project, {type: 'geojson', data});
                 map.addLayer({
@@ -62,11 +66,33 @@
                 });
             });
     }
+
+    let mapPopup = null;
+    let layersIds = [];
+    let highlightLayerSource = null;
+
     map.on('load', function () {
         fetch('leaves.geojson')
             .then(response => response.json())
             .then(data => {
                 layersIds.push('leaves');
+                if (!data.features[0].id) {
+                    data.features.forEach((feature, i) => {
+                        feature.id = (i+1);
+                    })
+                }
+                map.addSource('highlight', {type: 'geojson', data: {type: 'FeatureCollection', features: []}});
+                map.addLayer({
+                    'id': 'highlight',
+                    'type': 'line',
+                    'source': 'highlight',
+                    "paint": {
+                        "line-color": 'black',
+                        "line-width": 2
+                    }
+                });
+                highlightLayerSource = map.getSource('highlight')
+
                 map.addSource('leaves', {type: 'geojson', data});
                 map.addLayer({
                     'id': 'leaves',
@@ -74,13 +100,14 @@
                     'source': 'leaves',
                     "paint": {
                         "fill-color": ["case",
-                            ['==', ['get', 'leaves'], 'on'], "#ffaaaa",
-                            "#aaaaff"
+                            ['==', ['get', 'leaves'], 'on'], "#5aff70",
+                            "#fcae51"
                         ],
                         "fill-opacity": .8,
                         "fill-outline-color": ['case',
-                            ['==', ['get', 'leaves'], 'on'], "#aa0000",
-                            "#0000aa"
+                            ['==', ['feature-state', 'focused'], true], "#222222",
+                            ['==', ['get', 'leaves'], 'on'], "#047e16",
+                            "#a94202"
                         ]
                     }
                 });
@@ -90,7 +117,7 @@
                     console.log(features);
 
                     if (!features.length) {
-                        mapPopup
+                        highlightLayerSource.setData({type: 'FeatureCollection', features: []});
                         return;
                     }
 
@@ -106,12 +133,14 @@
                         'right': [-markerRadius, (markerHeight - markerRadius) * -1]
                     };
 
-                    const props = features[0].properties;
-                    const linkDrilldown = props.is_bbox ? `<div><a id="map-popover" href="#" data-project="${props.project}">see tiles</a></div>`:'';
+                    const feature = features[0];
+                    highlightLayerSource.setData({type: 'FeatureCollection', features: [feature]});
+                    const props = feature.properties;
+                    const linkDrilldown = props.is_bbox ? `<div><a id="map-popover" href="#" data-project="${props.project}" data-feature-id="${feature.id}">see tiles</a></div>`:'';
                     mapPopup = new mapboxgl.Popup({offset: popupOffsets, className: 'my-class', closeOnClick: true, closeOnMove: true})
                         .setLngLat(e.lngLat)
                         .setHTML(`
-<h1>${props.project}</h1>
+<div><strong>${props.project.replace('/', ' ')}</strong></div>
 <div>
 from ${props.date_start} to ${props.date_end}<br/>
 ${props.tile_count} tiles
@@ -123,7 +152,7 @@ ${props.tile_count} tiles
                         document.querySelector('#map-popover').addEventListener('click', e => {
                             e.preventDefault();
                             e.stopPropagation();
-                            loadTiles(e.target.dataset.project);
+                            loadTiles(e.target.dataset.project, e.target.dataset.featureId);
                         })
                     }
                 });
