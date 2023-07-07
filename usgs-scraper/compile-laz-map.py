@@ -52,7 +52,7 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
             continue
         file_count=file_count+1
 
-    print ('%s project has %d tiles\n' % (project, file_count)
+    print ('%s project has %d tiles\n' % (project, file_count))
 
     for file_name in files:
         if '.xml.txt' not in file_name:
