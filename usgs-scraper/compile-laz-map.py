@@ -29,6 +29,8 @@ def run():
         get_geojson_feature_collection(project_name, 'off', geojson_file)
 
     leaves_off_projects_file.close()
+
+    geojson_file.write(']}')
     geojson_file.close()
 
 def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_first_feature=False):
@@ -44,6 +46,14 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
     project_tiles_file.write('{"type": "FeatureCollection", "features": [')
 
     is_first_tile=True
+    file_count=0
+    for file_name in files:
+        if '.xml.txt' not in file_name:
+            continue
+        file_count=file_count+1
+
+    print ('%s project has %d tiles\n' % (project, file_count)
+
     for file_name in files:
         if '.xml.txt' not in file_name:
             continue
@@ -73,8 +83,8 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
           [bounds['west'], bounds['north']]]
 
         bbox['west'] = bounds['west'] if bbox['west'] == None else min(bounds['west'], bbox['west'])
-        bbox['east'] = bounds['east'] if bbox['east'] == None else min(bounds['east'], bbox['east'])
-        bbox['north'] = bounds['north'] if bbox['north'] == None else min(bounds['north'], bbox['north'])
+        bbox['east'] = bounds['east'] if bbox['east'] == None else max(bounds['east'], bbox['east'])
+        bbox['north'] = bounds['north'] if bbox['north'] == None else max(bounds['north'], bbox['north'])
         bbox['south'] = bounds['south'] if bbox['south'] == None else min(bounds['south'], bbox['south'])
 
         project_tiles_file.write( ('' if is_first_tile else ',' ) + json.dumps({
@@ -93,6 +103,7 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
 
         is_first_tile=False
 
+    project_tiles_file.write(']}')
     project_tiles_file.close()
 
     geojson_file.write( ('' if is_first_feature else ',' ) + json.dumps({
