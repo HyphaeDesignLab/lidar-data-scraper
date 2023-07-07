@@ -38,25 +38,96 @@
     var map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/hyphae-lab/clb2h2e48000015o4w0b0tyig',
-        center: [-92.1278181324235, 44.67653286521333],
+        center: [-92.1278181324235, 44.417302279521934],
         zoom: 12
     });
 
+    let mapPopup = null;
+    let layersIds = [];
+    function loadTiles(project) {
+        fetch(`projects/${project}/xml_tiles.geojson`)
+            .then(response => response.json())
+            .then(data => {
+                layersIds.push(project);
+                map.addSource(project, {type: 'geojson', data});
+                map.addLayer({
+                    'id': project,
+                    'type': 'fill',
+                    'source': project,
+                    "paint": {
+                        "fill-color": "#aaaaff",
+                        "fill-opacity": .9,
+                        "fill-outline-color": "#0000aa"
+                    }
+                });
+            });
+    }
     map.on('load', function () {
         fetch('leaves.geojson')
             .then(response => response.json())
             .then(data => {
+                layersIds.push('leaves');
                 map.addSource('leaves', {type: 'geojson', data});
                 map.addLayer({
                     'id': 'leaves',
                     'type': 'fill',
                     'source': 'leaves',
                     "paint": {
-                        "fill-color": "#ffaaaa",
+                        "fill-color": ["case",
+                            ['==', ['get', 'leaves'], 'on'], "#ffaaaa",
+                            "#aaaaff"
+                        ],
                         "fill-opacity": .8,
-                        "fill-outline-color": "#aa0000"
+                        "fill-outline-color": ['case',
+                            ['==', ['get', 'leaves'], 'on'], "#aa0000",
+                            "#0000aa"
+                        ]
                     }
                 });
+
+                map.on('click', function(e) {
+                    var features = map.queryRenderedFeatures(e.point, {layers: layersIds});
+                    console.log(features);
+
+                    if (!features.length) {
+                        mapPopup
+                        return;
+                    }
+
+                    var markerHeight = 50, markerRadius = 10, linearOffset = 25;
+                    var popupOffsets = {
+                        'top': [0, 0],
+                        'top-left': [0,0],
+                        'top-right': [0,0],
+                        'bottom': [0, -markerHeight],
+                        'bottom-left': [linearOffset, (markerHeight - markerRadius + linearOffset) * -1],
+                        'bottom-right': [-linearOffset, (markerHeight - markerRadius + linearOffset) * -1],
+                        'left': [markerRadius, (markerHeight - markerRadius) * -1],
+                        'right': [-markerRadius, (markerHeight - markerRadius) * -1]
+                    };
+
+                    const props = features[0].properties;
+                    const linkDrilldown = props.is_bbox ? `<div><a id="map-popover" href="#" data-project="${props.project}">see tiles</a></div>`:'';
+                    mapPopup = new mapboxgl.Popup({offset: popupOffsets, className: 'my-class', closeOnClick: true, closeOnMove: true})
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+<h1>${props.project}</h1>
+<div>
+from ${props.date_start} to ${props.date_end}<br/>
+${props.tile_count} tiles
+<br/>${linkDrilldown}</div>
+`)
+                        .setMaxWidth("300px")
+                        .addTo(map);
+                    if (props.is_bbox) {
+                        document.querySelector('#map-popover').addEventListener('click', e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            loadTiles(e.target.dataset.project);
+                        })
+                    }
+                });
+
 
             });
 
