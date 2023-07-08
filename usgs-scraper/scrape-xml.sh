@@ -164,16 +164,31 @@ scrape_project_xml_file() {
     if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
       echo $(date) $(cat $meta_dir/__errors.txt) >>$meta_dir/_errors.txt
     else
-      extract_xml_data $meta_dir $xml_file
+      extract_xml_data_of_single_file $meta_dir $xml_file
     fi
     rm $meta_dir/__errors.txt
     rm $meta_dir/$xml_file.xml.scraping  # remove marker file
   else
-    extract_xml_data $meta_dir $xml_file
+    extract_xml_data_of_single_file $meta_dir $xml_file
   fi
 }
-
 extract_xml_data() {
+  local project_path="projects"
+  project="$1"
+  subproject="$2"
+  if [ $project ]; then
+    project_path="projects/$project"
+  fi
+  if [ $subproject ]; then
+    project_path="projects/$project/$subproject"
+  fi
+
+  meta_dir=$project_path/meta
+  for fff in $meta_dir/*.xml; do
+    extract_xml_data_of_single_file $meta_dir $(echo $fff | sed -E -e 's@^.+/@@;s/\.xml$//')
+  done
+}
+extract_xml_data_of_single_file() {
   dir=$1
   xml_file=$2
   grep -E '' $dir/$xml_file.xml |
@@ -182,7 +197,7 @@ extract_xml_data() {
       s/^ +//
       s/^<begdate> */date_start:/
       s/^<enddate> */date_end:/
-      s/^<(\w+)bc> */\1:/
+      s/^<([a-z]+)bc> */\1:/
       s/^<mapprojn> */map_proj:/
       /<mapprojn>/ {
         s/^/map_proj:/

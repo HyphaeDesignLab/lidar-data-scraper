@@ -14,44 +14,25 @@ compare_xml_to_laz_date() {
 extract_xml_dates_on_one_line() {
   sed -nE  -e '/(date_start|begdate):/ {s/(date_start|begdate)://;N;s/\x0a/-/g;s/\n/-/g;s/(date_end|enddate)://;p;}' $@
 }
+
 get_days_of_date_range() {
-  year1=$(echo $1 | cut -c 1-4)
-  year2=$(echo $1 | cut -c 10-13)
-  month1=$(echo $1 | cut -c 5,6)
-  month2=$(echo $1 | cut -c 14,15)
-  day1=$(echo $1 | cut -c 7,8)
-  day2=$(echo $1 | cut -c 16,17)
-  expr \( $year2 - $year1 \) \* 365 + \( $month2 - $month1 \) \* 30 + $day2 - $day1
+  echo $1 | sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \\( \4 - \1 \\) \\* 365 + \\( \5 - \2 \) \\* 30 + \6 - \3/' > /tmp/xml-date-range.sh
+  chmod u+x /tmp/xml-date-range.sh
+  . /tmp/xml-date-range.sh
+  rm /tmp/xml-date-range.sh
 }
 is_date_leaves_on() {
-  monthday1=$(echo $1 | cut -c 5-8)
-  monthday2=$(echo $1 | cut -c 14-17)
-
-  # if between may 1 and sept 30 (incl), leaves are ON)
-  diff_start=$(expr $monthday1 - 0430)
-  diff_end=$(expr $monthday2 - 1001)
-
-  # check the diff with day before start and day after end
-  if [ "$diff_start" -gt "0" ] && [ "$diff_end" -le "0" ]; then
-    echo 1
-  fi
+  echo $1 | sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \4 - \1 = 0 \\\& \5\6 - 1001 \\< 0 \\\& \2\3 - 0430 \\> 0/' > /tmp/xml-leaves-on.sh
+  chmod u+x /tmp/xml-leaves-on.sh
+  . /tmp/xml-leaves-on.sh | grep -v 0
+  rm /tmp/xml-leaves-on.sh
 }
 is_date_leaves_off() {
-  monthday1=$(echo $1 | cut -c 5-8)
-  monthday2=$(echo $1 | cut -c 14-17)
-  # if between nov 1 and mar 31 (incl), leaves are off)
-
-  diff_start=$(expr $monthday1 - 0331)
-  diff_end=$(expr $monthday2 - 1101)
-
-  # reverse interval: if between apr 1 and oct 30 (incl), then NOT leaves are off
-  if [ "$diff_start" -gt "0" ] && [ "$diff_end" -le "0" ]; then
-    echo -n
-    return;
-  fi
-
-  # else leaves ARE off
-  echo 1;
+  echo $1 | sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \\( \4 - \1 = 1 \\\& \2\3 - 1031 \\> 0 \\\& \5\6 - 0401 \\< 0 \\) \\| \\( \4 - \1 = 0 \\\& \\( \5\6 - 0401 \\< 0 \\| \2\3 - 1031 \\> 0 \\) \\)/' > /tmp/xml-leaves-off.sh
+  chmod u+x /tmp/xml-leaves-off.sh
+  if [ "$2" = 'v' ]; then cat /tmp/xml-leaves-off.sh; fi;
+  . /tmp/xml-leaves-off.sh | grep -v 0
+  rm /tmp/xml-leaves-off.sh
 }
 
 check_xml_dates_within_project() {
@@ -87,15 +68,31 @@ make_xml_date_report() {
         echo 'dates:'$curr_dates > $ddd/project-length-days.txt;
         echo -n 'days:' >> $ddd/project-length-days.txt;
         get_days_of_date_range $curr_dates >> $ddd/project-length-days.txt
-
-        if [ "$(is_date_leaves_on $curr_dates)" ]; then echo > $ddd/leaves-on.txt; fi;
-        if [ "$(is_date_leaves_off $curr_dates)" ]; then echo > $ddd/leaves-off.txt; fi;
         break
       fi
       break; # run only ONCE
     done 2>/dev/null
   done
 
+}
+get_leaves_on_off() {
+  path_search='';
+  if [ "$1" ]; then path_search="-path *$1*"; fi
+  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
+    for fff in $(ls -1 $ddd/*.xml.txt); do
+      curr_dates=$(extract_xml_dates_on_one_line $fff);
+      if [ "${#curr_dates}" -gt '8' ]; then
+        is_date_leaves_on $curr_dates > $ddd/leaves-on.txt
+        is_date_leaves_off $curr_dates > $ddd/leaves-off.txt
+        if [ ! -s $ddd/leaves-on.txt ]; then rm $ddd/leaves-on.txt; fi
+        if [ ! -s $ddd/leaves-off.txt ]; then rm $ddd/leaves-off.txt; fi
+        break
+      fi
+      break; # run only ONCE
+    done 2>/dev/null
+  done
+
+  ls projects/*/meta/leaves-*.txt projects/*/*/meta/leaves-*.txt 2>/dev/null | sed -E -e 's@projects/@@;s@/meta/leaves-(on|off).txt@ \1@' > projects/leaves-report.txt
 }
 
 get_laz_areas() {

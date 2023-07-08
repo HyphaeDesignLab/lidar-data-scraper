@@ -5,30 +5,19 @@ from datetime import datetime
 from pathlib import Path
 
 def run():
-    leaves_on_projects_file=open('leaves-on.txt', 'r')
-    leaves_off_projects_file=open('leaves-off.txt', 'r')
+    leaves_report_file=open('projects/leaves-report.txt', 'r')
 
-    geojson_file = open('leaves.geojson', 'w')
+    geojson_file = open('projects/leaves.json', 'w')
     geojson_file.write('{"type": "FeatureCollection", "features": [')
     is_first_line = True
-    for line in leaves_on_projects_file:
-        project=line.replace('\n', '').replace('projects/', '').replace('meta/leaves-on.txt', '')
-        project_name_bits=project.split('/')
-        project_name_bits.pop()
-        project_name='/'.join(project_name_bits)
-        get_geojson_feature_collection(project_name, 'on', geojson_file, is_first_line)
+    for line in leaves_report_file:
+        project=line.replace('\n', '')
+        project_bits=project.split(' ')
+        has_leaves = project_bits.pop()
+        project_name = project_bits.pop()
+        get_geojson_feature_collection(project_name, has_leaves, geojson_file, is_first_line)
         is_first_line = False
-
-    leaves_on_projects_file.close()
-
-    for line in leaves_off_projects_file:
-        project=line.replace('\n', '').replace('projects/', '').replace('meta/leaves-off.txt', '')
-        project_name_bits=project.split('/')
-        project_name_bits.pop()
-        project_name='/'.join(project_name_bits)
-        get_geojson_feature_collection(project_name, 'off', geojson_file)
-
-    leaves_off_projects_file.close()
+    leaves_report_file.close()
 
     geojson_file.write(']}')
     geojson_file.close()
@@ -42,7 +31,7 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
     date_end=None
 
     bbox = { "west": None, "east": None, "north": None, "south":  None}
-    project_tiles_file = open ('projects/'+project+'/xml_tiles.geojson', 'w')
+    project_tiles_file = open ('projects/'+project+'/xml_tiles.json', 'w')
     project_tiles_file.write('{"type": "FeatureCollection", "features": [')
 
     is_first_tile=True

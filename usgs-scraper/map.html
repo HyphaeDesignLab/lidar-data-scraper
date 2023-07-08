@@ -38,12 +38,12 @@
     var map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/hyphae-lab/clb2h2e48000015o4w0b0tyig',
-        center: [-92.1278181324235, 44.417302279521934],
+        center: [-88.20513532089814,34.98027232735532],
         zoom: 12
     });
 
     function loadTiles(project, parentFeatureId) {
-        fetch(`projects/${project}/xml_tiles.geojson`)
+        fetch(`projects/${project}/xml_tiles.json`)
             .then(response => response.json())
             .then(data => {
                 if (!data.features[0].id) {
@@ -72,7 +72,7 @@
     let highlightLayerSource = null;
 
     map.on('load', function () {
-        fetch('leaves.geojson')
+        fetch('projects/leaves.json')
             .then(response => response.json())
             .then(data => {
                 layersIds.push('leaves');
@@ -140,9 +140,10 @@
                     mapPopup = new mapboxgl.Popup({offset: popupOffsets, className: 'my-class', closeOnClick: true, closeOnMove: true})
                         .setLngLat(e.lngLat)
                         .setHTML(`
-<div><strong>${props.project.replace('/', ' ')}</strong></div>
+<div><strong>${props.project.replace('/', ': ').replaceAll('_', ' ')}</strong></div>
 <div>
-from ${props.date_start} to ${props.date_end}<br/>
+leaves are ${props.leaves.toUpperCase()}<br/>
+from ${props.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')} to ${props.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')}<br/>
 ${props.tile_count} tiles
 <br/>${linkDrilldown}</div>
 `)
