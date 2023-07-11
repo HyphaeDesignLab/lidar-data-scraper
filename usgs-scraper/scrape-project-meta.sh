@@ -61,6 +61,57 @@ scrape_project_meta() {
       > $meta_dir/xml_files.txt
 }
 
+xml_check_empty_or_not_found() {
+  if [ -s $1 ]; then
+    grep -HF '404 Not Found' $1 | sed 's/404 Not Found/not_found/';
+  else
+    echo $1:empty
+  fi;
+}
+xml_file_list() {
+  find projects/ -type f -path '*/meta/*' -name '*.xml'
+}
+scrape_meta_check_empty() {
+  if [ ! "$1" ]; then
+    echo "to check all files and then do counts: $0 check_empty filein fileout"
+    echo " OR"
+    echo "to ONLY show counts: $0  check_empty file"
+    return 1
+  fi
+
+  filein=$1
+  fileout=$2
+  if [ "$2" ]; then
+    if [ ! -f $filein ]; then
+      xml_file_list > $filein
+    fi;
+    while read -r line; do xml_check_empty_or_not_found $line; done < $filein > $fileout
+  else
+    fileout=$1
+  fi
+
+  if [ ! -f $fileout ]; then
+    echo "no such file $fileout";
+    return;
+  fi;
+
+  echo -n 'not found: ';
+  grep -c 'not_found$' $fileout;
+
+  echo -n 'empty: ';
+  grep -c 'empty$' $fileout;
+}
+
 if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
-  scrape_project_meta $1 $2
+  if [ ! "$1" ]; then
+    echo "to scrape all meta files: $0 <?project> <?subproject>"
+    echo " OR"
+    echo "to check if empty meta files: $0  check_empty ..."
+    return 1
+  fi
+  if [ "$1" = "check_empty" ]; then
+    scrape_meta_check_empty $2 $3
+  else
+    scrape_project_meta $1 $2
+  fi
 fi
