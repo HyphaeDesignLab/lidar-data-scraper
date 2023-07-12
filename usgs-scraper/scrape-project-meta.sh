@@ -105,6 +105,7 @@ check_missing_projects() {
   if [ ! "$1" ] || [ ! "$2" ]; then
     echo "$0 check_missing_projects <project_lsit_file> <status_file_name>";
     echo " where <status_file_name> and <status_file_name>.error will be saved to each <project>/meta/ dir when requesting usgs.gov/<prj>/meta/index.html"
+    return 1;
   fi
   for prj in $(cat $1); do
     curl -s -S --retry 4 --retry-connrefused https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/$prj/metadata/ 2>projects/$prj/meta/$2.error 1>projects/$prj/meta/$2
