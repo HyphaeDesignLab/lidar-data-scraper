@@ -104,7 +104,7 @@ scrape_meta_check_empty() {
 
 if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
   if [ ! "$1" ]; then
-    echo "to scrape all meta files: $0 <?project> <?subproject>"
+    echo "to scrape all meta files: $0 all|<project> <?subproject>"
     echo " OR"
     echo "to check if empty meta files: $0  check_empty ..."
     return 1
@@ -112,6 +112,10 @@ if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
   if [ "$1" = "check_empty" ]; then
     scrape_meta_check_empty $2 $3
   else
-    scrape_project_meta $1 $2
+    if [ "$1" = "all" ]; then
+      scrape_project_meta
+    else
+      scrape_project_meta $1 $2
+    fi
   fi
 fi
