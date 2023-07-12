@@ -121,9 +121,12 @@ if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
     echo "to scrape all meta files: $0 all|<project> <?subproject>"
     echo " OR"
     echo "to check if empty meta files: $0  check_empty ..."
+    echo "to check projects that have been taken offline: $0  check_missing_projects ..."
     exit;
   fi
   if [ "$1" = "check_empty" ]; then
+    scrape_meta_check_empty $2 $3
+  if [ "$1" = "check_missing_projects" ]; then
     scrape_meta_check_empty $2 $3
   else
     if [ "$1" = "all" ]; then
