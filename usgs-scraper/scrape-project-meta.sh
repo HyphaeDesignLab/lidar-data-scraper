@@ -126,7 +126,7 @@ if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
   fi
   if [ "$1" = "check_empty" ]; then
     scrape_meta_check_empty $2 $3
-  if [ "$1" = "check_missing_projects" ]; then
+  elif [ "$1" = "check_missing_projects" ]; then
     scrape_meta_check_empty $2 $3
   else
     if [ "$1" = "all" ]; then
