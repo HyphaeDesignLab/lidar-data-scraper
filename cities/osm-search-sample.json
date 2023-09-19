@@ -1,0 +1,201 @@
+[
+  {
+    "place_id": 355412804,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 207359,
+    "boundingbox": [
+      "33.659541",
+      "34.337306",
+      "-118.6681779",
+      "-118.1552947"
+    ],
+    "lat": "34.0536909",
+    "lon": "-118.242766",
+    "display_name": "Los Angeles, Los Angeles County, CAL Fire Contract Counties, California, United States",
+    "place_rank": 16,
+    "category": "boundary",
+    "type": "administrative",
+    "importance": 0.9738053728457621,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_boundary_administrative.p.20.png"
+  },
+  {
+    "place_id": 298123297,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 396479,
+    "boundingbox": [
+      "32.75004",
+      "34.8233121",
+      "-118.9517221",
+      "-117.64627"
+    ],
+    "lat": "34.3155072",
+    "lon": "-118.209681",
+    "display_name": "Los Angeles County, CAL Fire Contract Counties, California, United States",
+    "place_rank": 12,
+    "category": "boundary",
+    "type": "administrative",
+    "importance": 0.800224981156181,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_boundary_administrative.p.20.png"
+  },
+  {
+    "place_id": 298588644,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 3487764,
+    "boundingbox": [
+      "9.3778767",
+      "9.4022923",
+      "-75.2594562",
+      "-75.2213977"
+    ],
+    "lat": "9.3900639",
+    "lon": "-75.2389229384263",
+    "display_name": "Los Angeles, Los Palmitos, Montes de María, Sucre, Colombia",
+    "place_rank": 16,
+    "category": "boundary",
+    "type": "administrative",
+    "importance": 0.55,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_boundary_administrative.p.20.png"
+  },
+  {
+    "place_id": 298329250,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 1658515,
+    "boundingbox": [
+      "-37.6629358",
+      "-37.1785281",
+      "-72.6836424",
+      "-72.03901"
+    ],
+    "lat": "-37.4707455",
+    "lon": "-72.351686",
+    "display_name": "Los Ángeles, Provincia de Bío-Bío, Biobío Region, Chile",
+    "place_rank": 16,
+    "category": "boundary",
+    "type": "administrative",
+    "importance": 0.5476132264292713,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_boundary_administrative.p.20.png"
+  },
+  {
+    "place_id": 299478669,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 11025613,
+    "boundingbox": [
+      "8.4737289",
+      "8.5744293",
+      "-82.2441543",
+      "-82.1248326"
+    ],
+    "lat": "8.524167250000001",
+    "lon": "-82.19418575966449",
+    "display_name": "Los Angeles, Distrito Gualaca, Chiriquí, Panama",
+    "place_rank": 16,
+    "category": "boundary",
+    "type": "administrative",
+    "importance": 0.5443555407079013,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_boundary_administrative.p.20.png"
+  },
+  {
+    "place_id": 299132722,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 7752593,
+    "boundingbox": [
+      "4.7967815",
+      "4.8050146",
+      "-75.6939554",
+      "-75.6898823"
+    ],
+    "lat": "4.80088935",
+    "lon": "-75.69149658133686",
+    "display_name": "Los Angeles, Universidad, Perimetro Urbano Pereira, Pereira, AMCO, Area Metropolitana Centro Occidente, Risaralda, RAP Eje Cafetero, Colombia",
+    "place_rank": 18,
+    "category": "boundary",
+    "type": "administrative",
+    "importance": 0.50001,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_boundary_administrative.p.20.png"
+  },
+  {
+    "place_id": 343421982,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "node",
+    "osm_id": 10034935559,
+    "boundingbox": [
+      "12.2503472",
+      "14.2503472",
+      "-87.0202885",
+      "-85.0202885"
+    ],
+    "lat": "13.2503472",
+    "lon": "-86.0202885",
+    "display_name": "Los Angeles, Jinotega (Municipio), Jinotega, 65000, Nicaragua",
+    "place_rank": 18,
+    "category": "place",
+    "type": "region",
+    "importance": 0.50001
+  },
+  {
+    "place_id": 352352757,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "node",
+    "osm_id": 6042263237,
+    "boundingbox": [
+      "2.3762108",
+      "2.4562108",
+      "-76.9573052",
+      "-76.8773052"
+    ],
+    "lat": "2.4162108",
+    "lon": "-76.9173052",
+    "display_name": "Los Angeles, El Tambo, Centro, Cauca, Colombia",
+    "place_rank": 18,
+    "category": "place",
+    "type": "town",
+    "importance": 0.50001,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_place_town.p.20.png"
+  },
+  {
+    "place_id": 299283180,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 9235998,
+    "boundingbox": [
+      "40.3456815",
+      "40.3645348",
+      "-3.7070704",
+      "-3.6930263"
+    ],
+    "lat": "40.3562217",
+    "lon": "-3.6996388",
+    "display_name": "Los Ángeles, Villaverde, Madrid, Community of Madrid, 28041, Spain",
+    "place_rank": 22,
+    "category": "boundary",
+    "type": "administrative",
+    "importance": 0.48252616625155753,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_boundary_administrative.p.20.png"
+  },
+  {
+    "place_id": 78229703,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "node",
+    "osm_id": 7449601386,
+    "boundingbox": [
+      "8.5043664",
+      "8.5443664",
+      "-82.2226253",
+      "-82.1826253"
+    ],
+    "lat": "8.5243664",
+    "lon": "-82.2026253",
+    "display_name": "Los Ángeles, Los Angeles, Distrito Gualaca, Chiriquí, Panama",
+    "place_rank": 19,
+    "category": "place",
+    "type": "village",
+    "importance": 0.47500000000000003,
+    "icon": "https://nominatim.openstreetmap.org/ui/mapicons/poi_place_village.p.20.png"
+  }
+]
