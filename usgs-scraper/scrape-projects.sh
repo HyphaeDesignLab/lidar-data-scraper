@@ -1,34 +1,9 @@
 base_dir=$(dirname $0)
 cd $base_dir
+. ./utils.sh
 . ./utils-stats.sh
 . ./scrape-project-index.sh
 . ./scrape-project-meta.sh
-
-scrape_count=0
-echo > scrape-rest.txt;
-check_scrape_count_and_rest() {
-    scrape_count=$(expr $scrape_count + 1)
-
-    date >> scrape-rest.txt;
-    if [ "$(expr $scrape_count % 250)" = "0" ]; then
-        echo 'every 250 scrapes rest 60 seconds' >> scrape-rest.txt;
-        sleep 60
-    elif [ "$(expr $scrape_count % 50)" = "0" ]; then
-        echo 'every 50 scrapes rest 20 seconds' >> scrape-rest.txt;
-        sleep 20
-    elif [ "$(expr $scrape_count % 20)" = "0" ]; then
-        echo 'every 20 scrapes rest 10 seconds' >> scrape-rest.txt;
-        sleep 10
-    elif [ "$(expr $scrape_count % 10)" = "0" ]; then
-        echo 'every 10 scrapes rest 3 seconds' >> scrape-rest.txt;
-        sleep 3
-    elif [ "$(expr $scrape_count % 5)" = "0" ]; then
-        echo 'every 5 scrapes rest 2 seconds' >> scrape-rest.txt;
-        sleep 2
-    else
-        sleep .5
-    fi
-}
 
 scrape_project() {
     project=$1
@@ -59,7 +34,7 @@ scrape_project() {
         if [ ! -f  projects/$project_path/_index/current/metadata_dir.txt ] && [ ! -f projects/$project_path/meta/_index.html ]; then
             echo " metadata scraping";
             scrape_project_meta $project
-            check_scrape_count_and_rest
+            throttle_scrape
         else
             echo " metadata already scraped";
         fi
@@ -87,7 +62,7 @@ scrape_subproject() {
     if [ ! -f  projects/$project_path/_index/current/metadata_dir.txt ] && [ ! -f projects/$project_path/meta/_index.html ]; then
         echo " metadata scraping";
         scrape_project_meta $project $subproject
-        check_scrape_count_and_rest
+        throttle_scrape
     else
         echo " metadata already scraped";
     fi
