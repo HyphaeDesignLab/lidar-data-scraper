@@ -103,7 +103,7 @@ scrape_meta_check_empty() {
 }
 check_missing_projects() {
   if [ ! "$1" ] || [ ! "$2" ]; then
-    echo "$0 check_missing_projects <project_lsit_file> <status_file_name>";
+    echo "$0 check_missing_projects <project_list_file> <status_file_name>";
     echo " where <status_file_name> and <status_file_name>.error will be saved to each <project>/meta/ dir when requesting usgs.gov/<prj>/meta/index.html"
     return 1;
   fi
