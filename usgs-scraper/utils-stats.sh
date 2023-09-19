@@ -137,12 +137,7 @@ xml_extracted_data_files() {
 xml_extracted_data_files_contents() {
   cat projects/*/meta/*xml.txt projects/*/*/meta/*xml.txt
 }
-xml_leaves_off_files_contents() {
-  ls projects/*/meta/leaves-off.txt projects/*/*/meta/leaves-off.txt 2>/dev/null
-}
-xml_leaves_on_files_contents() {
-  ls projects/*/meta/leaves-on.txt projects/*/*/meta/leaves-on.txt 2>/dev/null
-}
+
 xml_files_downloaded_count() {
   project=$1
   subproject=$2
@@ -213,7 +208,7 @@ xml_file_downloaded_vs_todownload() {
         continue
       fi
     fi
-    cat projects/$project/meta/xml_files.txt projects/$project/*/meta/xml_files.txt | wc -l > ${file_path_prefix}-xml-to-download-count.txt
+    cat projects/$project/meta/xml_files.txt projects/$project/*/meta/xml_files.txt 2>/dev/null | wc -l > ${file_path_prefix}-xml-to-download-count.txt
     read -r xml_to_download_count_i < ${file_path_prefix}-xml-to-download-count.txt
     ((xml_to_download_count = xml_to_download_count + xml_to_download_count_i))
 
