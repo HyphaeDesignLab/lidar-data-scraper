@@ -1,0 +1,15 @@
+Totals
+total XML files downloaded
+find projects/ -mindepth 2 -maxdepth 4 -type f -name '*xml' | wc -l
+to download
+cat projects/*/meta/xml_files.txt projects/*/*/meta/xml_files.txt | wc -l
+
+XML date ranges / leaves-on / leaves-off REPORTS
+./laz-xml-misc.sh  make_xml_date_report &
+
+Count leaves-off/on
+find projects/ -type f -name 'leaves-on.txt' > leaves-on.txt
+find projects/ -type f -name 'leaves-off.txt' > leaves-off.txt
+
+Compile leaves data into map geojson
+python3 compile-laz-map.py
