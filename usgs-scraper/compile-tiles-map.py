@@ -105,6 +105,8 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
     project_tiles_file.write(']}')
     project_tiles_file.close()
 
+    # adds the overall-bounding box of the ALL XML files in project
+    # TODO: create a polygon intersection of all individual XML bounding files
     geojson_file.write( ('' if is_first_feature else ',' ) + json.dumps({
                "type": "Feature",
                "geometry": {
