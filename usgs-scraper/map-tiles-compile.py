@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 def run():
-    leaves_report_file=open('projects/leaves-report.txt', 'r')
+    leaves_report_file=open('projects/leaves-status.txt', 'r')
 
     geojson_file = open('projects/leaves.json', 'w')
     geojson_file.write('{"type": "FeatureCollection", "features": [')

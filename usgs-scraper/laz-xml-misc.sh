@@ -25,21 +25,16 @@ is_date_leaves_on() {
   # return the boolean (1 or 0) of this:
   #    year2 - year1 == 0  AND month1+day > 4030 AND month2+day2 < 1001
   #    if date is between (and including) 05/01 and 09/30 (of the same year)
-  echo $1 | sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \4 - \1 = 0 \\\& \5\6 - 1001 \\< 0 \\\& \2\3 - 0430 \\> 0/' > /tmp/xml-leaves-on.sh
-  chmod u+x /tmp/xml-leaves-on.sh
-  . /tmp/xml-leaves-on.sh | grep -v 0
-  rm /tmp/xml-leaves-on.sh
+  eval $(sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \4 - \1 = 0 \\\& \5\6 - 1001 \\< 0 \\\& \2\3 - 0430 \\> 0/' <<< "$1" >/dev/null)
+  # return value $? will be 0 if EXPR is success and 1 if non-success
 }
 is_date_leaves_off() {
   # return boolean (1 or 0) of
   # if year is SAME
   #   if month1+day1
-  # if year is DIFFERENT
-  echo $1 | sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \\( \4 - \1 = 1 \\\& \2\3 - 1031 \\> 0 \\\& \5\6 - 0401 \\< 0 \\) \\| \\( \4 - \1 = 0 \\\& \\( \5\6 - 0401 \\< 0 \\| \2\3 - 1031 \\> 0 \\) \\)/' > /tmp/xml-leaves-off.sh
-  chmod u+x /tmp/xml-leaves-off.sh
-  if [ "$2" = 'v' ]; then cat /tmp/xml-leaves-off.sh; fi;
-  . /tmp/xml-leaves-off.sh | grep -v 0
-  rm /tmp/xml-leaves-off.sh
+  # if year1 = year2  AND ( month1 > month2 > 1031 OR month1 < month2 < 0401 )
+  # if year2 > year1 AND (month1 > 1031 AND month2 < 0401 )
+  eval $(sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \\( \4 - \1 = 1 \\\& \2\3 - 1031 \\> 0 \\\& \5\6 - 0401 \\< 0 \\) \\| \\( \4 - \1 = 0 \\\& \\( \5\6 - 0401 \\< 0 \\| \2\3 - 1031 \\> 0 \\) \\)/' <<< "$1" >/dev/null)
 }
 
 check_xml_dates_within_project() {
@@ -83,25 +78,25 @@ make_xml_date_report() {
 
 }
 get_leaves_on_off() {
+  # reset status file
+  echo > projects/leaves-status.txt
   path_search='';
   if [ "$1" ]; then path_search="-path *$1*"; fi
   for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
     for fff in $(ls -1 $ddd/*.xml.txt); do
       curr_dates=$(extract_xml_dates_on_one_line $fff);
       if [ "${#curr_dates}" -gt '8' ]; then
-        is_date_leaves_on $curr_dates > $ddd/leaves-on.txt
-        is_date_leaves_off $curr_dates > $ddd/leaves-off.txt
-        # remove leaves-on/off.txt file if project is NOT in either leave-on OR leaves-off date period
-        if [ ! -s $ddd/leaves-on.txt ]; then rm $ddd/leaves-on.txt; fi
-        if [ ! -s $ddd/leaves-off.txt ]; then rm $ddd/leaves-off.txt; fi
+        local leaves_status='mixed';
+        rm $ddd/leaves-*.txt 2>dev/null
+        if is_date_leaves_on $curr_dates; then leaves_status=on; fi
+        if is_date_leaves_off $curr_dates; then leaves_status=off; fi
+        echo $ddd $leaves_status >> projects/leaves-status.txt
+        #  ONLY first file in project/subproject directory (all XML files have SAME DATE)
+        #    hence break out of loop immediately (upon first file with more than 8-digit date (yyyymmdd-yyyymmdd)
         break
       fi
-      break; # run only ONCE
     done 2>/dev/null
   done
-
-  # list all leave-on/off.txt files in projects+subprojects folders
-  ls projects/*/meta/leaves-*.txt projects/*/*/meta/leaves-*.txt 2>/dev/null | sed -E -e 's@projects/@@;s@/meta/leaves-(on|off).txt@ \1@' > projects/leaves-report.txt
 }
 
 get_laz_areas() {
