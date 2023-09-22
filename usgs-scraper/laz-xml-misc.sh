@@ -86,10 +86,11 @@ get_leaves_on_off() {
     for fff in $(ls -1 $ddd/*.xml.txt); do
       curr_dates=$(extract_xml_dates_on_one_line $fff);
       if [ "${#curr_dates}" -gt '8' ]; then
-        local leaves_status='mixed';
+        local leaves_status='none';
         rm $ddd/leaves-*.txt 2>dev/null
-        if is_date_leaves_on $curr_dates; then leaves_status=on; fi
-        if is_date_leaves_off $curr_dates; then leaves_status=off; fi
+        if is_date_leaves_on $curr_dates; then leaves_status=on;
+        elif is_date_leaves_off $curr_dates; then leaves_status=off;
+        else leaves_status='mixed'; fi
         echo $ddd $leaves_status >> projects/leaves-status.txt
         #  ONLY first file in project/subproject directory (all XML files have SAME DATE)
         #    hence break out of loop immediately (upon first file with more than 8-digit date (yyyymmdd-yyyymmdd)
