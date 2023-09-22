@@ -7,7 +7,7 @@ from pathlib import Path
 def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
 
-    geojson_file = open('projects/leaves.json', 'w')
+    geojson_file = open('projects/leaves-status.json', 'w')
     geojson_file.write('{"type": "FeatureCollection", "features": [')
     is_first_line = True
     for line in leaves_report_file:
