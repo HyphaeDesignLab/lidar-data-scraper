@@ -72,7 +72,7 @@
     let highlightLayerSource = null;
 
     map.on('load', function () {
-        fetch('projects/leaves.json')
+        fetch('projects/leaves-status.json')
             .then(response => response.json())
             .then(data => {
                 layersIds.push('leaves');
