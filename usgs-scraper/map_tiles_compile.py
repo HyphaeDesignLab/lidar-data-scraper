@@ -11,7 +11,9 @@ def run():
     geojson_file.write('{"type": "FeatureCollection", "features": [')
     is_first_line = True
     for line in leaves_report_file:
-        project=line.replace('\n', '')
+        project=line.replace('\n', '').strip
+        if project == '' or project == None:
+            continue
         project_bits=project.split(' ')
         has_leaves = project_bits.pop()
         project_name = project_bits.pop()
