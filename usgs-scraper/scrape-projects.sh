@@ -6,32 +6,61 @@ cd $base_dir
 . ./scrape-project-meta.sh
 
 scrape_project() {
-    project=$1
-    project_path="$project"
-    is_in_loop=$2
+  if [ -f projects/STOP_SCRAPE.txt ]; then rm projects/STOP_SCRAPE.txt; return; fi;
 
-    if [ ! "$is_in_loop" ]; then
-        echo -n "(prj) $project: "
+    local project="$1"
+    local project_path=projects
+    if [ "$1" != '' ]; then
+        project_path=projects/$project
     fi
 
-    if [ ! -d projects/$project_path/_index/current ] || [ ! -f projects/$project_path/_index/current/index.txt ]; then
-        echo " index scraping";
+    local level=''
+    local indentation=' ' # 1 spaces for top-level
+    if [ "$project" != '' ]; then
+      level="prj"
+      indentation='  ' # 2 spaces for project
+      if [[ "$project" = *'/'* ]]; then
+        level="subprj"
+        indentation='   ' # 3 spaces for sub project
+      fi
+    else
+      echo 'USGS projects: '
+    fi
+
+
+    if [ ! -d $project_path/_index/current ] || [ ! -f $project_path/_index/current/index.txt ]; then
+        echo "$indentation index scraping";
         scrape_project_index $project
     else
-        echo " index already scraped";
+        echo "$indentation index already scraped";
     fi
 
-    subprojects=$(project_index $project)
-    subprojects_count=$(project_index $project | wc -l)
-    if [ "$subprojects" ]; then
-        subproject_i=0
+    local subprojects=($(project_index $project))
+    local subprojects_count=${#subprojects[@]}
+    if [ $subprojects_count -gt 0 ]; then
+        local subproject_i=0
         for subproject in $subprojects; do
-            subproject_i=$(expr $subproject_i + 1)
-            echo -n "(subprj) $subproject ($subproject_i/$subprojects_count): "
-            scrape_subproject $project $subproject in_loop
+            ((subproject_i++))
+            echo -n "$indentation ($level) $subproject ($subproject_i/$subprojects_count): "
+
+            local subproject_line_in_index=$(grep "${subproject}~" $project_path/_index/current/index_with_year_and_state.txt)
+            local subproject_state=$(echo $subproject_line_in_index | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
+
+            # skip states that are NOT in STATES to SCRAPE
+            if  [ "$subproject_state" != '' ] && [ "$subproject_state" != "none" ] && ! grep $subproject_state states-to-scrape.txt >/dev/null; then
+                echo " skipping because state $subproject_state is NOT in list of states to scrape"
+                continue
+            fi
+
+            local subproject_arg="$subproject"
+            if [ "$project" != '' ]; then
+              subproject_arg=$project/$subproject
+            fi
+            scrape_project $subproject_arg
+            throttle_scrape
         done;
     else
-        if [ ! -f  projects/$project_path/_index/current/metadata_dir.txt ] && [ ! -f projects/$project_path/meta/_index.html ]; then
+        if [ ! -f  $project_path/_index/current/metadata_dir.txt ] && [ ! -f $project_path/meta/_index.html ]; then
             echo " metadata scraping";
             scrape_project_meta $project
             throttle_scrape
@@ -39,73 +68,16 @@ scrape_project() {
             echo " metadata already scraped";
         fi
     fi
-    project_info $project > projects/$project_path/_stats.txt
+    project_info $project > $project_path/_stats.txt
 }
 
-scrape_subproject() {
-    project=$1
-    subproject=$2
-    is_in_loop=$3
-    project_path="$project/$subproject"
-
-    if [ ! "$is_in_loop" ]; then
-        echo -n "(subprj) $project: $subproject: "
-    fi
-
-    if [ ! -d projects/$project_path/_index/current ] || [ ! -f projects/$project_path/_index/current/index.txt ]; then
-        echo " index scraping";
-        scrape_project_index $project $subproject
-    else
-        echo " index already scraped";
-    fi
-
-    if [ ! -f  projects/$project_path/_index/current/metadata_dir.txt ] && [ ! -f projects/$project_path/meta/_index.html ]; then
-        echo " metadata scraping";
-        scrape_project_meta $project $subproject
-        throttle_scrape
-    else
-        echo " metadata already scraped";
-    fi
-    project_info $project $subproject > projects/$project_path/_stats.txt
-}
-
-
-scrape_projects() {
-
-    if [ ! -d projects/_index/current ] || [ ! -f projects/_index/current/index.txt ]; then
-      echo "scraping USGS projects list";
-      scrape_project_index
-    fi
-
-    projects=$(project_index)
-    projects_count=$(project_index | wc -l)
-
-    project_i=0
-    for project in $projects; do
-        if [ -f projects/STOP_SCRAPE.txt ]; then break; fi;
-        project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
-        project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
-
-        # skip states that are NOT in STATES to SCRAPE
-        if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
-            continue
-        fi
-
-        project_i=$(expr $project_i + 1)
-        echo -n "(prj) $project ($project_i/$projects_count): "
-        scrape_project $project in_loop
-    done
-    if [ -f projects/STOP_SCRAPE.txt ]; then
-      rm projects/STOP_SCRAPE.txt
-    fi;
-}
 
 if [ "$1" = "all" ]; then
-    scrape_projects;
+    scrape_project;
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
         scrape_project $1;
     else
-        scrape_subproject $1 $2;
+        scrape_project $1 $2;
     fi
 fi
