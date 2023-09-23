@@ -7,24 +7,24 @@ from pathlib import Path
 def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
 
-    geojson_file = open('projects/leaves-status.json', 'w')
-    geojson_file.write('{"type": "FeatureCollection", "features": [')
+    all_tiles_file = open('projects/leaves-status.json', 'w')
+    all_tiles_file.write('{"type": "FeatureCollection", "features": [')
     is_first_line = True
     for line in leaves_report_file:
-        project=line.replace('\n', '').strip
+        project=line.replace('\n', '').strip()
         if project == '' or project == None:
             continue
         project_bits=project.split(' ')
         has_leaves = project_bits.pop()
         project_name = project_bits.pop()
-        get_geojson_feature_collection(project_name, has_leaves, geojson_file, is_first_line)
+        get_geojson_feature_collection(project_name, has_leaves, all_tiles_file, is_first_line)
         is_first_line = False
     leaves_report_file.close()
 
-    geojson_file.write(']}')
-    geojson_file.close()
+    all_tiles_file.write(']}')
+    all_tiles_file.close()
 
-def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_first_feature=False):
+def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_first_feature=False):
     dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
     files = os.listdir(dir)
@@ -109,7 +109,7 @@ def get_geojson_feature_collection(project, leaves_on_off, geojson_file, is_firs
 
     # adds the overall-bounding box of the ALL XML files in project
     # TODO: create a polygon intersection of all individual XML bounding files
-    geojson_file.write( ('' if is_first_feature else ',' ) + json.dumps({
+    all_tiles_file.write( ('' if is_first_feature else ',' ) + json.dumps({
                "type": "Feature",
                "geometry": {
                  "type": "Polygon",
