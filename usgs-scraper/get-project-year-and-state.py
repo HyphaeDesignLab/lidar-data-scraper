@@ -20,8 +20,7 @@ for line in states_file:
     state_names[name] = abbr
 
 for line in file:
-    (original,project_date) = line.replace('\n', '').split('~')
-    project_date=project_date.replace(' ', 'T')
+    original = line.replace('\n', '')
     all_underscores = original.replace('-', '_').lower()
     # for searching two-word states
     two_word_join = []
@@ -58,5 +57,5 @@ for line in file:
     if not years_found:
         years_found.append('none')
 
-    print('%s~%s~%s~%s' % (original, state_found, '-'.join(years_found), project_date ) )
+    print('%s~%s~%s~' % (original, state_found, '-'.join(years_found) ) )
 
