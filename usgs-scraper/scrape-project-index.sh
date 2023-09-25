@@ -6,24 +6,16 @@ scrape_project_index() {
     if [ $project ]; then
         project_path="projects/$project"
     fi
-    if [ ! -d $project_path ]; then
-      mkdir -p $project_path;
-    fi
-
-    if [ ! -d $project_path/_index ]; then
-      mkdir $project_path/_index
-    fi
-
-    if [ ! -d $project_path/_index/backup ]; then
-      mkdir $project_path/_index/backup
-    fi
     #backup_dir=backup/2023-05-29---15-56-46
-    backup_dir=$project_path/_index/backup/$(date +%Y-%m-%d---%H-%M-%S)
-    mkdir $backup_dir
+    local backup_dir=$project_path/_index/backup/$(date +%Y-%m-%d---%H-%M-%S)
+    mkdir -p $backup_dir
+
+    local current_dir=$project_path/_index/current
 
     ### DOWNLOAD
-    base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-    curl -s -S --retry 4 --retry-connrefused $base_url/$project 2> $backup_dir/__errors.txt > $backup_dir/_index.html
+    local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
+    # --location: follow 3xx HTTP response redirects
+    curl -s -S --retry 4 --retry-connrefused --location $base_url/$project/ 2> $backup_dir/__errors.txt > $backup_dir/_index.html
     if [ "$(grep '404 Not Found' $backup_dir/_index.html)" ]; then
       echo '404 not found' >> $backup_dir/__errors.txt
     fi
@@ -51,7 +43,7 @@ scrape_project_index() {
     sed -E -e 's/^([^~]+)~.+/\1/' $backup_dir/index_details.txt > $backup_dir/index.txt
     sed -E -e 's/^([^~]+)~.+/\1/' $backup_dir/___dirs_and_details.txt > $backup_dir/___dirs.txt
 
-    states_filter="$(tr '\n' '|' < states-to-scrape.txt | sed -E -e 's/\|$//')"
+    local states_filter="$(tr '\n' '|' < states-to-scrape.txt | sed -E -e 's/\|$//')"
     python3 $script_base_dir/get-project-year-and-state.py $backup_dir/index.txt | grep -E "~$states_filter~" > $backup_dir/index_with_year_and_state.txt
 
     if [ "$project" ]; then
@@ -70,12 +62,14 @@ scrape_project_index() {
 
     ### START DIFF/STATS
     ### MAKE STATS / DIFF with previous (currents)
-    current_dir=$backup_dir/../../current
     mkdir $backup_dir/diff
     if [ -d $current_dir ]; then
       # do diffs side-by-side
       diff --side-by-side $current_dir/index.txt $backup_dir/index.txt | tr -d '\t ' | grep -E '<$' | sed -E -e 's/<$//' > $backup_dir/diff/removed.txt
       diff --side-by-side $current_dir/index.txt $backup_dir/index.txt | tr -d '\t ' | grep -E '^>' | sed -E -e 's/^>//' > $backup_dir/diff/added.txt
+      if [ ! -f $current_dir/index_details.txt ]; then
+        echo > $current_dir/index_details.txt
+      fi
       diff --side-by-side $current_dir/index_details.txt $backup_dir/index_details.txt | tr -d '\t ' | grep '|' > $backup_dir/diff/changes.txt
 
       sed -E \
