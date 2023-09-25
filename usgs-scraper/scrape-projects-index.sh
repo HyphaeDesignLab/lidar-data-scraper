@@ -14,6 +14,11 @@ scrape_project() {
         project_path=projects/$project
     fi
 
+    # '' blank (default):  only scrape if project is missing
+    # if_updated:  scrape if last modified date has changed, i.e. has updated
+    # force_scrape:  re-scrape no matter what
+    local mode="$2"
+
     local level=''
     local indentation=' ' # 1 spaces for top-level
     if [ "$project" != '' ]; then
@@ -27,8 +32,7 @@ scrape_project() {
       echo 'USGS projects: '
     fi
 
-
-    if [ ! -d $project_path/_index/current ] || [ ! -f $project_path/_index/current/index.txt ]; then
+    if [ ! -f $project_path/_index/current/index.txt ] || [ "$mode" = 'force' ]; then
         echo "$indentation index scraping";
         scrape_project_index $project
     else
@@ -56,17 +60,36 @@ scrape_project() {
             if [ "$project" != '' ]; then
               subproject_arg=$project/$subproject
             fi
-            scrape_project $subproject_arg
-            throttle_scrape
+
+            local should_scrape=0
+            if [ ! -d "projects/$subproject_arg" ] || [ "$mode" = 'force' ]; then
+              should_scrape=1
+            elif [ "$mode" = 'if_updated' ]; then
+              if grep -E "^$subproject~" $project_path/_index/current/diff/changes.txt >/dev/null; then
+                should_scrape=1
+              fi
+            fi
+            if [ "$should_scrape" ]; then
+              scrape_project $subproject_arg
+              throttle_scrape
+            fi
         done;
     else
-        if [ ! -f  $project_path/_index/current/metadata_dir.txt ] && [ ! -f $project_path/meta/_index.html ]; then
-            echo " metadata scraping";
-            scrape_project_meta $project
-            throttle_scrape
-        else
-            echo " metadata already scraped";
-        fi
+      local should_scrape=0
+      if [ ! -f  $project_path/_index/current/metadata_dir.txt ] && [ ! -f $project_path/meta/_index.html ]; then
+          echo " metadata scraping";
+          local should_scrape=1
+      elif [ "$mode" = 'force' ]; then
+        local should_scrape=1
+        echo " metadata already scraped, but scraping AGAIN";
+      else
+        echo " metadata already scraped";
+      fi
+
+      if [ "$should_scrape" ]; then
+        scrape_project_meta $subproject_arg
+        throttle_scrape
+      fi
     fi
     project_info $project > $project_path/_stats.txt
 }
