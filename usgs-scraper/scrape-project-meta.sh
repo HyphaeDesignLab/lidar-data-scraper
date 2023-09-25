@@ -1,64 +1,77 @@
 . ./utils-stats.sh
 
 scrape_project_meta() {
-    if [ ! -d projects/ ]; then
-      mkdir projects;
-    fi
+    local project_path="projects/$project"
+    local meta_dir=$project_path/meta
+    local backup_dir=$meta_dir/_backup/$(date +%Y-%m-%d---%H-%M-%S)
+    mkdir -p $backup_dir
+    local current_dir=$meta_dir/_current/
 
-    local project_path="projects"
-    project="$1"
-    subproject="$2"
-    if [ $project ]; then
-        project_path="projects/$project"
-      if [ ! -d $project_path ]; then
-        mkdir $project_path;
+    # introducing new meta directory structure:
+    # START: post-factum set-up of _current and _backup
+    #   meta/_current/ where all non XML and non .TXT.XML files live
+    #   meta/_backup/<backup_datestamp> folder lives of past scrapes (copies of previous _current folders)
+    # if we never did a backup and no current dir, migrate all files from main meta/dir to _current
+    if [ ! -d $current_dir ]; then
+      mkdir -p $current_dir # make current dir
+
+      # grab last-mod time from meta dir itself
+      local meta_dir_last_mod_in_seconds=$(stat -c '%Y' $meta_dir)
+      local previous_backup_date=$(date --date="@$meta_dir_last_mod_in_seconds" '+%Y-%m-%d---%H-%M-%S' 2>/dev/null)
+      if [ "$previous_backup_date" = '' ]; then
+        # if date utility does not work with the "--date" arg, try '-r'
+        previous_backup_date=$(date -r "$meta_dir_last_mod_in_seconds" '+%Y-%m-%d---%H-%M-%S' 2>/dev/null)
       fi
-    fi
-    if [ $subproject ]; then
-        project_path="projects/$project/$subproject"
-      if [ ! -d $project_path ]; then
-        mkdir $project_path;
-      fi
-    fi
 
-    if [ ! -d $project_path/meta ]; then
-      mkdir $project_path/meta
+      # copy all non .XML and non .TXT.XML files to new current dir
+      for fff in _errors.txt _index.html xml_files.txt xml_files_details.txt zip_files.txt project-length-days.txt; do
+        if [ -f $meta_dir/$fff ]; then
+          cp $meta_dir/$fff $current_dir/$fff 2>/dev/null
+        else
+          echo > $current_dir/$fff
+        fi
+      done
+      # do a back-up of current to previous (non-existent until now) backup
+      cp -rf $current_dir $meta_dir/_backup/$previous_backup_date
     fi
-    meta_dir=$project_path/meta
+    #/ END: post-factum set-up of _current and _backup
 
-    local project_path_url=""
-    if [ $project ]; then
-      project_path_url="$project/"
-    fi
-    if [ $subproject ]; then
-      project_path_url="$project/$subproject/"
-    fi
-
+    local meta_url_dir=$(cat $project_path/_index/current/metadata_dir.txt)
 
     ### DOWNLOAD
-    base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-    url=$base_url/$project_path_url/metadata/
-    curl -s -S --retry 4 --retry-connrefused $url 2> $meta_dir/__errors.txt > $meta_dir/_index.html
-    if [ "$(grep '404 Not Found' $meta_dir/_index.html)" ]; then
-      echo '404 not found' >> $meta_dir/__errors.txt
+    local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
+    local url=$base_url/$project/$meta_url_dir
+    curl -s -S --retry 4 --retry-connrefused $url 2> $backup_dir/__errors.txt > $backup_dir/_index.html
+    if [ "$(grep '404 Not Found' $backup_dir/_index.html)" ]; then
+      echo '404 not found' >> $backup_dir/__errors.txt
     fi
-    if [ $(get_line_count_or_empty $meta_dir/__errors.txt) ]; then
-        date | xargs echo -n >> $meta_dir/_errors.txt
-        cat $meta_dir/__errors.txt >> $meta_dir/_errors.txt
+    if [ $(get_line_count_or_empty $backup_dir/__errors.txt) ]; then
+        date | xargs echo -n >> $backup_dir/_errors.txt
+        cat $backup_dir/__errors.txt >> $backup_dir/_errors.txt
     fi
-    rm $meta_dir/__errors.txt
+    rm $backup_dir/__errors.txt
 
-    grep -E '<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">' $meta_dir/_index.html |
+    grep -E '<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">' $backup_dir/_index.html |
      sed -E -e 's@<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">.+@\1@' \
-     > $meta_dir/zip_files.txt
+     > $backup_dir/zip_files.txt
 
-    grep -E '<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">' $meta_dir/_index.html |
+    grep -E '<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">' $backup_dir/_index.html |
      sed -E \
-      -e 's@<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">.+@\1@' \
+      -e 's@<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml"> +([0-9]{4}-[0-9][0-9]-[0-9][0-9]) +([0-9][0-9]:[0-9][0-9]) +([-0-9KMG\.]+).*@\1~\2T\3~\4@' \
       -e 's@/@@' \
       -e "s/USGS_LPC_/{u}/" \
       -e "s/$project/{prj}/" \
-      > $meta_dir/xml_files.txt
+      > $backup_dir/xml_files_details.txt
+
+    grep -Eo '^[^~]+' $backup_dir/xml_files_details.txt > $backup_dir/xml_files.txt
+
+    # get XML file remove, added and date/size difference
+    # compare only file names (in xml_files.txt)
+    #   whether xml file was there but IS NOT NOW OR was not there but IS NOW
+    diff --side-by-side $current_dir/xml_files.txt $backup_dir/xml_files.txt | tr -d '\t ' | grep -E '<$' | sed -E -e 's/<$//' > $backup_dir/removed.txt
+    diff --side-by-side $current_dir/xml_files.txt $backup_dir/xml_files.txt | tr -d '\t ' | grep -E '^>' | sed -E -e 's/^>//' > $backup_dir/added.txt
+    # last-mod date and file size differences live in xml_files_details.txt
+    diff --side-by-side $current_dir/xml_files_details.txt $backup_dir/xml_files_details.txt | tr -d '\t ' | grep '|' > $backup_dir/changes.txt
 }
 
 xml_check_empty_or_not_found() {
@@ -130,10 +143,6 @@ if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
   elif [ "$1" = "check_missing_projects" ]; then
     check_missing_projects $2 $3
   else
-    if [ "$1" = "all" ]; then
-      scrape_project_meta
-    else
-      scrape_project_meta $1 $2
-    fi
+    scrape_project_meta $1
   fi
 fi
