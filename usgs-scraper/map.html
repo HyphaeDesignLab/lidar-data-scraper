@@ -100,8 +100,9 @@
                     'source': 'leaves',
                     "paint": {
                         "fill-color": ["case",
-                            ['==', ['get', 'leaves'], 'on'], "#5aff70",
-                            "#fcae51"
+                            ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
+                            ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .5], // "#fcae51"
+                            ["rgba", 252, 81, 121, .5] // "#fc5179"
                         ],
                         "fill-opacity": .8,
                         "fill-outline-color": ['case',
@@ -136,7 +137,7 @@
                     const feature = features[0];
                     highlightLayerSource.setData({type: 'FeatureCollection', features: [feature]});
                     const props = feature.properties;
-                    const linkDrilldown = props.is_bbox ? `<div><a id="map-popover" href="#" data-project="${props.project}" data-feature-id="${feature.id}">see tiles</a></div>`:'';
+                    const linkDrilldown = props.is_bbox ? `<div><a href="#" data-load-more-tiles data-project="${props.project}" data-feature-id="${feature.id}">see tiles</a></div>`:'';
                     mapPopup = new mapboxgl.Popup({offset: popupOffsets, className: 'my-class', closeOnClick: true, closeOnMove: true})
                         .setLngLat(e.lngLat)
                         .setHTML(`
@@ -150,7 +151,8 @@ ${props.tile_count} tiles
                         .setMaxWidth("300px")
                         .addTo(map);
                     if (props.is_bbox) {
-                        document.querySelector('#map-popover').addEventListener('click', e => {
+                        console.log('all')
+                        document.querySelector('[data-load-more-tiles]').addEventListener('click', e => {
                             e.preventDefault();
                             e.stopPropagation();
                             loadTiles(e.target.dataset.project, e.target.dataset.featureId);
