@@ -7,6 +7,10 @@ scrape_project_meta() {
     mkdir -p $backup_dir
     local current_dir=$meta_dir/_current/
 
+    local project_name=$(cut -d'/' -f 1 <<< $project); # get the project text before '/'
+    local subproject_name=$(cut -d'/' -f 2 <<< $project); # get the subproject (text after a slash /)
+    if [ "$subproject_name" = '' ]; then subproject_name='zzzzzzzzzz____nonexistent_string'; fi; # subproject is used for text replacement below, so if NOT SET, set it to something that cannot possibly exist in a filename
+
     # introducing new meta directory structure:
     # START: post-factum set-up of _current and _backup
     #   meta/_current/ where all non XML and non .TXT.XML files live
@@ -16,7 +20,11 @@ scrape_project_meta() {
       mkdir -p $current_dir # make current dir
 
       # grab last-mod time from meta dir itself
-      local meta_dir_last_mod_in_seconds=$(stat -c '%Y' $meta_dir)
+      local meta_dir_last_mod_in_seconds=$(stat -c '%Y' $meta_dir 2>/dev/null)
+      if [ "$meta_dir_last_mod_in_seconds" = '' ]; then
+        # alternate usage of stat
+        meta_dir_last_mod_in_seconds=$(stat -f "%m" -t "%s" $meta_dir)
+      fi
       local previous_backup_date=$(date --date="@$meta_dir_last_mod_in_seconds" '+%Y-%m-%d---%H-%M-%S' 2>/dev/null)
       if [ "$previous_backup_date" = '' ]; then
         # if date utility does not work with the "--date" arg, try '-r'
@@ -40,7 +48,8 @@ scrape_project_meta() {
 
     ### DOWNLOAD
     local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-    local url=$base_url/$project/$meta_url_dir
+    # make sure there is a trailing, else USGS server 301-http-redirects
+    local url=$base_url/$project/$meta_url_dir/
     curl -s -S --retry 4 --retry-connrefused $url 2> $backup_dir/__errors.txt > $backup_dir/_index.html
     if [ "$(grep '404 Not Found' $backup_dir/_index.html)" ]; then
       echo '404 not found' >> $backup_dir/__errors.txt
@@ -57,10 +66,11 @@ scrape_project_meta() {
 
     grep -E '<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">' $backup_dir/_index.html |
      sed -E \
-      -e 's@<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml"> +([0-9]{4}-[0-9][0-9]-[0-9][0-9]) +([0-9][0-9]:[0-9][0-9]) +([-0-9KMG\.]+).*@\1~\2T\3~\4@' \
+      -e 's@<img[^>]+alt="\[TXT\]"> *<a href="([^"]+).xml">[^<]+</a> +([0-9]{4}-[0-9][0-9]-[0-9][0-9]) +([0-9][0-9]:[0-9][0-9]) +([-0-9KMG\.]+).*@\1~\2T\3~\4@' \
       -e 's@/@@' \
       -e "s/USGS_LPC_/{u}/" \
-      -e "s/$project/{prj}/" \
+      -e "s@$project_name@{prj}@" \
+      -e "s@$subproject_name@{sprj}@" \
       > $backup_dir/xml_files_details.txt
 
     grep -Eo '^[^~]+' $backup_dir/xml_files_details.txt > $backup_dir/xml_files.txt
@@ -72,6 +82,9 @@ scrape_project_meta() {
     diff --side-by-side $current_dir/xml_files.txt $backup_dir/xml_files.txt | tr -d '\t ' | grep -E '^>' | sed -E -e 's/^>//' > $backup_dir/added.txt
     # last-mod date and file size differences live in xml_files_details.txt
     diff --side-by-side $current_dir/xml_files_details.txt $backup_dir/xml_files_details.txt | tr -d '\t ' | grep '|' > $backup_dir/changes.txt
+
+    # copy current backup as the "current"
+    cp -rf $backup_dir $current_dir
 }
 
 xml_check_empty_or_not_found() {
