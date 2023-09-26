@@ -14,6 +14,12 @@ has_arg () {
 }
 
 
+echo_if_debug() {
+  if [ "$LIDAR_SCRAPER_DEBUG" = '1' ]; then
+    echo $@
+  fi
+}
+
 
 get_line_count_or_empty() {
   wc -l $1 | sed -E -e 's/^ *([0-9]+).*$/\1/' -e 's/^0$//' | xargs echo -n;
