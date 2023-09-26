@@ -33,7 +33,7 @@ scrape_project() {
     fi
 
     if [ ! -f $project_path/_index/current/index.txt ] || [ "$mode" = 'force' ]; then
-        echo "$indentation index scraping";
+        echo "$indentation index scraping $project";
         scrape_project_index $project
     else
         echo "$indentation index already scraped";
@@ -41,9 +41,10 @@ scrape_project() {
 
     local subprojects=($(project_index $project))
     local subprojects_count=${#subprojects[@]}
+    echo_if_debug subprojects_count:$subprojects_count
     if [ $subprojects_count -gt 0 ]; then
         local subproject_i=0
-        for subproject in $subprojects; do
+        for subproject in ${subprojects[@]}; do
             ((subproject_i++))
             echo -n "$indentation ($level) $subproject ($subproject_i/$subprojects_count): "
 
@@ -70,15 +71,22 @@ scrape_project() {
               fi
             fi
             if [ "$should_scrape" ]; then
-              scrape_project $subproject_arg
+              echo_if_debug should_scrape:$should_scrape $subproject_arg
+              scrape_project $subproject_arg $mode
               throttle_scrape
             fi
+            echo_if_debug next
         done;
     else
       local should_scrape=0
-      if [ ! -f  $project_path/_index/current/metadata_dir.txt ] && [ ! -f $project_path/meta/_index.html ]; then
-          echo " metadata scraping";
-          local should_scrape=1
+      if [ ! -f  $project_path/_index/current/metadata_dir.txt ]; then
+          if [ ! -f $project_path/meta/xml_files.txt ] || [ ! -f  $project_path/meta/_current/xml_files.txt ]; then
+            echo " metadata scraping";
+            local should_scrape=1
+          fi
+      elif [ "$mode" = 'if_updated' ] && [ -f $project_path/_index/current/metadata_dir.txt ] && grep "^$(cat $project_path/_index/current/metadata_dir.txt)" $project_path/_index/current/diff/meta_laz_changes.txt 2>/dev/null >/dev/null; then
+        echo " metadata dir has changed... scraping";
+        local should_scrape=1
       elif [ "$mode" = 'force' ]; then
         local should_scrape=1
         echo " metadata already scraped, but scraping AGAIN";
@@ -86,8 +94,9 @@ scrape_project() {
         echo " metadata already scraped";
       fi
 
+      echo_if_debug
       if [ "$should_scrape" ]; then
-        scrape_project_meta $subproject_arg
+        scrape_project_meta $subproject_arg $mode
         throttle_scrape
       fi
     fi
