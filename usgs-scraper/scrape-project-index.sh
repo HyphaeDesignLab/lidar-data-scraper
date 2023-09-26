@@ -39,6 +39,7 @@ scrape_project_index() {
     # get only directories containing underscore (_); that implies it is a sub-project
     #   save them to index.txt
     grep '_' $backup_dir/___dirs_and_details.txt > $backup_dir/index_details.txt
+    grep -v '_' $backup_dir/___dirs_and_details.txt > $backup_dir/meta_laz_details.txt
 
     sed -E -e 's/^([^~]+)~.+/\1/' $backup_dir/index_details.txt > $backup_dir/index.txt
     sed -E -e 's/^([^~]+)~.+/\1/' $backup_dir/___dirs_and_details.txt > $backup_dir/___dirs.txt
@@ -71,6 +72,12 @@ scrape_project_index() {
         echo > $current_dir/index_details.txt
       fi
       diff --side-by-side $current_dir/index_details.txt $backup_dir/index_details.txt | tr -d '\t ' | grep '|' > $backup_dir/diff/changes.txt
+
+      # diff on meta/laz dir details
+      if [ ! -f $current_dir/meta_laz_details.txt ]; then
+        echo > $current_dir/meta_laz_details.txt
+      fi
+      diff --side-by-side $current_dir/meta_laz_details.txt $backup_dir/meta_laz_details.txt | tr -d '\t ' | grep '|' > $backup_dir/diff/meta_laz_changes.txt 2>/dev/null
 
       sed -E \
        -e 's/~20[0-9]{2}.+$//' \
