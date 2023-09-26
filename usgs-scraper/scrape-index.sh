@@ -2,8 +2,8 @@ base_dir=$(dirname $0)
 cd $base_dir
 . ./utils.sh
 . ./utils-stats.sh
-. ./scrape-project-index.sh
-. ./scrape-project-meta.sh
+. ./scrape-index-helper.sh
+. ./scrape-meta.sh
 
 scrape_project() {
   if [ -f projects/STOP_SCRAPE.txt ]; then rm projects/STOP_SCRAPE.txt; return; fi;

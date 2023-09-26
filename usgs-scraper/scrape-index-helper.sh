@@ -106,6 +106,6 @@ scrape_project_index() {
 
 }
 
-if [ "$(basename $0)" = "scrape-project-index.sh" ]; then
+if [ "$(basename $0)" = "scrape-index-helper.sh" ]; then
     scrape_project_index $1 $2
 fi
