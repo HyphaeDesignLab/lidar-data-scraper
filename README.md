@@ -4,7 +4,7 @@ All data is scraped from https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Ele
 
 ## Scrape Indeces
 
-`scrape-projects.sh "all"` will scrape indeces: 
+`scrape-index.sh "all"` will scrape indeces: 
 * 
 * of all USGS projects (index is saved to `projects/_index/current/index.txt`)
 * of all subprojects within each project (index is saved to `projects/<project_name>/_index/current/index.txt`; subprojects are just subdirectories under `projects/<project_name>/*`)
