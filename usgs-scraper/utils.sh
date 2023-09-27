@@ -40,26 +40,23 @@ throttle_scrape_reset() {
 }
 # run it immediately
 throttle_scrape_reset;
+
+# take x_scrape/y_second_rest argument pairs
+#  e.g. 250/60, 50/20, ... = for every 250 scrapes rest 60 seconds, for every 50 rest 20
 throttle_scrape() {
     scrape_count=$(expr $scrape_count + 1)
 
     date >> scrape-rest.txt;
-    if [ "$(expr $scrape_count % 250)" = "0" ]; then
-        echo 'every 250 scrapes rest 60 seconds' >> scrape-rest.txt;
-        sleep 60
-    elif [ "$(expr $scrape_count % 50)" = "0" ]; then
-        echo 'every 50 scrapes rest 20 seconds' >> scrape-rest.txt;
-        sleep 20
-    elif [ "$(expr $scrape_count % 20)" = "0" ]; then
-        echo 'every 20 scrapes rest 10 seconds' >> scrape-rest.txt;
-        sleep 10
-    elif [ "$(expr $scrape_count % 10)" = "0" ]; then
-        echo 'every 10 scrapes rest 3 seconds' >> scrape-rest.txt;
-        sleep 3
-    elif [ "$(expr $scrape_count % 5)" = "0" ]; then
-        echo 'every 5 scrapes rest 2 seconds' >> scrape-rest.txt;
-        sleep 2
-    else
-        sleep .5
-    fi
+    for every_x_rest_y in "$@"; do
+      local every_x=$(cut -d'/' -f 1 <<< $every_x_rest_y);
+      local rest_y_seconds=$(cut -d'/' -f 2 <<< $every_x_rest_y);
+      if [ "$(expr $scrape_count % $every_x)" = "0" ]; then
+        echo "every $every_x scrapes rest $rest_y_seconds seconds" >> scrape-rest.txt;
+        sleep $rest_y_seconds;
+        return; # break out of for-loop (as first match/condition suffices)
+      fi
+    done
+
+    # default sleep throttle
+    sleep .5
 }
