@@ -3,9 +3,9 @@ cd $base_dir
 . ./utils.sh
 . ./utils-stats.sh
 . ./scrape-index-helper.sh
-. ./scrape-meta.sh
+. ./scrape-meta-index.sh
 
-scrape_project() {
+scrape_index() {
   if [ -f projects/STOP_SCRAPE.txt ]; then rm projects/STOP_SCRAPE.txt; return; fi;
 
     local project="$1"
@@ -34,7 +34,7 @@ scrape_project() {
 
     if [ ! -f $project_path/_index/current/index.txt ] || [ "$mode" = 'force' ]; then
         echo "$indentation index scraping $project";
-        scrape_project_index $project
+        scrape_index_helper $project
     else
         echo "$indentation index already scraped";
     fi
@@ -72,8 +72,8 @@ scrape_project() {
             fi
             if [ "$should_scrape" ]; then
               echo_if_debug should_scrape:$should_scrape $subproject_arg
-              scrape_project $subproject_arg $mode
-              throttle_scrape
+              scrape_index $subproject_arg $mode
+              throttle_scrape 250/60 50/20 20/10 10/3 5/2
             fi
             echo_if_debug next
         done;
@@ -96,8 +96,8 @@ scrape_project() {
 
       echo_if_debug
       if [ "$should_scrape" ]; then
-        scrape_project_meta $subproject_arg $mode
-        throttle_scrape
+        scrape_meta_index $subproject_arg $mode
+        throttle_scrape 250/60 50/20 20/10 10/3 5/2
       fi
     fi
     project_info $project > $project_path/_stats.txt
@@ -105,11 +105,11 @@ scrape_project() {
 
 
 if [ "$1" = "all" ]; then
-    scrape_project;
+    scrape_index;
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
-        scrape_project $1;
+        scrape_index $1;
     else
-        scrape_project $1 $2;
+        scrape_index $1 $2;
     fi
 fi

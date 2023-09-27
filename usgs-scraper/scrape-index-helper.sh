@@ -1,7 +1,7 @@
 script_base_dir=$(pwd)
 . ./utils-stats.sh
 
-scrape_project_index() {
+scrape_index_helper() {
     local project_path="projects"
     if [ $project ]; then
         project_path="projects/$project"
@@ -107,5 +107,5 @@ scrape_project_index() {
 }
 
 if [ "$(basename $0)" = "scrape-index-helper.sh" ]; then
-    scrape_project_index $1 $2
+    scrape_index_helper $1 $2
 fi

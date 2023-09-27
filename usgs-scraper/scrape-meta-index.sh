@@ -1,6 +1,6 @@
 . ./utils-stats.sh
 
-scrape_project_meta() {
+scrape_meta_index() {
     local project_path="projects/$project"
     local meta_dir=$project_path/meta
     local backup_dir=$meta_dir/_backup/$(date +%Y-%m-%d---%H-%M-%S)
@@ -143,7 +143,7 @@ check_missing_projects() {
   done
 }
 
-if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
+if [ "$(basename $0)" = "scrape-meta-index.sh" ]; then
   if [ ! "$1" ]; then
     echo "to scrape all meta files: $0 all|<project> <?subproject>"
     echo " OR"
@@ -156,6 +156,6 @@ if [ "$(basename $0)" = "scrape-project-meta.sh" ]; then
   elif [ "$1" = "check_missing_projects" ]; then
     check_missing_projects $2 $3
   else
-    scrape_project_meta $1
+    scrape_meta_index $1
   fi
 fi
