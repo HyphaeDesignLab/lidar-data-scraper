@@ -55,5 +55,5 @@ migrate_backup_dirs() {
 }
 
 if [ "$1" = 'backup_dirs' ]; then
-  migrate_scrape_files
+  migrate_backup_dirs
 fi
