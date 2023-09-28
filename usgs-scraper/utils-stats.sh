@@ -23,7 +23,7 @@ project_index() {
         projects_path=projects/$project
     fi
 
-    cat $projects_path/_index/current/index.txt | grep -v '^$' | sort
+    cat $projects_path/_index/current/index.txt 2>/dev/null | grep -v '^$' | sort
 }
 index_bad_chars() {
     grep '[^0-9a-zA-Z_\-]' projects/_index/current/index.txt | sort
