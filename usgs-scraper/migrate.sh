@@ -13,6 +13,7 @@ migrate_backup_dirs() {
   for item_i in ${index[@]}; do
     if [ -d project_path/$item_i/_index/backup ]; then
       for backup_dir in $(ls -1 project_path/$item_i/_index/backup/); do
+        echo backup_dir
         if [ -d $backup_dir/diff/ ]; then
           if [ -s $backup_dir/diff/added.txt ]; then
             mv $backup_dir/diff/added.txt $backup_dir/diff-added.txt;
