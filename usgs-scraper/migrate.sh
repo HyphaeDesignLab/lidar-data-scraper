@@ -11,9 +11,11 @@ migrate_backup_dirs() {
   local index=($(project_index $project))
 
   for item_i in ${index[@]}; do
+    echo $project/$item_i:
     if [ -d project_path/$item_i/_index/backup ]; then
+      echo 'backup diffs:'
       for backup_dir in $(ls -1 project_path/$item_i/_index/backup/); do
-        echo backup_dir
+        echo $backup_dir
         if [ -d $backup_dir/diff/ ]; then
           if [ -s $backup_dir/diff/added.txt ]; then
             mv $backup_dir/diff/added.txt $backup_dir/diff-added.txt;
@@ -32,7 +34,9 @@ migrate_backup_dirs() {
       done
     fi
     local current_dir=project_path/$item_i/_index/current
+    echo 'current diff:'
     if [ -d current_dir/diff/ ]; then
+      echo $project/$item_i/diff
       if [ -s $current_dir/diff/added.txt ]; then
         mv $current_dir/diff/added.txt $current_dir/diff-added.txt;
       fi
