@@ -2,7 +2,7 @@
 
 # create and cleanup
 #  create index_details.txt (to contain last-mod and size)
-migrate_scrape_files() {
+migrate_backup_dirs() {
   local project="$1"
   local project_path='projects'
   if [ "$project" ]; then
@@ -30,6 +30,22 @@ migrate_scrape_files() {
         fi
       done
     fi
+    local current_dir=project_path/$item_i/_index/current
+    if [ -d current_dir/diff/ ]; then
+      if [ -s $current_dir/diff/added.txt ]; then
+        mv $current_dir/diff/added.txt $current_dir/diff-added.txt;
+      fi
+      if [ -s $current_dir/diff/removed.txt ]; then
+        mv $current_dir/diff/removed.txt $current_dir/diff-removed.txt;
+      fi
+      if [ -s $current_dir/diff/added.txt ]; then
+        mv $current_dir/diff/added.txt $current_dir/diff-added.txt;
+      fi
+      if [ -s $current_dir/diff/changes.txt ]; then
+        mv $current_dir/diff/changes.txt $current_dir/diff-changed.txt;
+      fi
+      rm -rf $current_dir/diff/
+    fi
     local project_arg=$item_i
     if [ "$project" ]; then
        project_arg=$project/$item_i
@@ -37,3 +53,7 @@ migrate_scrape_files() {
     migrate_scrape_files $project_arg
   done
 }
+
+if [ "$1" = 'backup_dirs' ]; then
+  migrate_scrape_files
+fi
