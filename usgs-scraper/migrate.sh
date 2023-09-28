@@ -50,7 +50,7 @@ migrate_backup_dirs() {
     if [ "$project" ]; then
        project_arg=$project/$item_i
      fi
-    migrate_scrape_files $project_arg
+    migrate_backup_dirs $project_arg
   done
 }
 
