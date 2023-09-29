@@ -129,6 +129,10 @@ loop_on_projects() {
   local limit="$4"
 
   local project_path='projects'
+  if [ "$project" = 'all' ]; then
+    project=''
+  fi
+
   if [ "$project" ]; then
     project_path="projects/$project"
   fi
@@ -165,7 +169,7 @@ loop_test_fn() {
 }
 loop_test() {
   echo loop_test
-  loop_on_projects '' loop_test_fn 'custom_arg/%s/__' 3
+  loop_on_projects 'all' loop_test_fn 'custom_arg/%s/__' 3
 }
 
 if [ "$1" = 'loop_test' ]; then
