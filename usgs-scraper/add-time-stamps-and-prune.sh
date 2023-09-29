@@ -81,7 +81,7 @@ add_time_stamps_and_prune() {
 }
 
 
-loop_on_all() {
+add_time_stamps__loop_on_all() {
     add_time_stamps_and_prune
 
     local projects=$(project_index)
@@ -96,7 +96,7 @@ loop_on_all() {
     done
 }
 
-loop_on_project() {
+add_time_stamps__loop_on_project() {
   add_time_stamps_and_prune $project
   local subprojects=$(project_index $project)
   local subproject=''
@@ -106,10 +106,10 @@ loop_on_project() {
 }
 
 if [ "$1" = "all" ]; then
-    loop_on_all;
+    add_time_stamps__loop_on_all;
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
-        loop_on_project $1;
+        add_time_stamps__loop_on_project $1;
     else
         add_time_stamps_and_prune $1 $2;
     fi
