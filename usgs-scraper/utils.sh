@@ -146,7 +146,7 @@ loop_on_projects() {
 
   local project_callback_arg=$(printf $fn_callback_arg_format $project_path)
   echo "calling $fn_callback with $project_callback_arg (limit: $limit)"
-  #eval $fn_callback $project_callback_arg
+  eval $fn_callback $project_callback_arg
 
   local index=()
   if [ "$limit" ]; then
@@ -165,7 +165,7 @@ loop_on_projects() {
 }
 
 loop_test_fn() {
-  echo $1
+  echo 'loop_test_fn callback: ' $1
 }
 loop_test() {
   echo loop_test
