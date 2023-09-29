@@ -88,16 +88,16 @@ scrape_index_helper__parse_index() {
   fi
 
   # get meta/laz/las directories
-  grep -v '_' $download_dir/___dirs_and_details.txt >$download_dir/data_details.txt
+  grep -v '_' $download_dir/___dirs_and_details.txt | grep -Eoi '^(meta(data)?|la[zs])~'> $download_dir/data_details.txt
   if [ $? = 0 ]; then
     grep -Eio '^meta(data)?~' $download_dir/data_details.txt 2>/dev/null | tr -d '~' > $download_dir/metadata_dir.txt
-    if [ "$?" = 0 ]; then
+    if [ -s $download_dir/metadata_dir.txt ]; then
       echo -n data > $download_dir/contents-type.txt
     else
       rm $download_dir/metadata_dir.txt
     fi
-    grep -Eio '^la[zs]?~' $download_dir/data_details.txt 2>/dev/null | tr -d '~' >$download_dir/laz_dir.txt
-    if [ "$?" = 0 ]; then
+    grep -Eio '^la[zs]~' $download_dir/data_details.txt 2>/dev/null | tr -d '~' > $download_dir/laz_dir.txt
+    if [ -s $download_dir/laz_dir.txt ]; then
       echo -n data > $download_dir/contents-type.txt
     else
       rm $download_dir/laz_dir.txt
