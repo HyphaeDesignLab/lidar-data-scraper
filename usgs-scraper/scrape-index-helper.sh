@@ -12,7 +12,6 @@ scrape_index_helper() {
 
   # Make a new back-up dir, download/parse new data into it
   local backup_dir=$project_path/_index/backup/$(date +%Y-%m-%d---%H-%M-%S)
-  mkdir -p $backup_dir
 
   # Compare it to the current (about to become last-backup)
   local current_dir=$project_path/_index/current
@@ -32,6 +31,7 @@ scrape_index_helper() {
 
 scrape_index_helper__curl() {
   local download_dir="$1"
+  mkdir -p $download_dir
 
   local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
   if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
