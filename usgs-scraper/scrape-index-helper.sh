@@ -112,7 +112,7 @@ scrape_index_helper__parse_index() {
 
 scrape_index_helper__diff() {
   local backup_dir="$1"
-  local current_dir="$1"
+  local current_dir="$backup_dir/../../current"
 
   ### START DIFF/STATS
   local data_type=$(cat $backup_dir/contents-type.txt)
@@ -154,14 +154,14 @@ scrape_index_helper__diff() {
       echo $(get_line_count $backup_dir/diff-changed.txt) meta/laz dirs updated >>$backup_dir/diff.txt
     fi
   else
-    echo 'first time scraping' >$backup_dir/diff.txt
+    echo 'first time scraping' > $backup_dir/diff.txt
   fi
   ### END DIFF/STATS
 }
 
 scrape_index_helper__backup() {
   local backup_dir="$1"
-  local current_dir="$1"
+  local current_dir="$backup_dir/../../current"
 
   if [ -d $current_dir ]; then
     rm -rf $current_dir
