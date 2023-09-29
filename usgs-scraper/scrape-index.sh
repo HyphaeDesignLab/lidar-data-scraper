@@ -36,6 +36,7 @@ scrape_index() {
     local indentation='' # 0 spaces for top-level
     local next_level_label='project'
     local short_project_name='USGS projects'
+    local short_project_id=''
     if [ "$project" = '' ] || [ "$project" = 'all' ]; then
       project=''
     else
@@ -43,10 +44,12 @@ scrape_index() {
       next_level_label='subproject'
       indentation='  ' # 2 spaces for project
       short_project_name=$project
+      short_project_id=$project
       if [[ "$project" = *'/'* ]]; then
         level=2
         indentation='    ' # 4 spaces for sub project
         short_project_name=$(cut -d'/' -f 2 <<< $project)  # get the subproject name (after slash /)
+        short_project_id=$short_project_name  # get the subproject name (after slash /)
       fi
     fi
 
@@ -63,6 +66,12 @@ scrape_index() {
     elif [ "$mode" = 'force' ]; then
         echo "$indentation force-update re-scraping index... ";
         scrape_index_helper $project
+    elif [ "$mode" = 'if_updated' ]; then
+      local project_updates=$(grep -E "^$short_project_id" "$project_path/../_index/current/diff-updated.txt" 2>/dev/null)
+      if [ "$project_updates" ]; then
+        echo "$indentation re-scraping index as it has changed... ";
+        scrape_index_helper $project
+      fi
     else
         echo "$indentation index already scraped";
     fi
@@ -84,6 +93,7 @@ scrape_index() {
           local state=$(echo $line_in_index | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
 
           # skip states that are NOT in STATES to SCRAPE
+          ## local states_filter="$(tr '\n' '|' <states-to-scrape.txt | sed -E -e 's/\|$//')" # alternative to grepping text file every time
           if  [ "$state" != '' ] && [ "$state" != "none" ] && ! grep $state states-to-scrape.txt >/dev/null; then
               echo "$indentation skipping because state $state is NOT in list of states to scrape"
               continue
