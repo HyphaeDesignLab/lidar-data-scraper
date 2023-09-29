@@ -127,6 +127,7 @@ loop_on_projects() {
   local fn_callback="$2"
   local fn_callback_arg_format="$3"
   local limit="$4"
+  local is_recursive="$5"
 
   local project_path='projects'
   if [ "$project" = 'all' ]; then
@@ -148,6 +149,10 @@ loop_on_projects() {
   echo "calling $fn_callback with $project_callback_arg (limit: $limit)"
   eval $fn_callback $project_callback_arg
 
+  if [ ! "$is_recursive" ]; then
+    return
+  fi
+
   local index=()
   if [ "$limit" ]; then
     index=($(cat $project_path/_index/current/index.txt 2>/dev/null | grep -v '^$' | sort | head -$limit))
@@ -160,7 +165,7 @@ loop_on_projects() {
     if [ "$project" ]; then
        item_i_arg=$project/$item_i
      fi
-    loop_on_projects $item_i_arg $fn_callback $fn_callback_arg_format $limit
+    loop_on_projects $item_i_arg $fn_callback $fn_callback_arg_format $limit $is_recursive
   done
 }
 
