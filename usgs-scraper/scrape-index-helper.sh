@@ -81,8 +81,8 @@ scrape_index_helper__parse_index() {
     echo -n projects > $download_dir/contents-type.txt
     sed -E -e 's/^([^~]+)~.+/\1/' $download_dir/index_details.txt >$download_dir/index.txt
 
-    local states_filter="$(tr '\n' '|' <states-to-scrape.txt | sed -E -e 's/\|$//')"
-    python3 $script_base_dir/get-project-year-and-state.py $download_dir/index.txt | grep -E "~$states_filter~" >$download_dir/index_with_year_and_state.txt
+
+    python3 $script_base_dir/get-project-year-and-state.py $download_dir/index.txt >$download_dir/index_with_year_and_state.txt
   else
     rm $download_dir/index_details.txt
   fi
