@@ -1,8 +1,11 @@
 #!/bin/bash
 base_dir=$(dirname $0)
 cd $base_dir
-. ./utils.sh
-. ./utils-stats.sh
+
+# included by scrape-meta-index.sh (below)
+#. ./utils.sh
+#. ./utils-stats.sh
+
 . ./scrape-meta-index.sh
 
 scrape_xml() {
