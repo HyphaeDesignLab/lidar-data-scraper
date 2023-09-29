@@ -1,10 +1,5 @@
 base_dir=$(dirname $0)
 
-. ./utils.sh
-init_has_arg $@
-
-base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-
 started_scrape() {
     projects_path=projects
     if [ "$1" ]; then

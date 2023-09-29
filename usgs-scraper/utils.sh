@@ -3,6 +3,7 @@ has_arg_search_args=''
 init_has_arg () {
   has_arg_search_args=$@
 }
+init_has_arg "$@"
 
 has_arg () {
   for arg in $has_arg_search_args; do
