@@ -119,40 +119,12 @@ scrape_index_helper__diff() {
   ### MAKE STATS / DIFF with previous (currents)
   if [ -d $current_dir ]; then
     if [ "$data_type" = 'projects' ]; then
-      # do diffs side-by-side
-      echo  $current_dir $backup_dir
-      diff --side-by-side $current_dir/index.txt $backup_dir/index.txt | tr -d '\t ' | grep -E '<$' | sed -E -e 's/<$//' >$backup_dir/diff-removed.txt
-      diff --side-by-side $current_dir/index.txt $backup_dir/index.txt | tr -d '\t ' | grep -E '^>' | sed -E -e 's/^>//' >$backup_dir/diff-added.txt
-      diff --side-by-side $current_dir/index_details.txt $backup_dir/index_details.txt | tr -d '\t ' | grep '|' >$backup_dir/diff-changed.txt
-      if [ ! -s $backup_dir/diff-removed.txt ]; then rm $backup_dir/diff-removed.txt; fi
-      if [ ! -s $backup_dir/diff-removed.txt ]; then rm $backup_dir/diff-added.txt; fi
-      if [ ! -s $backup_dir/diff-removed.txt ]; then rm $backup_dir/diff-changed.txt; fi
-
-      #    sed -E \
-      #      -e 's/~20[0-9]{2}.+$//' \
-      #      -e 's/^.*(20[0-9]{2}).*$/\1/' \
-      #      -e '/20[0-9]/ !s/.+/unknown/' \
-      #      $backup_dir/diff-removed.txt | sort | uniq >$backup_dir/diff/removed-years.txt
-      #
-      #    sed -E \
-      #      -e 's/~20[0-9]{2}.+$//' \
-      #      -e 's/.*(20[0-9]{2}).*/\1/' \
-      #      -e '/20[0-9]/ !s/.+/unknown/' \
-      #      $backup_dir/diff-added.txt | sort | uniq >$backup_dir/diff/added-years.txt
-
-      echo -n > $backup_dir/diff.txt
-      echo $(get_line_count $backup_dir/index.txt) total projects >$backup_dir/diff.txt
-      echo $(get_line_count $current_dir/index.txt) old total projects >>$backup_dir/diff.txt
-      echo $(get_line_count $backup_dir/diff-removed.txt) removed >>$backup_dir/diff.txt
-      echo $(get_line_count $backup_dir/diff-added.txt) added >>$backup_dir/diff.txt
-      echo $(get_line_count $backup_dir/diff-changed.txt) updated >>$backup_dir/diff.txt
-      echo >>$backup_dir/diff.txt
+      python3 diff_file_list.py $current_dir/index_details.txt $backup_dir/index_details.txt $backup_dir/
     fi
 
    # diff on meta/laz dir details
     if [ "$data_type" = 'data' ]; then
-      diff --side-by-side $current_dir/data_details.txt $backup_dir/data_details.txt | tr -d '\t ' | grep '|' > $backup_dir/diff/diff-changed.txt 2>/dev/null
-      echo $(get_line_count $backup_dir/diff-changed.txt) meta/laz dirs updated >>$backup_dir/diff.txt
+      python3 diff_file_list.py $current_dir/data_details.txt $backup_dir/data_details.txt $backup_dir/
     fi
   else
     echo 'first time scraping' > $backup_dir/diff.txt
