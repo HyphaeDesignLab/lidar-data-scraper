@@ -120,6 +120,7 @@ scrape_index_helper__diff() {
   if [ -d $current_dir ]; then
     if [ "$data_type" = 'projects' ]; then
       # do diffs side-by-side
+      echo  $current_dir $backup_dir
       diff --side-by-side $current_dir/index.txt $backup_dir/index.txt | tr -d '\t ' | grep -E '<$' | sed -E -e 's/<$//' >$backup_dir/diff-removed.txt
       diff --side-by-side $current_dir/index.txt $backup_dir/index.txt | tr -d '\t ' | grep -E '^>' | sed -E -e 's/^>//' >$backup_dir/diff-added.txt
       diff --side-by-side $current_dir/index_details.txt $backup_dir/index_details.txt | tr -d '\t ' | grep '|' >$backup_dir/diff-changed.txt
@@ -173,6 +174,32 @@ if [ "$(basename $0)" = "scrape-index-helper.sh" ]; then
     if [ "$1" = 'main' ]; then
       scrape_index_helper $1
     elif [ "$1" = 'loop' ]; then
-      scrape_index_helper $1
+      if [ ! "$2" ] || [ ! "$3" ] || [ ! "$4" ]; then
+        echo ' call the "loop" tester with 5 arguments'
+        echo '   1="loop" to invoke the tester'
+        echo '   2=callback_function_to_test and call for every loop '
+        echo '       possible value: '
+        echo '          parse_index         => scrape_index_helper__parse_index'
+        echo '          current_backup_diff => scrape_index_helper__diff'
+        echo '          backup              => scrape_index_helper__backup '
+        echo '   3=project  to loop on: possible values: "all", "project" or "project/subproject"'
+        echo '   4=arg_format  to pass to callback fn: e.g. "%s/_index/backup/2023-04-05"'
+        echo '   5=limit  of loop iterations'
+      else
+        ___lidar_scrape_project="$3"
+        if [ ! "$___lidar_scrape_project" ]; then
+          ___lidar_scrape_project='all';
+        fi
+        # $2 will contain the callback fn label
+        if [ "$2" = 'parse_index' ]; then
+          loop_on_projects $___lidar_scrape_project scrape_index_helper__parse_index $4 $5
+        fi
+        if [ "$2" = 'current_backup_diff' ]; then
+          loop_on_projects $___lidar_scrape_project scrape_index_helper__diff $4 $5
+        fi
+        if [ "$2" = 'backup' ]; then
+          loop_on_projects $___lidar_scrape_project scrape_index_helper__backup $4 $5
+        fi
+      fi
     fi
 fi
