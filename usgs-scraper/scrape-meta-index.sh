@@ -1,22 +1,25 @@
+. ./utils.sh
 . ./utils-stats.sh
 
 scrape_meta_index() {
     local project_path="projects/$project"
     local meta_dir=$project_path/meta
-    local backup_dir=$meta_dir/_backup/$(date +%Y-%m-%d---%H-%M-%S)
+    local backup_dir=$meta_dir/_index/backup/$(date +%Y-%m-%d---%H-%M-%S)
     mkdir -p $backup_dir
-    local current_dir=$meta_dir/_current/
+    local current_dir=$meta_dir/_index/current/
 
     local project_name=$(cut -d'/' -f 1 <<< $project); # get the project text before '/'
     local subproject_name=$(cut -d'/' -f 2 <<< $project); # get the subproject (text after a slash /)
     if [ "$subproject_name" = '' ]; then subproject_name='zzzzzzzzzz____nonexistent_string'; fi; # subproject is used for text replacement below, so if NOT SET, set it to something that cannot possibly exist in a filename
 
+    echo_if_debug "meta index scrape: $project"
     # introducing new meta directory structure:
-    # START: post-factum set-up of _current and _backup
-    #   meta/_current/ where all non XML and non .TXT.XML files live
-    #   meta/_backup/<backup_datestamp> folder lives of past scrapes (copies of previous _current folders)
+    # START: post-factum set-up of _index/current and _index/backup
+    #   meta/_index/current/ where all non XML and non .TXT.XML files live
+    #   meta/_index/backup/<backup_datestamp> folder lives of past scrapes (copies of previous _current folders)
     # if we never did a backup and no current dir, migrate all files from main meta/dir to _current
     if [ ! -d $current_dir ]; then
+      echo_if_debug 'migrating to new meta directories'
       mkdir -p $current_dir # make current dir
 
       # grab last-mod time from meta dir itself
@@ -34,20 +37,23 @@ scrape_meta_index() {
       # copy all non .XML and non .TXT.XML files to new current dir
       for fff in _errors.txt _index.html xml_files.txt xml_files_details.txt zip_files.txt project-length-days.txt; do
         if [ -f $meta_dir/$fff ]; then
-          cp $meta_dir/$fff $current_dir/$fff 2>/dev/null
+          mv $meta_dir/$fff $current_dir/$fff 2>/dev/null
         else
           echo > $current_dir/$fff
         fi
       done
       # do a back-up of current to previous (non-existent until now) backup
-      cp -rf $current_dir $meta_dir/_backup/$previous_backup_date
+      cp -rf $current_dir $meta_dir/_index/backup/$previous_backup_date
     fi
-    #/ END: post-factum set-up of _current and _backup
+    #/ END: post-factum set-up of _index/current and _index/backup
 
     local meta_url_dir=$(cat $project_path/_index/current/metadata_dir.txt)
 
     ### DOWNLOAD
     local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
+    if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
+      base_url=$LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS
+    fi
     # make sure there is a trailing, else USGS server 301-http-redirects
     local url=$base_url/$project/$meta_url_dir/
     curl -s -S --retry 4 --retry-connrefused $url 2> $backup_dir/__errors.txt > $backup_dir/_index.html
