@@ -151,26 +151,28 @@ if [ "$(basename $0)" = "scrape-index-helper.sh" ]; then
         echo '   1="loop" to invoke the tester'
         echo '   2=callback_function_to_test and call for every loop '
         echo '       possible value: '
-        echo '          parse_index         => scrape_index_helper__parse_index'
-        echo '          current_backup_diff => scrape_index_helper__diff'
-        echo '          backup              => scrape_index_helper__backup '
+        echo '          get           => get from URL  (scrape_index_helper__curl)'
+        echo '          parse         => parse index  (scrape_index_helper__parse_index)'
+        echo '          diff          => diff the previous and current index (scrape_index_helper__diff)'
+        echo '          backup        => backup the current (scrape_index_helper__backup)'
         echo '   3=project  to loop on: possible values: "all", "project" or "project/subproject"'
         echo '   4=arg_format  to pass to callback fn: e.g. "%s/_index/backup/2023-04-05"'
         echo '   5=limit  of loop iterations'
+        echo '   6=is recursive loop'
       else
         ___lidar_scrape_project="$3"
         if [ ! "$___lidar_scrape_project" ]; then
           ___lidar_scrape_project='all';
         fi
         # $2 will contain the callback fn label
-        if [ "$2" = 'parse_index' ]; then
-          loop_on_projects $___lidar_scrape_project scrape_index_helper__parse_index $4 $5
-        fi
-        if [ "$2" = 'current_backup_diff' ]; then
-          loop_on_projects $___lidar_scrape_project scrape_index_helper__diff $4 $5
-        fi
-        if [ "$2" = 'backup' ]; then
-          loop_on_projects $___lidar_scrape_project scrape_index_helper__backup $4 $5
+        if [ "$2" = 'get' ]; then
+          loop_on_projects $___lidar_scrape_project scrape_index_helper__curl $4 $5 $6
+        elif [ "$2" = 'parse' ]; then
+          loop_on_projects $___lidar_scrape_project scrape_index_helper__parse_index $4 $5 $6
+        elif [ "$2" = 'diff' ]; then
+          loop_on_projects $___lidar_scrape_project scrape_index_helper__diff $4 $5 $6
+        elif [ "$2" = 'backup' ]; then
+          loop_on_projects $___lidar_scrape_project scrape_index_helper__backup $4 $5 $6
         fi
       fi
     fi
