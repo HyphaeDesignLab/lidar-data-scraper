@@ -38,10 +38,13 @@
     var map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/hyphae-lab/clb2h2e48000015o4w0b0tyig',
-        center: [-88.20513532089814,34.98027232735532],
-        zoom: 12
+        center: [-121.87209750161911, 41.648412869824384],
+        zoom: 6.5
     });
 
+    let loadTilesErrorEl = null;
+    let loadingTilesEl = null;
+    let loadTilesEl = null;
     function loadTiles(project, parentFeatureId) {
         parentFeatureId = parseInt(parentFeatureId)
         fetch(`projects/${project}/xml_tiles.json`)
@@ -75,6 +78,12 @@
                         "fill-outline-color": "#0000aa"
                     }
                 });
+            })
+            .catch(e => {
+                loadTilesErrorEl.style.display = ''
+                loadTilesErrorEl.innerText = e.message
+                loadingTilesEl.style.display = 'none'
+                loadTilesEl.style.display = ''
             });
     }
 
@@ -152,7 +161,15 @@
                     const feature = features[0];
                     highlightLayerSource.setData({type: 'FeatureCollection', features: [feature]});
                     const props = feature.properties;
-                    const linkDrilldown = props.is_bbox ? `<div><a href="#" data-load-more-tiles data-project="${props.project}" data-feature-id="${feature.id}">see tiles</a></div>`:'';
+                    const linkDrilldown = props.is_bbox ? `<div>
+    <div data-load-more-tiles="error" style="color: red; display: none"></div>
+    <span data-load-more-tiles="loading" style="display: none">loading tiles...</span>
+    <a href="#"
+        data-load-more-tiles="start"
+        data-project="${props.project}"
+        data-feature-id="${feature.id}">
+        see tiles</a>
+</div>`:'';
                     mapPopup = new mapboxgl.Popup({offset: popupOffsets, className: 'my-class', closeOnClick: true, closeOnMove: true})
                         .setLngLat(e.lngLat)
                         .setHTML(`
@@ -167,10 +184,20 @@ ${props.tile_count} tiles
                         .addTo(map);
                     if (props.is_bbox) {
                         console.log('all')
-                        document.querySelector('[data-load-more-tiles]').addEventListener('click', e => {
+                        loadTilesEl = document.querySelector('[data-load-more-tiles=start]');
+                        loadTilesErrorEl = document.querySelector('[data-load-more-tiles=error]');
+                        loadingTilesEl = document.querySelector('[data-load-more-tiles=loading]');
+                        loadTilesEl.addEventListener('click', e => {
                             e.preventDefault();
                             e.stopPropagation();
-                            loadTiles(e.target.dataset.project, e.target.dataset.featureId);
+                            loadingTilesEl.style.display='';
+                            loadTilesEl.style.display='none';
+                            loadTilesErrorEl.innerText = '';
+                            loadTilesErrorEl.style.display='none';
+                            setTimeout(() => {
+                                loadTiles(e.target.dataset.project, e.target.dataset.featureId);
+                            }, 2000)
+
                         })
                     }
                 });
