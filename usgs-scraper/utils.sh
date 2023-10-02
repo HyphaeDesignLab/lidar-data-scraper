@@ -155,7 +155,7 @@ loop_on_projects() {
   echo "calling $fn_callback with $project_callback_arg (limit: $limit)"
   eval $fn_callback $project_callback_arg
 
-  if [ ! "$is_recursive" ]; then
+  if [ "$is_recursive" != 'yes' ]; then
     return
   fi
 
