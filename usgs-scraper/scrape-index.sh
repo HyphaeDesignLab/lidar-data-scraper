@@ -160,10 +160,11 @@ scrape_index() {
 }
 
 
-if [ "$1" = '' ] || [ "$2" = '' ]; then
-  echo 'Usage: scrape-index.sh <project_name> <mode>'
+if [ "$1" = '' ] || [ "$2" = '' ] || [ "$3" = '' ]; then
+  echo 'Usage: scrape-index.sh <project_name> <mode> <is_recursive>'
   echo '  where project_name is "all" or e.g. "CA_some_prj_2020" or "CA_some_prj_2020/CA_some_subproject" '
   echo '  where mode is "normal", "if_updated", or "force"'
+  echo '  where is_recursive is "yes" or "no"'
 else
-  scrape_index $1 $2;
+  scrape_index $1 $2 $3;
 fi
