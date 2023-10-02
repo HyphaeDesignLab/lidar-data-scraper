@@ -105,15 +105,18 @@
                     'id': 'leaves',
                     'type': 'fill',
                     'source': 'leaves',
+                    'layout': {
+                        'visibility': ["case",
+                            ['==', ["feature-state", 'tiles_loaded'], 'on'], 'none', // transparent if "tiles are loaded"
+                            'visible'], // default
+                    },
                     "paint": {
                         "fill-color": ["case",
                             ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
                             ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .5], // "#fcae51"
                             ["rgba", 252, 81, 121, .5] // "#fc5179"
                         ],
-                        "fill-opacity": ["case",
-                            ['==', ["feature-state", 'tiles_loaded'], 'on'], 0, // transparent if "tiles are loaded"
-                            .8], // default
+                        "fill-opacity": .8, // default
                         "fill-outline-color": ['case',
                             ['==', ['feature-state', 'focused'], true], "#222222",
                             ['==', ['get', 'leaves'], 'on'], "#047e16",
