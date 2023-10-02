@@ -43,6 +43,7 @@
     });
 
     function loadTiles(project, parentFeatureId) {
+        parentFeatureId = parseInt(parentFeatureId)
         fetch(`projects/${project}/xml_tiles.json`)
             .then(response => response.json())
             .then(data => {
@@ -52,12 +53,15 @@
                         feature.id =  baseNumber + (i+1);
                     })
                 }
-                map.setFeatureState({
-                    source: 'leaves',
-                    id: parentFeatureId,
-                }, {
-                    tiles_loaded: 'on'
+
+                // remove feature whose sub-tiles were show
+                tilesData['leaves'].features.forEach((feature, i) => {
+                    if (feature.id === parentFeatureId) {
+                        tilesData['leaves'].features.splice(i, 1)
+                    }
                 });
+                // update source
+                sources['leaves'].setData(tilesData['leaves']); // update
 
                 layersIds.push(project);
                 map.addSource(project, {type: 'geojson', data});
@@ -77,11 +81,14 @@
     let mapPopup = null;
     let layersIds = [];
     let highlightLayerSource = null;
+    let sources = {}
 
+    const tilesData = {};
     map.on('load', function () {
         fetch('projects/leaves-status.json')
             .then(response => response.json())
             .then(data => {
+                tilesData['leaves'] = data;
                 layersIds.push('leaves');
                 if (!data.features[0].id) {
                     data.features.forEach((feature, i) => {
@@ -101,15 +108,11 @@
                 highlightLayerSource = map.getSource('highlight')
 
                 map.addSource('leaves', {type: 'geojson', data});
+                sources['leaves'] = map.getSource('leaves')
                 map.addLayer({
                     'id': 'leaves',
                     'type': 'fill',
                     'source': 'leaves',
-                    'layout': {
-                        'visibility': ["case",
-                            ['==', ["feature-state", 'tiles_loaded'], 'on'], 'none', // transparent if "tiles are loaded"
-                            'visible'], // default
-                    },
                     "paint": {
                         "fill-color": ["case",
                             ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
