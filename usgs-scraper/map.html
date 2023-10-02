@@ -52,6 +52,13 @@
                         feature.id =  baseNumber + (i+1);
                     })
                 }
+                map.setFeatureState({
+                    source: 'leaves',
+                    id: parentFeatureId,
+                }, {
+                    tiles_loaded: 'on'
+                });
+
                 layersIds.push(project);
                 map.addSource(project, {type: 'geojson', data});
                 map.addLayer({
@@ -104,7 +111,9 @@
                             ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .5], // "#fcae51"
                             ["rgba", 252, 81, 121, .5] // "#fc5179"
                         ],
-                        "fill-opacity": .8,
+                        "fill-opacity": ["case",
+                            ['==', ["feature-state", 'tiles_loaded'], 'on'], 0, // transparent if "tiles are loaded"
+                            .8], // default
                         "fill-outline-color": ['case',
                             ['==', ['feature-state', 'focused'], true], "#222222",
                             ['==', ['get', 'leaves'], 'on'], "#047e16",
