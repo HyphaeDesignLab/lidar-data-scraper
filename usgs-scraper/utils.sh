@@ -73,6 +73,12 @@ throttle_scrape_reset;
 # take x_scrape/y_second_rest argument pairs
 #  e.g. 250/60, 50/20, ... = for every 250 scrapes rest 60 seconds, for every 50 rest 20
 throttle_scrape() {
+  if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
+    local _ignore_input_=''
+    read -p 'continue? ' _ignore_input_
+    return
+  fi
+
     scrape_count=$(expr $scrape_count + 1)
 
     date >> scrape-rest.txt;
