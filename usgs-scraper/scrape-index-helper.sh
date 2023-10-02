@@ -36,7 +36,7 @@ scrape_index_helper__curl() {
   local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
   if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
     base_url=$LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS
-    echo_if_debug "scrape-index-helper.sh scrape index helper: mock server in use: $LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS"
+    echo_if_debug "scrape-index-helper.sh: mock server in use: $LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS"
   fi
 
   curl_scrape $base_url/$project/ $download_dir/___index.html $download_dir/___http_code.txt $download_dir/___errors.txt
