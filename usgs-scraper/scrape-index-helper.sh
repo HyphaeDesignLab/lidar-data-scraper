@@ -47,11 +47,12 @@ scrape_index_helper__curl() {
     echo -n 'HTTP response: ' >> $download_dir/errors.txt
     cat $download_dir/___http_code.txt >> $download_dir/errors.txt
   else
+    # if no errors
     # strip index.html of unnecessary stuff
     grep -E '<img[^>]+alt="\[DIR\]">' $download_dir/___index.html > $download_dir/index.html
 
-    if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
-      # if no errors, save index.html to server_mock dir for local testing
+    if [ "$LIDAR_SCRAPER_DEBUG" = '' ]; then
+      # if no errors and NOT debugging, save index.html to server_mock dir for local testing
       mkdir -p projects/_server_mock/$project
       cp $download_dir/index.html projects/_server_mock/$project/index.html
     fi
