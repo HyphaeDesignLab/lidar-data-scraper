@@ -159,7 +159,7 @@ if [ "$(basename $0)" = "scrape-index-helper.sh" ]; then
         echo '   3=project  to loop on: possible values: "all", "project" or "project/subproject"'
         echo '   4=arg_format  to pass to callback fn: e.g. "%s/_index/backup/2023-04-05"'
         echo '   5=limit  of loop iterations'
-        echo '   6=is recursive loop'
+        echo '   6=is recursive loop (yes/no)'
       else
         ___lidar_scrape_project="$3"
         if [ ! "$___lidar_scrape_project" ]; then
