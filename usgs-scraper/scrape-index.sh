@@ -22,24 +22,37 @@ scrape_index() {
   fi;
 
     local project="$1"
+    if [ "$project" = '' ] || [ "$project" = 'all' ]; then
+      project=''
+    fi
+
     local project_path=projects
-    if [ "$1" != '' ]; then
+    if [ "$project" != '' ]; then
         project_path=projects/$project
     fi
 
-    # '' blank (default):  only scrape if project is missing
+    # 'normal' blank (default):  only scrape if project is missing
     # if_updated:  scrape if last modified date has changed, i.e. has updated
     # force_scrape:  re-scrape no matter what
     local mode="$2"
+    if [ "$mode" = '' ]; then
+      mode="normal"
+    fi
+
+    # 'normal' blank (default):  only scrape if project is missing
+    # if_updated:  scrape if last modified date has changed, i.e. has updated
+    # force_scrape:  re-scrape no matter what
+    local is_recursive="$3"
+    if [ "$is_recursive" = '' ]; then
+      is_recursive="no"
+    fi
 
     local level=0
     local indentation='' # 0 spaces for top-level
     local next_level_label='project'
     local short_project_name='USGS projects'
     local short_project_id=''
-    if [ "$project" = '' ] || [ "$project" = 'all' ]; then
-      project=''
-    else
+    if [ "$project" != '' ]; then
       level=1
       next_level_label='subproject'
       indentation='  ' # 2 spaces for project
@@ -54,7 +67,10 @@ scrape_index() {
     fi
 
     echo "$indentation -- $short_project_name --"
-    echo_if_debug "scrape-index.sh  level:$level, indent: project:$project, short_project_name:$short_project_name"
+    echo "$indentation    (mode: $mode, recursive: $is_recursive)"
+    echo_if_debug "scrape-index.sh  level:$level, indent: project:$project, short_project_name:$short_project_name, "
+
+    throttle_scrape 250/60 50/20 20/10 10/3 5/2
 
     # if index not scraped yet OR "top-level" index (i.e. blank) OR mode=FORCE
     if [ "$level" = 0 ]; then
@@ -112,10 +128,9 @@ scrape_index() {
               should_scrape=1
             fi
           fi
-          if [ "$should_scrape" ]; then
+          if [ "$should_scrape" ] && [ "$is_recursive" = 'yes' ]; then
             echo_if_debug "scrape-index.sh should_scrape:$should_scrape $item_recursive_arg"
-            scrape_index $item_recursive_arg $mode
-            throttle_scrape 250/60 50/20 20/10 10/3 5/2
+            scrape_index $item_recursive_arg $mode $is_recursive
           fi
           echo_if_debug "scrape-index.sh next"
       done;
@@ -139,7 +154,6 @@ scrape_index() {
 
       if [ "$should_scrape" ]; then
         scrape_meta_index $project $mode
-        throttle_scrape 250/60 50/20 20/10 10/3 5/2
       fi
     fi
     project_info $project > $project_path/_stats.txt
