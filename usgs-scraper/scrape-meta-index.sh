@@ -70,7 +70,7 @@ scrape_meta_index_helper__parse_index() {
   #    skip (d=delete) all lines that are not DIR
   #    get the href PATH and the YYYY-MM-DD HH:MM timestamp and -/12K/1.2M/200M file size
   #    finally remove slashes in href PATH and trailing - (i.e. missing/not-applicable file size)
-  grep -oE '<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">' $download_dir/index.html > $download_dir/___zip_files_details.txt
+  grep -E '<img[^>]+compressed.gif[^>]+> *<a href="([^"]+)">' $download_dir/index.html > $download_dir/___zip_files_details.txt
   if [ $? = 0 ]; then
     sed -E -e 's@.*<a href="([^"]+)">[^<]+</a> +([0-9]{4}-[0-9][0-9]-[0-9][0-9]) +([0-9][0-9]:[0-9][0-9]) +([-0-9KMG\.]+).*@\1~\2T\3~\4@' \
      $download_dir/___zip_files_details.txt > $download_dir/zip_files_details.txt;
