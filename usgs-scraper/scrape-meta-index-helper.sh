@@ -74,9 +74,9 @@ scrape_meta_index_helper__has_been_updated_on_server() {
   local project_path="projects/$project"
 
   if grep "^$(cat $project_path/_index/current/metadata_dir.txt)~" $project_path/_index/current/diff-updated.txt 2>/dev/null >/dev/null; then
-    return 1
-  else
     return 0
+  else
+    return 1
   fi
 }
 
