@@ -2,11 +2,11 @@
 base_dir=$(dirname $0)
 cd $base_dir
 
-# included by scrape-meta-index.sh (below)
+# included by scrape-meta-index-helper.sh (below)
 #. ./utils.sh
 #. ./utils-stats.sh
 
-. ./scrape-meta-index.sh
+. ./scrape-meta-index-helper.sh
 
 scrape_xml() {
     local project=$1

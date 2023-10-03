@@ -1,12 +1,12 @@
 base_dir=$(dirname $0)
 cd $base_dir
 
-# included by scrape-meta-index.sh
+# included by scrape-meta-index-helper.sh
 #. ./utils.sh
 #. ./utils-stats.sh
 
 . ./scrape-index-helper.sh
-. ./scrape-meta-index.sh
+. ./scrape-meta-index-helper.sh
 
 echo;
 
@@ -153,7 +153,7 @@ scrape_index() {
       fi
 
       if [ "$should_scrape" ]; then
-        scrape_meta_index $project $mode
+        scrape_meta_index_helper $project $mode
       fi
     fi
     project_info $project > $project_path/_stats.txt
