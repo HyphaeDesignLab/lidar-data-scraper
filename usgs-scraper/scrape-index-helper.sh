@@ -36,7 +36,7 @@ scrape_index_helper__curl() {
   mkdir -p $download_dir
 
   local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
-  if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
+  if [ "$LIDAR_SCRAPER_DEBUG__MOCK_SERVER" != '' ]; then
     base_url=$LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS
     echo_if_debug "scrape-index-helper.sh: mock server in use: $LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS"
   fi
@@ -53,7 +53,7 @@ scrape_index_helper__curl() {
     # strip index.html of unnecessary stuff
     grep -E '<img[^>]+alt="\[DIR\]">' $download_dir/___index.html > $download_dir/index.html
 
-    if [ "$LIDAR_SCRAPER_DEBUG" = '' ]; then
+    if [ "$LIDAR_SCRAPER_DEBUG__MOCK_SERVER" = '' ]; then
       # if no errors and NOT debugging, save index.html to server_mock dir for local testing
       mkdir -p projects/_server_mock/$project
       cp $download_dir/index.html projects/_server_mock/$project/index.html

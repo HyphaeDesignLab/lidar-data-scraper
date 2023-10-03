@@ -34,7 +34,7 @@ scrape_meta_index_helper__curl() {
   local meta_url_dir=$(cat $project_path/_index/current/metadata_dir.txt)
 
   local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/
-  if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
+  if [ "$LIDAR_SCRAPER_DEBUG__MOCK_SERVER" != '' ]; then
     base_url=$LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS
     echo_if_debug "scrape-meta-index-helper.sh: mock server in use: $LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS"
   fi
@@ -48,7 +48,7 @@ scrape_meta_index_helper__curl() {
     cat $download_dir/___http_code.txt >> $download_dir/errors.txt
   else
     # if no errors
-    if [ "$LIDAR_SCRAPER_DEBUG" = '' ]; then
+    if [ "$LIDAR_SCRAPER_DEBUG__MOCK_SERVER" = '' ]; then
       # if not debugging, save index.html to server_mock dir for local testing
       mkdir -p projects/_server_mock/$project/$meta_url_dir/
       cp $download_dir/index.html projects/_server_mock/$project/$meta_url_dir/index.html
