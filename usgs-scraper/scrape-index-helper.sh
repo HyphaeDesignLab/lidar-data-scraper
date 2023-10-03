@@ -17,7 +17,7 @@ scrape_index_helper() {
   local current_dir=$project_path/_index/current
 
   # DOWNLOAD
-  scrape_index_helper__curl $project $backup_dir
+  scrape_index_helper__curl $backup_dir $project
 
   # Parse data out of index.html
   scrape_index_helper__parse_index $backup_dir
@@ -30,8 +30,8 @@ scrape_index_helper() {
 }
 
 scrape_index_helper__curl() {
-  local project="$1"
-  local download_dir="$2"
+  local download_dir="$1"
+  local project="$2"
   mkdir -p $download_dir
 
   local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
