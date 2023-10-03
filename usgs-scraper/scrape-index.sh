@@ -135,25 +135,28 @@ scrape_index() {
           echo_if_debug "scrape-index.sh next"
       done;
     else
-      local should_scrape=0
       echo_if_debug "scrape-index.sh meta index scrape: $project_path/_index/current/metadata_dir.txt "
-      if [ ! -f  $project_path/_index/current/metadata_dir.txt ]; then
-          if [ ! -f $project_path/meta/xml_files.txt ] || [ ! -f  $project_path/meta/_current/xml_files.txt ]; then
+      if [ -f  $project_path/_index/current/metadata_dir.txt ]; then
+        if [ "$mode" = 'normal' ]; then
+          if scrape_meta_index_helper__is_not_started $project; then
             echo "$indentation metadata scraping";
-            local should_scrape=1
+            scrape_meta_index_helper $project $mode
+          else
+            echo "$indentation metadata already scraped";
           fi
-      elif [ "$mode" = 'if_updated' ] && [ -f $project_path/_index/current/metadata_dir.txt ] && grep "^$(cat $project_path/_index/current/metadata_dir.txt)" $project_path/_index/current/diff/meta_laz_changes.txt 2>/dev/null >/dev/null; then
-        echo "$indentation metadata dir has changed... scraping";
-        local should_scrape=1
-      elif [ "$mode" = 'force' ]; then
-        local should_scrape=1
-        echo "$indentation metadata already scraped, but scraping AGAIN";
-      else
-        echo "$indentation metadata already scraped";
-      fi
-
-      if [ "$should_scrape" ]; then
-        scrape_meta_index_helper $project $mode
+        elif [ "$mode" = 'if_updated' ]; then
+          if scrape_meta_index_helper__has_been_updated_on_server $project; then
+            echo "$indentation metadata dir has changed... scraping";
+            scrape_meta_index_helper $project $mode
+          else
+            echo "$indentation metadata dir has NOT changed";
+          fi
+        elif [ "$mode" = 'force' ]; then
+          echo "$indentation metadata force-scraping";
+          scrape_meta_index_helper $project $mode
+        else
+          echo "$indentation metadata scrape mode UNKNOWN";
+        fi
       fi
     fi
     project_info $project > $project_path/_stats.txt
