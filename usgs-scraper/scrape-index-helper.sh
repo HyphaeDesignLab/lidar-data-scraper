@@ -177,5 +177,7 @@ if [ "$(basename $0)" = "scrape-index-helper.sh" ]; then
           loop_on_projects $___lidar_scrape_project scrape_index_helper__backup $4 $5 $6
         fi
       fi
+    else
+      eval $1 $2 $3 $4 $5 $6
     fi
 fi
