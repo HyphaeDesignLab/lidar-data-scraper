@@ -131,7 +131,7 @@ scrape_index() {
           if [ ! -d "projects/$item_recursive_arg" ] || [ "$mode" = 'force' ]; then
             should_scrape=1
           elif [ "$mode" = 'if_updated' ]; then
-            if grep -E "^$item_i~" $project_path/_index/current/diff/changes.txt >/dev/null; then
+            if grep -E "^$item_i~" $project_path/_index/current/diff-updated.txt >/dev/null; then
               should_scrape=1
             fi
           fi
