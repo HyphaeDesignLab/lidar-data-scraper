@@ -1,5 +1,4 @@
-base_dir=$(dirname $0)
-cd $base_dir
+cd $(dirname $0)
 
 for fff in $(ls projects/*/meta/*xml projects/*/*/meta/*.xml); do
   laz_file=$(echo $fff | sed -e '
