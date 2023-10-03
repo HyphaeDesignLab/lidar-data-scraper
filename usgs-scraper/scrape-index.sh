@@ -117,7 +117,7 @@ scrape_index() {
 
           # skip states that are NOT in STATES to SCRAPE
           ## local states_filter="$(tr '\n' '|' <states-to-scrape.txt | sed -E -e 's/\|$//')" # alternative to grepping text file every time
-          if  [ "$state" != '' ] && [ "$state" != "none" ] && ! grep $state states-to-scrape.txt >/dev/null; then
+          if  [ "$state" = '' ] || [ "$state" = "none" ] || ! grep $state states-to-scrape.txt >/dev/null; then
               echo "$indentation skipping because state $state is NOT in list of states to scrape"
               continue
           fi
