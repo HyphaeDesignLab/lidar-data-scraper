@@ -3,10 +3,7 @@
 
 scrape_meta_index_helper() {
   local project="$1"
-  local project_path="projects"
-  if [ $project ]; then
-    project_path="projects/$project"
-  fi
+  local project_path="projects/$project"
 
   #backup_dir=backup/2023-05-29---15-56-46
 
@@ -59,6 +56,28 @@ scrape_meta_index_helper__curl() {
   fi
   # remove temporary files
   rm $download_dir/___*
+}
+
+scrape_meta_index_helper__is_not_started() {
+  local project="$1"
+  local project_path="projects/$project"
+  if [ ! -d $project_path/meta/_index/current/ ] \
+      || [ ! -f $project_path/meta/_index/current/index.html ] \
+      || [ ! -f $project_path/meta/_index/current/zip_files.txt ] \
+      || [ ! -f $project_path/meta/_index/current/xml_files.txt ]; then
+        return 0
+  fi
+  return 1
+}
+scrape_meta_index_helper__has_been_updated_on_server() {
+  local project="$1"
+  local project_path="projects/$project"
+
+  if grep "^$(cat $project_path/_index/current/metadata_dir.txt)~" $project_path/_index/current/diff-updated.txt 2>/dev/null >/dev/null; then
+    return 1
+  else
+    return 0
+  fi
 }
 
 scrape_meta_index_helper__parse_index() {
