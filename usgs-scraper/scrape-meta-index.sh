@@ -39,7 +39,7 @@ scrape_meta_index_helper__curl() {
   local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/
   if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
     base_url=$LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS
-    echo_if_debug "scrape-index-helper.sh: mock server in use: $LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS"
+    echo_if_debug "scrape-meta-index-helper.sh: mock server in use: $LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS"
   fi
 
   curl_scrape $base_url/$project/$meta_url_dir/index.html $download_dir/index.html $download_dir/___http_code.txt $download_dir/___errors.txt
@@ -113,7 +113,7 @@ scrape_meta_index_helper__diff() {
       python3 diff_file_list.py $current_dir/xml_files_details.txt $backup_dir/xml_files_details.txt $backup_dir/
     fi
 
-   # diff on zip files
+    # diff on zip files
     if [ -f $backup_dir/zip_files_details.txt ]; then
       python3 diff_file_list.py $current_dir/zip_files_details.txt $backup_dir/zip_files_details.txt $backup_dir/
     fi
