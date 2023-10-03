@@ -39,7 +39,7 @@ scrape_meta_index_helper__curl() {
     echo_if_debug "scrape-meta-index-helper.sh: mock server in use: $LIDAR_SCRAPER_DEBUG__MOCK_SERVER_ADDRESS"
   fi
 
-  curl_scrape $base_url/$project/$meta_url_dir/index.html $download_dir/index.html $download_dir/___http_code.txt $download_dir/___errors.txt
+  curl_scrape $base_url/$project/$meta_url_dir/ $download_dir/index.html $download_dir/___http_code.txt $download_dir/___errors.txt
   if [ $? != 0 ]; then
     # save more detailed error to errors.txt (only 1 request (index.html) error we are dealing with here)
     date > $download_dir/errors.txt
