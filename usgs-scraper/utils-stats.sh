@@ -1,3 +1,4 @@
+___utils_stats_sh_included=1
 base_dir=$(dirname $0)
 
 started_scrape() {

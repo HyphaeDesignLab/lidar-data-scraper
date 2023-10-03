@@ -1,5 +1,5 @@
-. ./utils.sh
-. ./utils-stats.sh
+if [ ! "$___utils_sh_included" ]; then . ./utils.sh; fi
+if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 scrape_meta_index_helper() {
   local project="$1"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. ./utils-stats.sh
+if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 ######### MAIN  ###########
 

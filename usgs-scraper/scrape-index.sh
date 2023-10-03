@@ -1,9 +1,7 @@
-base_dir=$(dirname $0)
-cd $base_dir
+cd $(dirname $0)
 
-# included by scrape-meta-index-helper.sh
-#. ./utils.sh
-#. ./utils-stats.sh
+if [ ! "$___utils_sh_included" ]; then . ./utils.sh; fi
+if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 . ./scrape-index-helper.sh
 . ./scrape-meta-index-helper.sh
@@ -15,6 +13,14 @@ if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
 fi
 
 scrape_index() {
+  if [ "$LIDAR_SCRAPER_DEBUG__PROMPT" ]; then
+    local stop_scrape=''
+    read -p ' continue (or n to stop)' stop_scrape
+    if [ "$stop_scrape" = 'n' ]; then
+      echo stop > projects/STOP_SCRAPE.txt
+    fi
+  fi
+
   if [ -f projects/STOP_SCRAPE.txt ] && [ -s projects/STOP_SCRAPE.txt ]; then
     echo Stopping scrape...
     stop_mock_server_debug

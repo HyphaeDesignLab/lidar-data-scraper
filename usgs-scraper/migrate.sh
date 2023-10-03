@@ -1,5 +1,5 @@
-. ./utils.sh
-. ./utils-stats.sh
+if [ ! "$___utils_sh_included" ]; then . ./utils.sh; fi
+if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 # create and cleanup
 #  create index_details.txt (to contain last-mod and size)

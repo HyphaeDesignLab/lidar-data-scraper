@@ -1,10 +1,7 @@
 #!/bin/bash
-base_dir=$(dirname $0)
-cd $base_dir
-
-# included by scrape-meta-index-helper.sh (below)
-#. ./utils.sh
-#. ./utils-stats.sh
+cd $(dirname $0)
+if [ ! "$___utils_sh_included" ]; then . ./utils.sh; fi
+if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 . ./scrape-meta-index-helper.sh
 

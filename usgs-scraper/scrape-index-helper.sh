@@ -1,6 +1,5 @@
-script_base_dir=$(pwd)
-. ./utils.sh
-. ./utils-stats.sh
+if [ ! "$___utils_sh_included" ]; then . ./utils.sh; fi
+if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 scrape_index_helper() {
   local project="$1"
@@ -85,7 +84,7 @@ scrape_index_helper__parse_index() {
     sed -E -e 's/^([^~]+)~.+/\1/' $download_dir/index_details.txt >$download_dir/index.txt
 
 
-    python3 $script_base_dir/get-project-year-and-state.py $download_dir/index.txt >$download_dir/index_with_year_and_state.txt
+    python3 ./get-project-year-and-state.py $download_dir/index.txt >$download_dir/index_with_year_and_state.txt
   else
     rm $download_dir/index_details.txt
   fi

@@ -1,8 +1,6 @@
-base_dir=$(dirname $0)
-script_base_dir=$(pwd)
-cd $base_dir
-. ./utils.sh
-. ./utils-stats.sh
+cd $(dirname $0)
+if [ ! "$___utils_sh_included" ]; then . ./utils.sh; fi
+if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 # Add last-modified from the index HTML file to the index.txt file
 #  Why? So that we can easily compare projects changes (not only by difference in project/subproject)
@@ -32,7 +30,7 @@ add_time_stamps_and_prune() {
 
     # for all-project list and project levels (0 and 1)
     if [ "$project_level" -lt 2 ]; then
-        python3 $script_base_dir/get-project-year-and-state.py $index_dir/_tmp_directories_of_projects.txt > $index_dir/_tmp_directories_of_projects_with_year_and_state.txt
+        python3 ./get-project-year-and-state.py $index_dir/_tmp_directories_of_projects.txt > $index_dir/_tmp_directories_of_projects_with_year_and_state.txt
 
 
         if [ "$project_level" = 0 ]; then
