@@ -83,18 +83,15 @@ scrape_index() {
     if [ "$level" = 0 ]; then
         echo "$indentation scraping index... (always for all projects)";
         scrape_index_helper $project
-    elif [ ! -f $project_path/_index/current/index.txt ]; then
+    elif [ "$mode" = 'normal' ] && scrape_index_helper__is_not_started $project; then
         echo "$indentation index not scraped yet, scraping for first time... ";
         scrape_index_helper $project
     elif [ "$mode" = 'force' ]; then
         echo "$indentation force-update re-scraping index... ";
         scrape_index_helper $project
-    elif [ "$mode" = 'if_updated' ]; then
-      local project_updates=$(grep -E "^$short_project_id" "$project_path/../_index/current/diff-updated.txt" 2>/dev/null)
-      if [ "$project_updates" ]; then
+    elif [ "$mode" = 'if_updated' ] && scrape_index_helper__has_been_updated_on_server $project $short_project_id; then
         echo "$indentation re-scraping index as it has changed... ";
         scrape_index_helper $project
-      fi
     else
         echo "$indentation index already scraped";
     fi

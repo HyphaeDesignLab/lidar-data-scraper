@@ -27,6 +27,9 @@ scrape_index_helper() {
 
   # Backup: make new back-up => current
   scrape_index_helper__backup $backup_dir $current_dir
+
+  # Update parent project to tell it that its child has gotten updated
+  scrape_index_helper__mark_updated_in_parent $project
 }
 
 scrape_index_helper__curl() {
@@ -61,6 +64,28 @@ scrape_index_helper__curl() {
 
   # remove temporary files
   rm $download_dir/___*
+}
+
+scrape_index_helper__is_not_started() {
+  local project="$1"
+  local project_path="projects/$project"
+  if [ ! -d $project_path/_index/current/ ] \
+      || [ ! -f $project_path/_index/current/index_details.txt ] \
+      || [ ! -f $project_path/_index/current/data_details.txt ]; then
+        return 0
+  fi
+  return 1
+}
+scrape_index_helper__has_been_updated_on_server() {
+  local project="$1"
+  local project_short_id="$2"
+  local project_path="projects/$project"
+
+  if grep -E "^$project_short_id~" "$project_path/../_index/current/diff-updated.txt" 2>/dev/null >/dev/null; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 scrape_index_helper__parse_index() {
@@ -132,6 +157,21 @@ scrape_index_helper__diff() {
     echo 'first time scraping' > $backup_dir/diff.txt
   fi
   ### END DIFF/STATS
+}
+
+scrape_index_helper__mark_updated_in_parent() {
+  local project="$1"
+  if [ "$project" = '' ]; then
+    return
+  fi
+
+  local project_short_id=$(cut -d'/' -f 2 <<< $project)
+
+  if grep -E "^$project_short_id~" "projects/$project/../_index/current/diff-updated.txt" 2>/dev/null >/dev/null; then
+    grep -Ev "^$project_short_id~" "projects/$project/../_index/current/diff-updated.txt" \
+     > projects/$project/../_index/current/diff-updated.txt_
+    mv projects/$project/../_index/current/diff-updated.txt_ > projects/$project/../_index/current/diff-updated.txt
+  fi;
 }
 
 scrape_index_helper__backup() {
