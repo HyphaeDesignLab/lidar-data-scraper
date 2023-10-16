@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src='//api.mapbox.com/mapbox-gl-js/v1.10.0/mapbox-gl.js'></script>
+    <link href='//api.mapbox.com/mapbox-gl-js/v1.10.0/mapbox-gl.css' rel='stylesheet'/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        #map-controls {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background-color: maroon;
+            color: white;
+            border: 1px solid grey;
+        }
+
+        #map-controls input {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div id="log"
+     style="white-space: pre-wrap; position: fixed; top: 0; right: 0; z-index: 123; width: 50%; max-width: 500px; min-width: 300px; height: 200px; overflow-y: scroll;"></div>
+<div id='map' style='width: 100vw; height: 80vh;'></div>
+
+<script>
+    const logEl = document.querySelector('#log');
+    const log = (...things) => {
+        things.forEach(thing => {
+            logEl.innerHTML += thing + " \n";
+        });
+    };
+    mapboxgl.accessToken = 'pk.eyJ1IjoiaHlwaGFlLWxhYiIsImEiOiJjazN4czF2M2swZmhkM25vMnd2MXZrYm11In0.LS_KIw8THi2qIethuAf2mw';
+
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/hyphae-lab/clb2h2e48000015o4w0b0tyig',
+        center: [-122.4412, 37.9675],
+        zoom: 9
+    });
+
+
+    let mapPopup = null;
+    let layersIds = [];
+    let highlightLayerSource = null;
+    let sources = {}
+
+    const tilesData = {};
+    map.on('load', function () {
+        const dataUrl = !!window.location.search ? window.location.search.substring(1):'test-intersections.json'
+        fetch(dataUrl)
+        .then(response => response.json())
+        .then(data => {
+
+            if (!data.features[0].id) {
+                data.features.forEach((feature, i) => {
+                    feature.id = (i + 1);
+                })
+            }
+            console.log(data)
+            map.addSource('intersection_tests', {type: 'geojson', data});
+            map.addLayer({
+                'id': 'intersection_tests',
+                'type': 'fill',
+                'source': 'intersection_tests',
+                "paint": {
+                    "fill-opacity": .3,
+                    "fill-color": ['case',
+                        ['==', ['get', 'type'], 'city'], "#047e16",
+                        ['==', ['get', 'type'], 'green'], "#047e16",
+                        ['==', ['get', 'type'], 'blue'], "#3e3eff",
+                        ['==', ['get', 'type'], 'red'], "#a94202",
+                        "#a94202"
+                    ]
+                }
+            });
+        });
+    });
+</script>
+
+
+</body>
+</html>
