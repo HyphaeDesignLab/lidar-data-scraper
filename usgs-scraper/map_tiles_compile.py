@@ -3,6 +3,7 @@ import sys
 import json
 from datetime import datetime
 from pathlib import Path
+from shapely.geometry import Polygon, MultiPolygon, mapping
 
 def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
@@ -32,7 +33,8 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
     date_start=None
     date_end=None
 
-    bbox = { "west": None, "east": None, "north": None, "south":  None}
+    #bbox = { "west": None, "east": None, "north": None, "south":  None}
+    project_tiles_union = None
     project_tiles_file = open ('projects/'+project+'/xml_tiles.json', 'w')
     project_tiles_file.write('{"type": "FeatureCollection", "features": [')
 
@@ -80,12 +82,20 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
           [bounds['east'], bounds['north']],
           [bounds['east'], bounds['south']],
           [bounds['west'], bounds['south']],
-          [bounds['west'], bounds['north']]]
+          [bounds['west'], bounds['north']]
+        ]
 
-        bbox['west'] = bounds['west'] if bbox['west'] == None else min(bounds['west'], bbox['west'])
-        bbox['east'] = bounds['east'] if bbox['east'] == None else max(bounds['east'], bbox['east'])
-        bbox['north'] = bounds['north'] if bbox['north'] == None else max(bounds['north'], bbox['north'])
-        bbox['south'] = bounds['south'] if bbox['south'] == None else min(bounds['south'], bbox['south'])
+        # do tiles union
+        if project_tiles_union is None:
+            project_tiles_union = Polygon(polygon)
+        else:
+            project_tiles_union = project_tiles_union.union(Polygon(polygon))
+
+        # keep building the tiles bounding box (commented out for tile union above)
+        # bbox['west'] = bounds['west'] if bbox['west'] == None else min(bounds['west'], bbox['west'])
+        # bbox['east'] = bounds['east'] if bbox['east'] == None else max(bounds['east'], bbox['east'])
+        # bbox['north'] = bounds['north'] if bbox['north'] == None else max(bounds['north'], bbox['north'])
+        # bbox['south'] = bounds['south'] if bbox['south'] == None else min(bounds['south'], bbox['south'])
 
         project_tiles_file.write( ('' if is_first_tile else ',' ) + json.dumps({
            "type": "Feature",
@@ -103,24 +113,27 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
          }))
 
         is_first_tile=False
+        # /end-for-loop
 
     project_tiles_file.write(']}')
     project_tiles_file.close()
 
+
     # adds the overall-bounding box of the ALL XML files in project
-    # TODO: create a polygon intersection of all individual XML bounding files
+    # project_tiles_bbox_geojson = {
+    #     "type": "Polygon",
+    #     "coordinates": [[
+    #       [bbox['west'], bbox['north']],
+    #       [bbox['east'], bbox['north']],
+    #       [bbox['east'], bbox['south']],
+    #       [bbox['west'], bbox['south']],
+    #       [bbox['west'], bbox['north']]
+    #     ]]
+    # }
+
     all_tiles_file.write( ('' if is_first_feature else ',' ) + json.dumps({
                "type": "Feature",
-               "geometry": {
-                 "type": "Polygon",
-                 "coordinates": [[
-                   [bbox['west'], bbox['north']],
-                   [bbox['east'], bbox['north']],
-                   [bbox['east'], bbox['south']],
-                   [bbox['west'], bbox['south']],
-                   [bbox['west'], bbox['north']]
-                ]]
-               },
+               "geometry": mapping(project_tiles_union), # was project_tiles_bbox_geojson
                "properties": {
                  "tile_count": file_count,
                  "is_bbox": True,
@@ -131,28 +144,34 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
                }
              }))
 
-def get_polygon_union(polygons):
-    import geopandas as gpd
-    from shapely.ops import unary_union
+def test_polygon_union(polygons):
+    polygon1 = Polygon(
+        [
+            [-122.6, 37.6],
+            [-122.6, 37.5],
+            [-122.5, 37.5],
+            [-122.5, 37.6],
+            [-122.6, 37.6]
+         ],
+         holes=[]
+    )
+    polygon2 = Polygon(
+        [
+            [-122.44, 37.95],
+            [-122.44, 37.85],
+            [-122.38, 37.85],
+            [-122.38, 37.95],
+            [-122.44, 37.95]
+         ],
+         holes=[]
+    )
 
-    # Example polygons
-    polygons = [
-        Polygon([(0, 0), (1, 0), (1, 1)]),
-        Polygon([(1, 1), (2, 1), (2, 2)]),
-        Polygon([(2, 2), (3, 2), (3, 3)]),
-    ]
-
-    # Create GeoDataFrame
-    gdf = gpd.GeoDataFrame(geometry=polygons)
-
-    # Union operation
-    union_polygon = gdf.unary_union
-
-    # Create new GeoDataFrame for the union polygon
-    gdf_union = gpd.GeoDataFrame(geometry=[union_polygon])
-
-    # Print the union polygon
-    print(gdf_union)
+    union = polygon1.union(polygon2)
+    union_geojson_obj = { "type": "FeatureCollection", "features": [
+        {'properties': {'type':'poly'}, 'geometry': mapping(polygon1)},
+        {'properties': {'type':'poly'}, 'geometry': mapping(polygon2)},
+        {'properties': {'type':'union'}, 'geometry': mapping(union)}
+    ]}
 
 if (__name__ == '__main__'):
     run()
