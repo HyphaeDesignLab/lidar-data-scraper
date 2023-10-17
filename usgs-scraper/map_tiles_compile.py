@@ -9,7 +9,7 @@ def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
 
     all_tiles_file = open('projects/leaves-status.json', 'w')
-    all_tiles_file.write('{"type": "FeatureCollection", "features": [')
+    all_tiles_file.write('{"type": "FeatureCollection", "features": [\n')
     is_first_line = True
     for line in leaves_report_file:
         project=line.replace('\n', '').strip()
@@ -131,7 +131,7 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
     #     ]]
     # }
 
-    all_tiles_file.write( ('' if is_first_feature else ',' ) + json.dumps({
+    all_tiles_file.write( ('\n' if is_first_feature else ',\n' ) + json.dumps({
                "type": "Feature",
                "geometry": mapping(project_tiles_union), # was project_tiles_bbox_geojson
                "properties": {
