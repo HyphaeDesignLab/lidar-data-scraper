@@ -133,7 +133,7 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
     #     ]]
     # }
 
-    all_tiles_file.open(all_tiles_file.name, 'a')
+    all_tiles_file = open(all_tiles_file.name, 'a')
     all_tiles_file.write( ('\n' if is_first_feature else ',\n' ) + json.dumps({
                "type": "Feature",
                "geometry": mapping(project_tiles_union), # was project_tiles_bbox_geojson
@@ -146,7 +146,7 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
                  "leaves": leaves_on_off
                }
              }))
-     all_tiles_file.close()
+    all_tiles_file.close()
 
 def test_polygon_union(polygons):
     polygon1 = Polygon(
