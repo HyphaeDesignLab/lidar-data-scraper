@@ -90,7 +90,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
         ]
 
         # do tiles union later
-        project_tiles_arr.append(polygon)
+        project_tiles_arr.append(Polygon(polygon))
 
         # do tiles union
         # if project_tiles_union is None:
