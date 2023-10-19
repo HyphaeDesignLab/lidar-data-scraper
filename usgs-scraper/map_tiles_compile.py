@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from shapely.geometry import Polygon, MultiPolygon, mapping
+from shapely.ops import unary_union
 
 def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
@@ -19,7 +20,7 @@ def run():
         project_bits=project.split(' ')
         has_leaves = project_bits.pop()
         project_name = project_bits.pop()
-        get_geojson_feature_collection(project_name, has_leaves, all_tiles_file, is_first_line)
+        get_geojson_feature_collection_for_project(project_name, has_leaves, all_tiles_file, is_first_line)
         is_first_line = False
     leaves_report_file.close()
 
@@ -27,7 +28,7 @@ def run():
     all_tiles_file.write(']}')
     all_tiles_file.close()
 
-def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_first_feature=False):
+def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles_file, is_first_feature=False):
     dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
     files = os.listdir(dir)
@@ -37,6 +38,7 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
 
     #bbox = { "west": None, "east": None, "north": None, "south":  None}
     project_tiles_union = None
+    project_tiles_arr = []
     project_tiles_file = open ('projects/'+project+'/xml_tiles.json', 'w')
     project_tiles_file.write('{"type": "FeatureCollection", "features": [')
 
@@ -87,11 +89,14 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
           [bounds['west'], bounds['north']]
         ]
 
+        # do tiles union later
+        project_tiles_arr.append(polygon)
+
         # do tiles union
-        if project_tiles_union is None:
-            project_tiles_union = Polygon(polygon)
-        else:
-            project_tiles_union = project_tiles_union.union(Polygon(polygon))
+        # if project_tiles_union is None:
+        #     project_tiles_union = Polygon(polygon)
+        # else:
+        #     project_tiles_union = project_tiles_union.union(Polygon(polygon))
 
         # keep building the tiles bounding box (commented out for tile union above)
         # bbox['west'] = bounds['west'] if bbox['west'] == None else min(bounds['west'], bbox['west'])
@@ -120,6 +125,7 @@ def get_geojson_feature_collection(project, leaves_on_off, all_tiles_file, is_fi
     project_tiles_file.write(']}')
     project_tiles_file.close()
 
+    project_tiles_union = unary_union(project_tiles_arr)
 
     # adds the overall-bounding box of the ALL XML files in project
     # project_tiles_bbox_geojson = {
