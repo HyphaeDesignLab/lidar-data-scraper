@@ -36,15 +36,20 @@
     mapboxgl.accessToken = 'pk.eyJ1IjoiaHlwaGFlLWxhYiIsImEiOiJjazN4czF2M2swZmhkM25vMnd2MXZrYm11In0.LS_KIw8THi2qIethuAf2mw';
 
     let customCenter = null;
+    let customDataFile = null;
     let customZoom = null;
     if (window.location.search) {
-        const customCenterMatch = window.location.search.match(/center=[^&]+/);
-        const customZoomMatch = window.location.search.match(/zoom=[^&]+/)
+        const customCenterMatch = window.location.search.match(/center=([^&]+)/);
+        const customZoomMatch = window.location.search.match(/zoom=([^&]+)/)
+        const customDataFileMatch = window.location.search.match(/data=([^&]+)/)
         if (customCenterMatch) {
-            customCenter = customCenterMatch[0].replace('center=', '').split(',').map(i => parseFloat(i));
+            customCenter = customCenterMatch[1].split(',').map(i => parseFloat(i));
         }
         if (customZoomMatch) {
-            customZoom = parseInt(customZoomMatch[0].replace('zoom=', ''))
+            customZoom = parseInt(customZoomMatch[1])
+        }
+        if (customDataFileMatch) {
+            customDataFile = customDataFileMatch[1]
         }
     }
     const map = new mapboxgl.Map({
@@ -98,7 +103,8 @@
     const tilesData = {};
 
     function initMap () {
-        fetch('projects/leaves-status.json')
+        const dataFile = customDataFile ? customDataFile : 'projects/leaves-status.json'
+        fetch(dataFile)
             .then(response => response.json())
             .then(data => loadProjectsBboxes(data));
     }
