@@ -71,10 +71,11 @@
                 lastCoordinateParent = lastCoordinateParent[0]
             }
 
-            //map.setCenter(lastCoordinateParent)
+            map.setCenter(lastCoordinateParent)
 
             console.log(data)
             map.addSource('test', {type: 'geojson', data});
+            layersIds.push('test')
             map.addLayer({
                 'id': 'test',
                 'type': 'fill',
@@ -84,8 +85,34 @@
                     'fill-outline-color': 'blue'
                 }
             });
+
+
+            map.addSource('highlight', {type: 'geojson', data: {type: 'FeatureCollection', features: []}});
+            map.addLayer({
+                'id': 'highlight',
+                'type': 'line',
+                'source': 'highlight',
+                "paint": {
+                    "line-color": 'black',
+                    "line-width": 3
+                }
+            });
+            highlightLayerSource = map.getSource('highlight')
+
+            map.on('click', onMapClick)
         });
     });
+
+    function onMapClick(clickEvent) {
+        var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersIds});
+        console.log(features);
+
+        if (!features.length) {
+            highlightLayerSource.setData({type: 'FeatureCollection', features: []});
+            return;
+        }
+        highlightLayerSource.setData({type: 'FeatureCollection', features: [features[0]]});
+    }
 </script>
 
 
