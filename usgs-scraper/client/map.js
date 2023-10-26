@@ -1,32 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-    <script src='//api.mapbox.com/mapbox-gl-js/v1.10.0/mapbox-gl.js'></script>
-    <link href='//api.mapbox.com/mapbox-gl-js/v1.10.0/mapbox-gl.css' rel='stylesheet'/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        #map-controls {
-            position: fixed;
-            top: 0;
-            right: 0;
-            background-color: maroon;
-            color: white;
-            border: 1px solid grey;
-        }
 
-        #map-controls input {
-            display: block;
-        }
-    </style>
-</head>
-<body>
-<div id="log"
-     style="white-space: pre-wrap; position: fixed; top: 0; right: 0; z-index: 123; width: 50%; max-width: 500px; min-width: 300px; height: 200px; overflow-y: scroll;"></div>
-<div id='map' style='width: 100vw; height: 80vh;'></div>
+function LidarScraperMap() {
+    if (LidarScraperMap.__IS_INIT) {
+        return;
+    }
+    LidarScraperMap.__IS_INIT = true
 
-<script>
     const logEl = document.querySelector('#log');
     const log = (...things) => {
         things.forEach(thing => {
@@ -67,7 +45,7 @@
                 if (!data.features[0].id) {
                     const baseNumber = parentFeatureId * Math.pow(10, String(data.features.length).length)
                     data.features.forEach((feature, i) => {
-                        feature.id =  baseNumber + (i+1);
+                        feature.id = baseNumber + (i + 1);
                     })
                 }
 
@@ -102,21 +80,25 @@
 
     const tilesData = {};
 
-    function initMap () {
+    function initMap() {
         const dataFile = customDataFile ? customDataFile : 'projects/leaves-status.json'
         fetch(dataFile)
             .then(response => response.json())
             .then(data => loadProjectsBboxes(data));
     }
+
     function loadProjectsBboxes(data) {
         tilesData['leaves'] = data;
         layersIds.push('leaves');
         if (!data.features[0].id) {
             data.features.forEach((feature, i) => {
-                feature.id = (i+1);
+                feature.id = (i + 1);
             })
         }
-        map.addSource('highlight', {type: 'geojson', data: {type: 'FeatureCollection', features: []}});
+        map.addSource('highlight', {
+            type: 'geojson',
+            data: {type: 'FeatureCollection', features: []}
+        });
         map.addLayer({
             'id': 'highlight',
             'type': 'line',
@@ -151,6 +133,7 @@
 
         map.on('click', onMapClick);
     }
+
     function onMapClick(clickEvent) {
         var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersIds});
         console.log(features);
@@ -162,6 +145,7 @@
         highlightLayerSource.setData({type: 'FeatureCollection', features: [features[0]]});
         renderPopover(features[0], clickEvent.lngLat)
     }
+
     function renderPopover(feature, mapClickLngLat) {
         const dateStart = feature.properties.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')
         const dateEnd = feature.properties.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')
@@ -224,10 +208,10 @@
         loadTilesEl.addEventListener('click', e => {
             e.preventDefault();
             e.stopPropagation();
-            loadingTilesEl.style.display='';
-            loadTilesEl.style.display='none';
+            loadingTilesEl.style.display = '';
+            loadTilesEl.style.display = 'none';
             loadTilesErrorEl.innerText = '';
-            loadTilesErrorEl.style.display='none';
+            loadTilesErrorEl.style.display = 'none';
             setTimeout(() => {
                 loadProjectTiles(e.target.dataset.project, e.target.dataset.featureId)
                     .then(() => {
@@ -244,19 +228,25 @@
             }, 2000)
         })
     }
+
     function initPopoverObject(html, popoverLngLat, onOpenCallback) {
         var markerHeight = 50, markerRadius = 10, linearOffset = 25;
         var popupOffsets = {
             'top': [0, 0],
-            'top-left': [0,0],
-            'top-right': [0,0],
+            'top-left': [0, 0],
+            'top-right': [0, 0],
             'bottom': [0, -markerHeight],
             'bottom-left': [linearOffset, (markerHeight - markerRadius + linearOffset) * -1],
             'bottom-right': [-linearOffset, (markerHeight - markerRadius + linearOffset) * -1],
             'left': [markerRadius, (markerHeight - markerRadius) * -1],
             'right': [-markerRadius, (markerHeight - markerRadius) * -1]
         };
-        const popup = new mapboxgl.Popup({offset: popupOffsets, className: 'my-class', closeOnClick: true, closeOnMove: true})
+        const popup = new mapboxgl.Popup({
+            offset: popupOffsets,
+            className: 'my-class',
+            closeOnClick: true,
+            closeOnMove: true
+        })
             .setLngLat(popoverLngLat)
             .setHTML(html)
             .setMaxWidth("300px")
@@ -267,8 +257,4 @@
     }
 
     map.on('load', initMap);
-</script>
-
-
-</body>
-</html>
+}
