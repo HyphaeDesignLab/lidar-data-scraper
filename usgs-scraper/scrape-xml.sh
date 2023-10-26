@@ -1,4 +1,3 @@
-#!/bin/bash
 cd $(dirname $0)
 if [ ! "$___utils_sh_included" ]; then . ./utils.sh; fi
 if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
@@ -202,9 +201,9 @@ extract_xml_data_of_single_file() {
     > $dir/$xml_file.xml.txt
 }
 
-if [ "$1" = "all" ]; then
+if [ "$1" = "all-project" ]; then
   scrape_xml_all;
-elif [ "$1" = 'xml' ]; then
+elif [ "$1" = 'project' ]; then
   scrape_xml_files $2 $3
 elif [ "$1" = 'xml_extract_data' ]; then
   extract_xml_data $2 $3
