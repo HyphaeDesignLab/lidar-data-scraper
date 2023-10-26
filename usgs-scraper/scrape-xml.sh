@@ -106,14 +106,14 @@ scrape_xml_files() {
   fi
 
   if [ "$ZENV_SAMPLE_XML_ONLY" ]; then
-    local xml_files_count=$(get_line_count $meta_dir/xml_files.txt)
+    local xml_files_count=$(get_line_count $meta_dir/_index/current/xml_files.txt)
     local xml_files_middle_i=$(expr $xml_files_count / 2)
   fi;
   local xml_files=$(sed \
    -e 's/{u}/USGS_LPC_/' \
    -e "s/{prj}/$project/" \
    -e "s/{sprj}/$subproject/" \
-   $meta_dir/xml_files.txt 2>/dev/null)
+   $meta_dir/_index/current/xml_files.txt)
 
   local xml_file_i='0'
   local xml_file=''
