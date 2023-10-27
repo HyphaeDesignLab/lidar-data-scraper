@@ -129,7 +129,11 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     project_tiles_file.close()
 
     project_tiles_union = unary_union(project_tiles_arr)
-    project_tiles_simple = geopanda_geoseries(project_tiles_union).simplify(1)
+    # turn simply ON or OFF with first arg on CLI
+    if len(sys.argv) > 1 and sys.argv[1] == 'simplify':
+        #  specify simplify tolerance in sencond arg (optional)
+        simplify_tolerance = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+        project_tiles_union = geopanda_geoseries(project_tiles_union).simplify(simplify_tolerance)
 
     # adds the overall-bounding box of the ALL XML files in project
     # project_tiles_bbox_geojson = {
