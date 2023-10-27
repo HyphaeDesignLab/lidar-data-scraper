@@ -1,16 +1,15 @@
-
 function LidarScraperMap() {
     if (LidarScraperMap.__IS_INIT) {
         return;
     }
     LidarScraperMap.__IS_INIT = true
 
-    const logEl = document.querySelector('#log');
-    const log = (...things) => {
+    const log = window.location.search.indexOf('debug=') < 0 ? () => {} : (...things) => {
         things.forEach(thing => {
-            logEl.innerHTML += thing + " \n";
+            console.log(thing)
         });
     };
+
     mapboxgl.accessToken = 'pk.eyJ1IjoiaHlwaGFlLWxhYiIsImEiOiJjazN4czF2M2swZmhkM25vMnd2MXZrYm11In0.LS_KIw8THi2qIethuAf2mw';
 
     let customCenter = null;
@@ -55,7 +54,7 @@ function LidarScraperMap() {
                         tilesData['leaves'].features.splice(i, 1)
                     }
                 });
-                console.log(tilesData)
+                log(tilesData)
                 // update source
                 sources['leaves'].setData(tilesData['leaves']); // update
 
@@ -90,11 +89,15 @@ function LidarScraperMap() {
     function loadProjectsBboxes(data) {
         tilesData['leaves'] = data;
         layersIds.push('leaves');
-        if (!data.features[0].id) {
-            data.features.forEach((feature, i) => {
+
+        data.features.forEach((feature, i) => {
+            log(feature)
+            addProjectControlEl(feature.properties.project)
+            if (!data.features[0].id) {
                 feature.id = (i + 1);
-            })
-        }
+            }
+        })
+
         map.addSource('highlight', {
             type: 'geojson',
             data: {type: 'FeatureCollection', features: []}
@@ -136,7 +139,7 @@ function LidarScraperMap() {
 
     function onMapClick(clickEvent) {
         var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersIds});
-        console.log(features);
+        log(features);
 
         if (!features.length) {
             highlightLayerSource.setData({type: 'FeatureCollection', features: []});
@@ -255,6 +258,32 @@ function LidarScraperMap() {
         }
         popup.addTo(map)
     }
+
+
+
+    const controlsEl = document.querySelector('[data-controls=container]');
+    controlsEl.toggleEl = document.querySelector('[data-controls=toggle]')
+    controlsEl.contentEl = document.querySelector('[data-controls=content]')
+    controlsEl.toggleEl.addEventListener('click', e => {
+        if (!controlsEl.contentEl.style.display) {
+            controlsEl.contentEl.style.display = 'none';
+            controlsEl.style.minWidth = 'auto'
+        } else {
+            controlsEl.contentEl.style.display = ''
+            controlsEl.style.minWidth = controlsEl.dataset.styleMinWidth
+        }
+    });
+
+    function addProjectControlEl(project) {
+        renderProjectControlEl(project)
+    }
+    function renderProjectControlEl(project) {
+        const el = document.createElement('div')
+        el.innerHTML = `<div>${project}</div>`
+        controlsEl.contentEl.appendChild(el);
+    }
+
+
 
     map.on('load', initMap);
 }

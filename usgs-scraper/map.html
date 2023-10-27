@@ -24,8 +24,16 @@
     </style>
 </head>
 <body>
-<div id="log"
-     style="white-space: pre-wrap; position: fixed; top: 0; right: 0; z-index: 123; width: 50%; max-width: 500px; min-width: 300px; height: 200px; overflow-y: scroll;"></div>
+<div data-controls="container"
+     data-style-min-width="300px"
+     style="
+         position: fixed; top: 0; right: 0; z-index: 123;
+         max-width: 500px;
+         overflow-y: scroll;
+         background: rgba(255,255,255,.85)">
+    <div data-controls="content"  style="display: none; white-space: pre-wrap; "> </div>
+</div>
+<div data-controls="toggle" style="cursor: pointer; position: fixed; top: 0; right: 0; z-index: 124; background-color: rgba(255,255,255,.85); border: 1px solid black">&#x2699;</div>
 <div id='map' style='width: 100vw; height: 80vh;'></div>
 
 
