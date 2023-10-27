@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from shapely.geometry import Polygon, MultiPolygon, mapping
 from shapely.ops import unary_union
-from geopandas import GeoSeries as geopanda_geoseries
+import geopandas
 import time
 
 def run():
@@ -54,6 +54,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
 
     print ('%s project has %d tiles\n' % (project, file_count))
 
+    deltas_sum = 0
     for file_name in files:
         if '.xml.txt' not in file_name:
             continue
@@ -93,7 +94,11 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
         ]
 
         # do tiles union later
-        project_tiles_arr.append(Polygon(polygon))
+        delta = abs(polygon[0][0]-polygon[1][0])
+        if delta == 0:
+            delta = abs(polygon[1][1]-polygon[2][1])
+        project_tiles_arr.append(Polygon(polygon).buffer(delta/3))
+        deltas_sum = deltas_sum + delta
 
         # do tiles union
         # if project_tiles_union is None:
@@ -128,12 +133,17 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     project_tiles_file.write(']}')
     project_tiles_file.close()
 
+    average_delta = deltas_sum / file_count
+    print(f'average delta {average_delta}')
     project_tiles_union = unary_union(project_tiles_arr)
     # turn simply ON or OFF with first arg on CLI
     if len(sys.argv) > 1 and sys.argv[1] == 'simplify':
         #  specify simplify tolerance in sencond arg (optional)
-        simplify_tolerance = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-        project_tiles_union = geopanda_geoseries(project_tiles_union).simplify(simplify_tolerance)
+        simplify_tolerance = float(sys.argv[2]) if len(sys.argv) > 2 else average_delta/2
+        project_tiles_union = geopandas.GeoSeries(project_tiles_union).simplify(simplify_tolerance)
+        project_tiles_union = json.loads(geopandas.GeoDataFrame(geometry=project_tiles_union).to_json())['features'][0]['geometry']
+    else:
+        project_tiles_union = mapping(project_tiles_union)
 
     # adds the overall-bounding box of the ALL XML files in project
     # project_tiles_bbox_geojson = {
@@ -150,7 +160,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     all_tiles_file = open(all_tiles_file.name, 'a')
     all_tiles_file.write( ('\n' if is_first_feature else ',\n' ) + json.dumps({
                "type": "Feature",
-               "geometry": mapping(project_tiles_simple), # was project_tiles_bbox_geojson
+               "geometry": project_tiles_union, # was project_tiles_bbox_geojson
                "properties": {
                  "tile_count": file_count,
                  "is_bbox": True,
