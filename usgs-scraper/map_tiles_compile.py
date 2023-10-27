@@ -6,6 +6,7 @@ from pathlib import Path
 from shapely.geometry import Polygon, MultiPolygon, mapping
 from shapely.ops import unary_union
 from geopandas import GeoSeries as geopanda_geoseries
+import time
 
 def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
@@ -30,6 +31,7 @@ def run():
     all_tiles_file.close()
 
 def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles_file, is_first_feature=False):
+    start_time = time.time()
     dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
     files = os.listdir(dir)
@@ -155,6 +157,10 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
                }
              }))
     all_tiles_file.close()
+
+    end_time = time.time()
+    total_time = round(end_time - start_time, 1)
+    print(f'done... in {total_time} seconds')
 
 if (__name__ == '__main__'):
     run()
