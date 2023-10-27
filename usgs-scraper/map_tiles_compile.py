@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from shapely.geometry import Polygon, MultiPolygon, mapping
 from shapely.ops import unary_union
+from geopandas import GeoSeries as geopanda_geoseries
 
 def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
@@ -126,6 +127,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     project_tiles_file.close()
 
     project_tiles_union = unary_union(project_tiles_arr)
+    project_tiles_simple = geopanda_geoseries(project_tiles_union).simplify(1)
 
     # adds the overall-bounding box of the ALL XML files in project
     # project_tiles_bbox_geojson = {
@@ -142,7 +144,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     all_tiles_file = open(all_tiles_file.name, 'a')
     all_tiles_file.write( ('\n' if is_first_feature else ',\n' ) + json.dumps({
                "type": "Feature",
-               "geometry": mapping(project_tiles_union), # was project_tiles_bbox_geojson
+               "geometry": mapping(project_tiles_simple), # was project_tiles_bbox_geojson
                "properties": {
                  "tile_count": file_count,
                  "is_bbox": True,
