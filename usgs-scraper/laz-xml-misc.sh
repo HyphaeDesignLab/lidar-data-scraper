@@ -81,7 +81,7 @@ get_leaves_on_off() {
   echo > projects/leaves-status.txt
   path_search='';
   if [ "$1" ]; then path_search="-path *$1*"; fi
-  for ddd in $(find projects -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
+  for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
     for fff in $(ls -1 $ddd/*.xml.txt); do
       curr_dates=$(extract_xml_dates_on_one_line $fff);
       if [ "${#curr_dates}" -gt '8' ]; then
