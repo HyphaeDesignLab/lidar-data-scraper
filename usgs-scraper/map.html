@@ -30,12 +30,21 @@
          position: fixed; top: 0; right: 0; z-index: 123;
          max-width: 500px;
          overflow-y: scroll;
-         background: rgba(255,255,255,.85)">
-    <div data-controls="content"  style="display: none; white-space: pre-wrap; "> </div>
+         background: rgba(255,155,255,.85)">
+    <div data-controls="content"  style="display: none; "> </div>
 </div>
 <div data-controls="toggle" style="cursor: pointer; position: fixed; top: 0; right: 0; z-index: 124; background-color: rgba(255,255,255,.85); border: 1px solid black">&#x2699;</div>
 <div id='map' style='width: 100vw; height: 80vh;'></div>
 
+<div style="display:none;">
+    <div data-controls="polygon-intersect">
+        <h3>Polygon Intersect Tool</h3>
+        <textarea
+                placeholder="enter full GeoJSON or a simple array of polygon vertices' coordinates"></textarea>
+        <br/>
+        <input type="button" value="find intersection"/>
+    </div>
+</div>
 
 
 <script>

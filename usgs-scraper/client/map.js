@@ -10,33 +10,36 @@ function LidarScraperMap() {
         });
     };
 
-    mapboxgl.accessToken = 'pk.eyJ1IjoiaHlwaGFlLWxhYiIsImEiOiJjazN4czF2M2swZmhkM25vMnd2MXZrYm11In0.LS_KIw8THi2qIethuAf2mw';
+    window.map=null
+    function initMap() {
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaHlwaGFlLWxhYiIsImEiOiJjazN4czF2M2swZmhkM25vMnd2MXZrYm11In0.LS_KIw8THi2qIethuAf2mw';
 
-    let customCenter = null;
-    let customDataFile = null;
-    let customZoom = null;
-    if (window.location.search) {
-        const customCenterMatch = window.location.search.match(/center=([^&]+)/);
-        const customZoomMatch = window.location.search.match(/zoom=([^&]+)/)
-        const customDataFileMatch = window.location.search.match(/data=([^&]+)/)
-        if (customCenterMatch) {
-            customCenter = customCenterMatch[1].split(',').map(i => parseFloat(i));
+        let customCenter = null;
+        let customDataFile = null;
+        let customZoom = null;
+        if (window.location.search) {
+            const customCenterMatch = window.location.search.match(/center=([^&]+)/);
+            const customZoomMatch = window.location.search.match(/zoom=([^&]+)/)
+            const customDataFileMatch = window.location.search.match(/data=([^&]+)/)
+            if (customCenterMatch) {
+                customCenter = customCenterMatch[1].split(',').map(i => parseFloat(i));
+            }
+            if (customZoomMatch) {
+                customZoom = parseInt(customZoomMatch[1])
+            }
+            if (customDataFileMatch) {
+                customDataFile = customDataFileMatch[1]
+            }
         }
-        if (customZoomMatch) {
-            customZoom = parseInt(customZoomMatch[1])
-        }
-        if (customDataFileMatch) {
-            customDataFile = customDataFileMatch[1]
-        }
+        map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/hyphae-lab/clb2h2e48000015o4w0b0tyig',
+            center: customCenter ?? [-121.87209750161911, 41.648412869824384],
+            zoom: customZoom ?? 6.5
+        });
     }
-    const map = new mapboxgl.Map({
-        container: 'map',
-        style: 'mapbox://styles/hyphae-lab/clb2h2e48000015o4w0b0tyig',
-        center: customCenter ?? [-121.87209750161911, 41.648412869824384],
-        zoom: customZoom ?? 6.5
-    });
 
-    function loadProjectTiles(project, parentFeatureId) {
+    function loadProjectData(project, parentFeatureId) {
         parentFeatureId = parseInt(parentFeatureId)
         return fetch(`projects/${project}/xml_tiles.json`)
             .then(response => response.json())
@@ -48,47 +51,27 @@ function LidarScraperMap() {
                     })
                 }
 
-                // remove feature whose sub-tiles were show
-                tilesData['leaves'].features.forEach((feature, i) => {
-                    if (feature.id === parentFeatureId) {
-                        tilesData['leaves'].features.splice(i, 1)
-                    }
-                });
-                log(tilesData)
                 // update source
-                sources['leaves'].setData(tilesData['leaves']); // update
-
+                mapData.project = data
+                mapSources.project.setData(mapData.project); // update
                 layersIds.push(project);
-                map.addSource(project, {type: 'geojson', data});
-                map.addLayer({
-                    'id': project,
-                    'type': 'fill',
-                    'source': project,
-                    "paint": {
-                        "fill-color": "#aaaaff",
-                        "fill-opacity": .9,
-                        "fill-outline-color": "#0000aa"
-                    }
-                });
             })
     }
 
     let layersIds = [];
-    let highlightLayerSource = null;
-    let sources = {}
+    const mapSources = {'highlight': null, 'all':null, 'project': null}
+    const mapData = {};
 
-    const tilesData = {};
-
-    function initMap() {
+    function initData() {
         const dataFile = customDataFile ? customDataFile : 'projects/leaves-status.json'
         fetch(dataFile)
             .then(response => response.json())
-            .then(data => loadProjectsBboxes(data));
+            .then(data => loadAllProjectsData(data));
     }
 
-    function loadProjectsBboxes(data) {
-        tilesData['leaves'] = data;
-        layersIds.push('leaves');
+    function loadAllProjectsData(data) {
+        mapData.all = data;
+        layersIds.push('all');
 
         data.features.forEach((feature, i) => {
             log(feature)
@@ -111,14 +94,14 @@ function LidarScraperMap() {
                 "line-width": 2
             }
         });
-        highlightLayerSource = map.getSource('highlight')
+        mapSources.highlight = map.getSource('highlight')
 
-        map.addSource('leaves', {type: 'geojson', data});
-        sources['leaves'] = map.getSource('leaves')
+        map.addSource('all', {type: 'geojson', data});
+        mapSources.all = map.getSource('all')
         map.addLayer({
-            'id': 'leaves',
+            'id': 'all',
             'type': 'fill',
-            'source': 'leaves',
+            'source': 'all',
             "paint": {
                 "fill-color": ["case",
                     ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
@@ -134,6 +117,37 @@ function LidarScraperMap() {
             }
         });
 
+        map.addSource('project', {type: 'geojson', data: {type: 'FeatureCollection', features: []}});
+        mapSources.project = map.getSource('project')
+        map.addLayer({
+            'id': 'project',
+            'type': 'fill',
+            'source': 'project',
+            "paint": {
+                "fill-color": ["case",
+                    ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
+                    ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .5], // "#fcae51"
+                    ["rgba", 252, 81, 121, .5] // "#fc5179"
+                ],
+                "fill-opacity": .8, // default
+                "fill-outline-color": ['case',
+                    ['==', ['feature-state', 'focused'], true], "#222222",
+                    ['==', ['get', 'leaves'], 'on'], "#047e16",
+                    "#a94202"
+                ]
+            }
+        });
+        // map.addLayer({
+        //     'id': 'project',
+        //     'type': 'fill',
+        //     'source': 'project',
+        //     "paint": {
+        //         "fill-color": "#aaaaff",
+        //         "fill-opacity": .9,
+        //         "fill-outline-color": "#0000aa"
+        //     }
+        // });
+
         map.on('click', onMapClick);
     }
 
@@ -142,10 +156,10 @@ function LidarScraperMap() {
         log(features);
 
         if (!features.length) {
-            highlightLayerSource.setData({type: 'FeatureCollection', features: []});
+            mapSources.highlight.setData({type: 'FeatureCollection', features: []});
             return;
         }
-        highlightLayerSource.setData({type: 'FeatureCollection', features: [features[0]]});
+        mapSources.highlight.setData({type: 'FeatureCollection', features: [features[0]]});
         renderPopover(features[0], clickEvent.lngLat)
     }
 
@@ -216,7 +230,7 @@ function LidarScraperMap() {
             loadTilesErrorEl.innerText = '';
             loadTilesErrorEl.style.display = 'none';
             setTimeout(() => {
-                loadProjectTiles(e.target.dataset.project, e.target.dataset.featureId)
+                loadProjectData(e.target.dataset.project, e.target.dataset.featureId)
                     .then(() => {
                         loadTilesEl.style.display = 'none';
                         loadingTilesEl.style.display = 'none'
@@ -282,8 +296,26 @@ function LidarScraperMap() {
         el.innerHTML = `<div>${project}</div>`
         controlsEl.contentEl.appendChild(el);
     }
+    function addControlEl(el) {
+        controlsEl.contentEl.appendChild(el);
+    }
+
+
+    // ------------------- Polygon Intersection -------------------
+    function initPolygonIntersectionControl() {
+        const polygonIntersectControlTemplateEl = document.querySelector('[data-controls=polygon-intersect]');
+        const polygonIntersectControlEl = polygonIntersectControlTemplateEl.cloneNode(true)
+        polygonIntersectControlEl.querySelector('input[type=button]').addEventListener('click', e => {
+            const json = JSON.parse(polygonIntersectControlEl.querySelector('textarea'));
+            const geoJson = json.type ? {type: 'Polygon', coordinates: [json]} : json;
+            const turfPolygon = turf.polygon(geoJson)
+        })
+        addControlEl(polygonIntersectControlEl)
+
+    }
 
 
 
-    map.on('load', initMap);
+    //initMap()
+    //map.on('load', initData);
 }
