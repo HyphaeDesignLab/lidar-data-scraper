@@ -39,24 +39,7 @@ function LidarScraperMap() {
         });
     }
 
-    function loadProjectData(project, parentFeatureId) {
-        parentFeatureId = parseInt(parentFeatureId)
-        return fetch(`projects/${project}/xml_tiles.json`)
-            .then(response => response.json())
-            .then(data => {
-                if (!data.features[0].id) {
-                    const baseNumber = parentFeatureId * Math.pow(10, String(data.features.length).length)
-                    data.features.forEach((feature, i) => {
-                        feature.id = baseNumber + (i + 1);
-                    })
-                }
 
-                // update source
-                mapData.project = data
-                mapSources.project.setData(mapData.project); // update
-                layersIds.push(project);
-            })
-    }
 
     let layersIds = [];
     const mapSources = {'highlight': null, 'all':null, 'project': null}
@@ -71,6 +54,7 @@ function LidarScraperMap() {
 
     function loadAllProjectsData(data) {
         mapData.all = data;
+        turfData.
         layersIds.push('all');
 
         data.features.forEach((feature, i) => {
@@ -151,6 +135,24 @@ function LidarScraperMap() {
         map.on('click', onMapClick);
     }
 
+    function loadProjectData(project, parentFeatureId) {
+        parentFeatureId = parseInt(parentFeatureId)
+        return fetch(`projects/${project}/xml_tiles.json`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.features[0].id) {
+                    const baseNumber = parentFeatureId * Math.pow(10, String(data.features.length).length)
+                    data.features.forEach((feature, i) => {
+                        feature.id = baseNumber + (i + 1);
+                    })
+                }
+
+                // update source
+                mapData.project = data
+                mapSources.project.setData(mapData.project); // update
+                layersIds.push(project);
+            })
+    }
     function onMapClick(clickEvent) {
         var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersIds});
         log(features);
