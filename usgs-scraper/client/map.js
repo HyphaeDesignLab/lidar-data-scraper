@@ -15,20 +15,15 @@ function LidarScraperMap() {
         mapboxgl.accessToken = 'pk.eyJ1IjoiaHlwaGFlLWxhYiIsImEiOiJjazN4czF2M2swZmhkM25vMnd2MXZrYm11In0.LS_KIw8THi2qIethuAf2mw';
 
         let customCenter = null;
-        let customDataFile = null;
         let customZoom = null;
         if (window.location.search) {
             const customCenterMatch = window.location.search.match(/center=([^&]+)/);
             const customZoomMatch = window.location.search.match(/zoom=([^&]+)/)
-            const customDataFileMatch = window.location.search.match(/data=([^&]+)/)
             if (customCenterMatch) {
                 customCenter = customCenterMatch[1].split(',').map(i => parseFloat(i));
             }
             if (customZoomMatch) {
                 customZoom = parseInt(customZoomMatch[1])
-            }
-            if (customDataFileMatch) {
-                customDataFile = customDataFileMatch[1]
             }
         }
         map = new mapboxgl.Map({
@@ -43,9 +38,17 @@ function LidarScraperMap() {
 
     let layersIds = [];
     const mapSources = {'highlight': null, 'all':null, 'project': null}
-    const mapData = {};
+    window.mapData = {};
+    window.turfData = {};
 
     function initData() {
+        let customDataFile = null;
+        if (window.location.search) {
+            const customDataFileMatch = window.location.search.match(/data=([^&]+)/)
+            if (customDataFileMatch) {
+                customDataFile = customDataFileMatch[1]
+            }
+        }
         const dataFile = customDataFile ? customDataFile : 'projects/leaves-status.json'
         fetch(dataFile)
             .then(response => response.json())
@@ -54,7 +57,7 @@ function LidarScraperMap() {
 
     function loadAllProjectsData(data) {
         mapData.all = data;
-        turfData.
+        turfData.all = turf.featureCollection(data.features)
         layersIds.push('all');
 
         data.features.forEach((feature, i) => {
@@ -308,16 +311,34 @@ function LidarScraperMap() {
         const polygonIntersectControlTemplateEl = document.querySelector('[data-controls=polygon-intersect]');
         const polygonIntersectControlEl = polygonIntersectControlTemplateEl.cloneNode(true)
         polygonIntersectControlEl.querySelector('input[type=button]').addEventListener('click', e => {
-            const json = JSON.parse(polygonIntersectControlEl.querySelector('textarea'));
-            const geoJson = json.type ? {type: 'Polygon', coordinates: [json]} : json;
-            const turfPolygon = turf.polygon(geoJson)
+            const json = JSON.parse(polygonIntersectControlEl.querySelector('textarea').value);
+            const turfPolygon = turf.polygon(json.type ? json.coordinates : [json]);
+            const intersections = []
+            turfData.all.features.forEach(f => {
+                const turfFeatureGeometry = turf[ typeof(f.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](f.geometry.coordinates, f.properties)
+                if (turf.intersect(turfPolygon, turfFeatureGeometry)) {
+                    intersections.push(f);
+                }
+            })
+            log(intersections)
+            mapSources.highlight.setData({type: 'FeatureCollection', features: [intersections[0]]});
+            map.flyTo({center: geoHelpers.getPolygonFirstCoordinate(intersections[0])})
         })
         addControlEl(polygonIntersectControlEl)
 
     }
+    initPolygonIntersectionControl()
 
 
 
-    //initMap()
-    //map.on('load', initData);
+    initMap()
+    map.on('load', initData);
+}
+
+const geoHelpers = {
+    getPolygonFirstCoordinate: featureOrCoordinates => {
+        const coordinates = featureOrCoordinates.geometry ? featureOrCoordinates.geometry.coordinates : featureOrCoordinates;
+        const isMulti = typeof(coordinates[0][0][0]) === 'object';
+        return isMulti ? coordinates[0][0][0] : coordinates[0][0];
+    }
 }
