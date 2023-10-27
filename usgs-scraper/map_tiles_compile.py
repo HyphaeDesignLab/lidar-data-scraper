@@ -140,6 +140,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     if len(sys.argv) > 1 and sys.argv[1] == 'simplify':
         #  specify simplify tolerance in sencond arg (optional)
         simplify_tolerance = float(sys.argv[2]) if len(sys.argv) > 2 else average_delta/2
+        # https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoSeries.simplify.html
         project_tiles_union = geopandas.GeoSeries(project_tiles_union).simplify(simplify_tolerance)
         project_tiles_union = json.loads(geopandas.GeoDataFrame(geometry=project_tiles_union).to_json())['features'][0]['geometry']
     else:
