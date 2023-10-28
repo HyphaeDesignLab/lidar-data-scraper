@@ -139,16 +139,28 @@ function LidarScraperMap() {
     }
 
     function loadProjectData(project, parentFeatureId) {
-        parentFeatureId = parseInt(parentFeatureId)
-        return fetch(`projects/${project}/xml_tiles.json`)
-            .then(response => response.json())
-            .then(data => {
-                if (!data.features[0].id) {
-                    const baseNumber = parentFeatureId * Math.pow(10, String(data.features.length).length)
-                    data.features.forEach((feature, i) => {
-                        feature.id = baseNumber + (i + 1);
+        const loadData = () => {
+            mapData.project = mapData[project];
+            mapSources.project.setData(mapData.project); // update
+            setClickMode('project')
+        }
+        if (mapData[project]) {
+            loadData()
+            return Promise.resolve();
+        } else {
+            parentFeatureId = parseInt(parentFeatureId)
+            return fetch(`projects/${project}/xml_tiles.json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.features[0].id) {
+                        const baseNumber = parentFeatureId * Math.pow(10, String(data.features.length).length)
+                        data.features.forEach((feature, i) => {
+                            feature.id = baseNumber + (i + 1);
+                        })
+                    }
+                    data.features.forEach(feature => {
+                        feature.properties.type = 'project'
                     })
-                }
 
                 // update source
                 mapData.project = data
