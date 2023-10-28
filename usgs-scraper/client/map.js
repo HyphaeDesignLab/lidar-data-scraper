@@ -157,15 +157,53 @@ function LidarScraperMap() {
             })
     }
     function onMapClick(clickEvent) {
-        var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersIds});
+        var features = map.queryRenderedFeatures(clickEvent.point, {layers: ['all', 'project']});
         log(features);
 
         if (!features.length) {
             mapSources.highlight.setData({type: 'FeatureCollection', features: []});
             return;
         }
-        mapSources.highlight.setData({type: 'FeatureCollection', features: [features[0]]});
-        renderPopover(features[0], clickEvent.lngLat)
+        if (features.length > 1) {
+            // const singleTileFeature = features.find(f => !f.properties.is_bbox);
+            // if (singleTileFeature) {
+            //
+            // }
+            renderMultiLayerChooser(features, clickEvent.lngLat)
+        } else {
+            mapSources.highlight.setData({type: 'FeatureCollection', features: [features[0]]});
+            renderPopover(features[0], clickEvent.lngLat)
+        }
+    }
+    function renderMultiLayerChooser(features, mapClickEventLngLat) {
+        const listEl = document.createElement('ul');
+        listEl.style.padding = '0';
+        const headingEl = document.createElement('div');
+        headingEl.innerText = 'choose a layer to view details:'
+        listEl.appendChild(headingEl)
+        let popover = null
+        features.forEach(feature => {
+            const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
+            const name = !feature.properties.is_bbox ?
+                `tile ${feature.id} (${projectName})`
+                :`project ${projectName} with ${feature.properties.tile_count} tiles`;
+            const el = document.createElement('li');
+            el.style.cursor='pointer'
+            el.style.textDecoration='underline'
+            el.style.margin='0'
+            el.style.marginLeft='10px'
+            el.innerText = name;
+            el.addEventListener('click', e => {
+                popover.remove();
+                onMultiLayerChooserClick(feature, mapClickEventLngLat)
+            })
+            listEl.appendChild(el);
+        })
+        popover = initPopoverObject(listEl, mapClickEventLngLat);
+    }
+    function onMultiLayerChooserClick(feature, mapClickEventLngLat) {
+        mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
+        renderPopover(feature, mapClickEventLngLat)
     }
 
     function renderPopover(feature, mapClickLngLat) {
@@ -203,7 +241,7 @@ function LidarScraperMap() {
             clickHandlers = addProjectPopoverClickHandlers;
         } else {
             html = `
-<div><strong>Project TILES: <br/></strong> ${projectName}</div>
+<div><strong>Project TILE ${feature.id}: <br/></strong> (${projectName})</div>
 <div>
     leaves are ${leavesStatus}<br/>
     from ${dateStart} to ${dateEnd}<br/>
@@ -251,7 +289,7 @@ function LidarScraperMap() {
         })
     }
 
-    function initPopoverObject(html, popoverLngLat, onOpenCallback) {
+    function initPopoverObject(htmlOrEl, popoverLngLat, onOpenCallback) {
         var markerHeight = 50, markerRadius = 10, linearOffset = 25;
         var popupOffsets = {
             'top': [0, 0],
@@ -270,12 +308,17 @@ function LidarScraperMap() {
             closeOnMove: true
         })
             .setLngLat(popoverLngLat)
-            .setHTML(html)
-            .setMaxWidth("300px")
+            .setMaxWidth("300px");
+        if (htmlOrEl instanceof Object) {
+            popup.setDOMContent(htmlOrEl)
+        } else {
+            popup.setHTML(htmlOrEl)
+        }
         if (onOpenCallback) {
             popup.on('open', onOpenCallback);
         }
         popup.addTo(map)
+        return popup
     }
 
 
