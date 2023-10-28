@@ -171,7 +171,9 @@ function LidarScraperMap() {
             // }
             renderMultiLayerChooser(features, clickEvent.lngLat)
         } else {
-            mapSources.highlight.setData({type: 'FeatureCollection', features: [features[0]]});
+            // weird behavior of mapbox selecting partial complex polygon returned by queryRenderedFeatures() at various zoom levels
+            const featureToHighlight = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
+            mapSources.highlight.setData({type: 'FeatureCollection', features: [featureToHighlight]});
             renderPopover(features[0], clickEvent.lngLat)
         }
     }
