@@ -36,7 +36,7 @@ function LidarScraperMap() {
 
 
 
-    let layersIds = [];
+    let layersToQuery = [];
     const mapSources = {'highlight': null, 'all':null, 'project': null}
     window.mapData = {};
     window.turfData = {};
@@ -55,13 +55,25 @@ function LidarScraperMap() {
             .then(data => loadAllProjectsData(data));
     }
 
+    const allProjectsFillColorForMode = {
+        'all': ["case",
+            ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
+            ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .5], // "#fcae51"
+            ["rgba", 252, 81, 121, .5] // "#fc5179"
+        ],
+        'project': ["case",
+            ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .2], // "#5aff70",
+            ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .2], // "#fcae51"
+            ["rgba", 252, 81, 121, .2] // "#fc5179"
+        ]
+    }
     function loadAllProjectsData(data) {
         mapData.all = data;
+        log(data)
         turfData.all = turf.featureCollection(data.features)
-        layersIds.push('all');
 
         data.features.forEach((feature, i) => {
-            log(feature)
+            feature.properties.type = 'all'
             addProjectControlEl(feature.properties.project)
             if (!data.features[0].id) {
                 feature.id = (i + 1);
@@ -90,11 +102,7 @@ function LidarScraperMap() {
             'type': 'fill',
             'source': 'all',
             "paint": {
-                "fill-color": ["case",
-                    ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
-                    ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .5], // "#fcae51"
-                    ["rgba", 252, 81, 121, .5] // "#fc5179"
-                ],
+                "fill-color": allProjectsFillColorForMode.all,
                 "fill-opacity": .8, // default
                 "fill-outline-color": ['case',
                     ['==', ['feature-state', 'focused'], true], "#222222",
@@ -162,25 +170,38 @@ function LidarScraperMap() {
                         feature.properties.type = 'project'
                     })
 
-                // update source
-                mapData.project = data
-                mapSources.project.setData(mapData.project); // update
-                layersIds.push(project);
-            })
+                    // update source
+                    mapData[project] = data;
+                    loadData()
+                })
+        }
+
+    }
+
+    let clickMode = 'all'
+    function setClickMode(mode) {
+        clickMode = mode;
+        switch(mode) {
+            case 'all':
+                layersToQuery = ['all'];
+                map.setPaintProperty('all', 'fill-color', allProjectsFillColorForMode.all);
+                break;
+            case 'project':
+                map.setPaintProperty('all', 'fill-color', allProjectsFillColorForMode.project);
+                layersToQuery = ['project'];
+                break;
+        }
     }
     function onMapClick(clickEvent) {
-        var features = map.queryRenderedFeatures(clickEvent.point, {layers: ['all', 'project']});
+        var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
         log(features);
 
         if (!features.length) {
+            setClickMode('all')
             mapSources.highlight.setData({type: 'FeatureCollection', features: []});
             return;
         }
         if (features.length > 1) {
-            // const singleTileFeature = features.find(f => !f.properties.is_bbox);
-            // if (singleTileFeature) {
-            //
-            // }
             renderMultiLayerChooser(features, clickEvent.lngLat)
         } else {
             // weird behavior of mapbox selecting partial complex polygon returned by queryRenderedFeatures() at various zoom levels
