@@ -36,7 +36,7 @@ function LidarScraperMap() {
 
 
 
-    let layersToQuery = [];
+    let layersToQuery = ['all'];
     const mapSources = {'highlight': null, 'all':null, 'project': null}
     window.mapData = {};
     window.turfData = {};
@@ -339,8 +339,8 @@ function LidarScraperMap() {
         const popup = new mapboxgl.Popup({
             offset: popupOffsets,
             className: 'my-class',
-            closeOnClick: true,
-            closeOnMove: true
+            closeOnClick: false,
+            closeOnMove: false
         })
             .setLngLat(popoverLngLat)
             .setMaxWidth("300px");
