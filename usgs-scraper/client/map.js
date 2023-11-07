@@ -75,7 +75,7 @@ function LidarScraperMap() {
         data.features.forEach((feature, i) => {
             feature.properties.type = 'all'
             addProjectControlEl(feature.properties.project)
-            if (!data.features[0].id) {
+            if (!feature.id) {
                 feature.id = (i + 1);
             }
         })
@@ -211,11 +211,12 @@ function LidarScraperMap() {
         if (features.length > 1) {
             renderMultiLayerChooser(features, clickEvent.lngLat)
         } else {
+            const feature = features[0];
             // weird behavior of mapbox selecting partial complex polygon returned by queryRenderedFeatures() at various zoom levels
-            const featureToHighlight = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
-            mapSources.highlight.setData({type: 'FeatureCollection', features: [featureToHighlight]});
-            log(featureToHighlight)
-            renderPopover(features[0], clickEvent.lngLat)
+            // const feature = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
+            mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
+            log(feature)
+            renderPopover(feature, clickEvent.lngLat)
         }
     }
     function renderMultiLayerChooser(features, mapClickEventLngLat) {
