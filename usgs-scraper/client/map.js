@@ -143,7 +143,7 @@ function LidarScraperMap() {
         //     }
         // });
 
-        map.on('click', onMapClick);
+        toggleMapClick(true);
     }
 
     function loadProjectData(project, parentFeatureId) {
@@ -192,6 +192,13 @@ function LidarScraperMap() {
                 break;
         }
     }
+    function toggleMapClick(newState) {
+        if (newState) {
+            map.on('click', onMapClick);
+        } else {
+            map.off('click', onMapClick);
+        }
+    }
     function onMapClick(clickEvent) {
         var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
         log(features);
@@ -207,6 +214,7 @@ function LidarScraperMap() {
             // weird behavior of mapbox selecting partial complex polygon returned by queryRenderedFeatures() at various zoom levels
             const featureToHighlight = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
             mapSources.highlight.setData({type: 'FeatureCollection', features: [featureToHighlight]});
+            log(featureToHighlight)
             renderPopover(features[0], clickEvent.lngLat)
         }
     }
@@ -339,7 +347,7 @@ function LidarScraperMap() {
         const popup = new mapboxgl.Popup({
             offset: popupOffsets,
             className: 'my-class',
-            closeOnClick: false,
+            closeOnClick: true,
             closeOnMove: false
         })
             .setLngLat(popoverLngLat)
@@ -385,12 +393,41 @@ function LidarScraperMap() {
 
 
     // ------------------- Polygon Intersection -------------------
+    const polygonIntersectControlTemplateEl = document.querySelector('[data-controls=polygon-intersect]');
+    polygonIntersectControlTemplateEl.parentElement.remove(polygonIntersectControlTemplateEl);
     function initPolygonIntersectionControl() {
-        const polygonIntersectControlTemplateEl = document.querySelector('[data-controls=polygon-intersect]');
         const polygonIntersectControlEl = polygonIntersectControlTemplateEl.cloneNode(true)
-        polygonIntersectControlEl.querySelector('input[type=button]').addEventListener('click', e => {
-            const json = JSON.parse(polygonIntersectControlEl.querySelector('textarea').value);
-            const turfPolygon = turf.polygon(json.type ? json.coordinates : [json]);
+        const drawBtn = polygonIntersectControlEl.querySelector('button[data-button="draw"]');
+        const textArea = polygonIntersectControlEl.querySelector('textarea');
+        drawBtn.innerText = drawBtn.dataset.textOff;
+        drawBtn.addEventListener('click', e => {
+            const newState = drawBtn.state = !drawBtn.state;
+            drawBtn.innerText = drawBtn.dataset[newState ? 'textOn' : 'textOff'];
+            toggleMapClick(!newState); // invert-set map click when in "draw on map" mode
+            if (newState) {
+                if (!drawBtn.mapboxDrawObj) {
+                    drawBtn.mapboxDrawObj = new MapboxDraw({
+                        displayControlsDefault: false,
+                        controls: {
+                            polygon: true,
+                            trash: true
+                        }
+                        // styles: MapboxDrawDefaultTheme
+                    });
+                    drawBtn.mapboxDrawObj.onAdd(map);
+                    //map.addControl(drawBtn.mapboxDrawObj, 'top-right');
+                }
+                drawBtn.mapboxDrawObj.changeMode('draw_polygon')
+            } else {
+                const featureCollection = drawBtn.mapboxDrawObj.getAll();
+                textArea.value = JSON.stringify(featureCollection.features.length ? featureCollection.features[0] : []);
+                drawBtn.mapboxDrawObj.changeMode('simple_select')
+                drawBtn.mapboxDrawObj.deleteAll();
+            }
+        });
+        polygonIntersectControlEl.querySelector('button[data-button="intersect"]').addEventListener('click', e => {
+            const json = JSON.parse(textArea.value);
+            const turfPolygon = turf.polygon(json.type ? json.geometry.coordinates : [json]);
             const intersections = []
             turfData.all.features.forEach(f => {
                 const turfFeatureGeometry = turf[ typeof(f.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](f.geometry.coordinates, f.properties)
@@ -399,7 +436,7 @@ function LidarScraperMap() {
                 }
             })
             log(intersections)
-            mapSources.highlight.setData({type: 'FeatureCollection', features: [intersections[0]]});
+            mapSources.highlight.setData({type: 'FeatureCollection', features: intersections});
             map.flyTo({center: geoHelpers.getPolygonFirstCoordinate(intersections[0])})
         })
         addControlEl(polygonIntersectControlEl)

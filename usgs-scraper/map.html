@@ -6,7 +6,10 @@
     <script src='client/third-party/turf-6.5.0.min.js'></script>
     <script src='client/third-party/api.mapbox.com_mapbox-gl-js_v1.10.0_mapbox-gl.js'></script>
     <link href='client/third-party/api.mapbox.com_mapbox-gl-js_v1.10.0_mapbox-gl.css' rel='stylesheet'/>
+    <script src='client/third-party/api.mapbox.com_mapbox-gl-js_plugins_mapbox-gl-draw_v1.4.3_mapbox-gl-draw.js'></script>
+    <link href='client/third-party/api.mapbox.com_mapbox-gl-js_plugins_mapbox-gl-draw_v1.4.3_mapbox-gl-draw.css' rel='stylesheet'/>
     <script src="client/map.js"></script>
+    <script src="client/mapbox-draw-theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         #map-controls {
@@ -42,10 +45,10 @@
 <div style="display:none;">
     <div data-controls="polygon-intersect">
         <h3>Polygon Intersect Tool</h3>
-        <textarea
-                placeholder="enter full GeoJSON or a simple array of polygon vertices' coordinates"></textarea>
+        <button data-button="draw" data-text-off="select on map" data-text-on="done selecting"></button>
+        <textarea placeholder="enter full GeoJSON or a simple array of polygon vertices' coordinates"></textarea>
         <br/>
-        <input type="button" value="find intersection"/>
+        <button data-button="intersect">find intersection</button>
     </div>
 </div>
 
