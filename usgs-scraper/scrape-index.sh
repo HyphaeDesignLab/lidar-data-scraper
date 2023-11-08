@@ -8,7 +8,7 @@ if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 echo;
 
-if [ "$LIDAR_SCRAPER_DEBUG" != '' ]; then
+if [ "$LIDAR_SCRAPER_DEBUG__MOCK_SERVER" != '' ]; then
   start_mock_server_debug;
 fi
 
