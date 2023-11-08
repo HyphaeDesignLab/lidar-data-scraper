@@ -146,14 +146,16 @@ function LidarScraperMap() {
         toggleMapClick(true);
     }
 
-    function loadProjectData(project, parentFeatureId) {
-        const loadData = () => {
+    function loadProjectData(project, parentFeatureId, immediatelyDisplayLoadedData=true) {
+        const loadData_ = () => {
             mapData.project = mapData[project];
-            mapSources.project.setData(mapData.project); // update
+            if (immediatelyDisplayLoadedData) {
+                mapSources.project.setData(mapData.project); // update
+            }
             setClickMode('project')
         }
         if (mapData[project]) {
-            loadData()
+            loadData_()
             return Promise.resolve();
         } else {
             parentFeatureId = parseInt(parentFeatureId)
@@ -172,7 +174,7 @@ function LidarScraperMap() {
 
                     // update source
                     mapData[project] = data;
-                    loadData()
+                    loadData_()
                 })
         }
 
@@ -424,21 +426,59 @@ function LidarScraperMap() {
                 textArea.value = JSON.stringify(featureCollection.features.length ? featureCollection.features[0] : []);
                 drawBtn.mapboxDrawObj.changeMode('simple_select')
                 drawBtn.mapboxDrawObj.deleteAll();
+                mapSources.highlight.setData(featureCollection);
             }
         });
+
         polygonIntersectControlEl.querySelector('button[data-button="intersect"]').addEventListener('click', e => {
             const json = JSON.parse(textArea.value);
             const turfPolygon = turf.polygon(json.type ? json.geometry.coordinates : [json]);
-            const intersections = []
-            turfData.all.features.forEach(f => {
-                const turfFeatureGeometry = turf[ typeof(f.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](f.geometry.coordinates, f.properties)
+            const bbox = turf.bbox(turfPolygon);
+            const center = turf.center(turfPolygon);
+            const canvasStyle = getComputedStyle(map.getCanvas());
+            let lastZoom;
+            const adjustZoom = () => {
+                const currentZoom = map.getZoom();
+                log('move/zoom end, now adjusting zoom', currentZoom, map.getCenter())
+                if (currentZoom === lastZoom) {
+                    return; // sometimes the zoom might max out, then stop recursing
+                }
+                const bboxInPixels = [ ...Object.values(map.project([bbox[0], bbox[1]])), ...Object.values(map.project([bbox[2], bbox[3]])) ]
+                const bboxHeight = Math.abs(bboxInPixels[0] - bboxInPixels[2]);
+                const bboxWidth = Math.abs(bboxInPixels[1] - bboxInPixels[3]);
+                const canvasHeight = parseInt(canvasStyle.height);
+                const canvasWidth = parseInt(canvasStyle.width);
+                log(bboxInPixels, bboxHeight, bboxWidth, canvasHeight, canvasWidth)
+                if (bboxInPixels[0] < 0 || bboxInPixels[0] > canvasWidth
+                    || bboxInPixels[2] < 0 || bboxInPixels[2] > canvasWidth
+                    || bboxInPixels[1] < 0 || bboxInPixels[1] > canvasHeight
+                    || bboxInPixels[3] < 0 || bboxInPixels[3] > canvasHeight
+                    || (bboxHeight < canvasHeight * .9 && bboxWidth < canvasWidth * .9)
+                ) {
+                    map.setZoom(currentZoom * 1.02);
+                    map.once('moveend', adjustZoom)
+                }
+                lastZoom = currentZoom;
+            }
+
+            map.flyTo({center: center.geometry.coordinates});
+            map.once('moveend', adjustZoom);
+
+            const intersectingProjects = [];
+            const loadDataPromises = [];
+            turfData.all.features.forEach(feature => {
+                const turfFeatureGeometry = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
                 if (turf.intersect(turfPolygon, turfFeatureGeometry)) {
-                    intersections.push(f);
+                    intersectingProjects.push(feature.properties.project);
+                    const loadPromise = loadProjectData(feature.properties.project, feature.id);
+                    loadDataPromises.push(loadPromise);
                 }
             })
-            log(intersections)
-            mapSources.highlight.setData({type: 'FeatureCollection', features: intersections});
-            map.flyTo({center: geoHelpers.getPolygonFirstCoordinate(intersections[0])})
+            Promise.all(loadDataPromises).then(() => {
+                const combinedFeatures = [];
+                intersectingProjects.forEach(project => { combinedFeatures.push(...mapData[project].features); });
+                mapSources.highlight.setData({type: 'FeatureCollection', features: combinedFeatures});
+            })
         })
         addControlEl(polygonIntersectControlEl)
 
