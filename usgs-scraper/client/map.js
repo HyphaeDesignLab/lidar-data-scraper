@@ -148,9 +148,8 @@ function LidarScraperMap() {
 
     function loadProjectData(project, parentFeatureId, immediatelyDisplayLoadedData=true) {
         const loadData_ = () => {
-            mapData.project = mapData[project];
             if (immediatelyDisplayLoadedData) {
-                mapSources.project.setData(mapData.project); // update
+                mapSources.project.setData(mapData[project]); // update
             }
             setClickMode('project')
         }
