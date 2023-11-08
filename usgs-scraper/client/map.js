@@ -218,7 +218,7 @@ function LidarScraperMap() {
             // const feature = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
             mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
             log(feature)
-            renderPopover(feature, clickEvent.lngLat)
+            renderPopup(feature, clickEvent.lngLat)
         }
     }
     function renderMultiLayerChooser(features, mapClickEventLngLat) {
@@ -227,7 +227,7 @@ function LidarScraperMap() {
         const headingEl = document.createElement('div');
         headingEl.innerText = 'choose a layer to view details:'
         listEl.appendChild(headingEl)
-        let popover = null
+        let popup = null
         features.forEach(feature => {
             const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
             const name = !feature.properties.is_bbox ?
@@ -240,19 +240,19 @@ function LidarScraperMap() {
             el.style.marginLeft='10px'
             el.innerText = name;
             el.addEventListener('click', e => {
-                popover.remove();
+                popup.remove();
                 onMultiLayerChooserClick(feature, mapClickEventLngLat)
             })
             listEl.appendChild(el);
         })
-        popover = initPopoverObject(listEl, mapClickEventLngLat);
+        popup = initPopupObject(listEl, mapClickEventLngLat);
     }
     function onMultiLayerChooserClick(feature, mapClickEventLngLat) {
         mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
-        renderPopover(feature, mapClickEventLngLat)
+        renderPopup(feature, mapClickEventLngLat)
     }
 
-    function renderPopover(feature, mapClickLngLat) {
+    function renderPopup(feature, mapClickLngLat) {
         const dateStart = feature.properties.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')
         const dateEnd = feature.properties.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')
         const leavesStatus = feature.properties.leaves.toUpperCase();
@@ -260,7 +260,7 @@ function LidarScraperMap() {
         const projectId = feature.properties.project;
         const tileCount = feature.properties.tile_count;
 
-        // if the feature clicked on to show popover for is the "bounding box" tile of a project (not the individual tile within a project)
+        // if the feature clicked on to show popup for is the "bounding box" tile of a project (not the individual tile within a project)
         const isBbox = feature.properties.is_bbox;
 
         let clickHandlers = null;
@@ -284,7 +284,7 @@ function LidarScraperMap() {
     </div>
 </div>
 `;
-            clickHandlers = addProjectPopoverClickHandlers;
+            clickHandlers = addProjectPopupClickHandlers;
         } else {
             html = `
 <div><strong>Project TILE ${feature.id}: <br/></strong> (${projectName})</div>
@@ -304,10 +304,10 @@ function LidarScraperMap() {
 </div>
 `;
         }
-        initPopoverObject(html, mapClickLngLat, clickHandlers);
+        initPopupObject(html, mapClickLngLat, clickHandlers);
     }
 
-    function addProjectPopoverClickHandlers() {
+    function addProjectPopupClickHandlers() {
         const loadTilesEl = document.querySelector('[data-load-more-tiles=start]');
         const loadTilesErrorEl = document.querySelector('[data-load-more-tiles=error]');
         const loadingTilesEl = document.querySelector('[data-load-more-tiles=loading]');
@@ -335,7 +335,7 @@ function LidarScraperMap() {
         })
     }
 
-    function initPopoverObject(htmlOrEl, popoverLngLat, onOpenCallback) {
+    function initPopupObject(htmlOrEl, popupLngLat, onOpenCallback) {
         var markerHeight = 50, markerRadius = 10, linearOffset = 25;
         var popupOffsets = {
             'top': [0, 0],
@@ -353,7 +353,7 @@ function LidarScraperMap() {
             closeOnClick: true,
             closeOnMove: false
         })
-            .setLngLat(popoverLngLat)
+            .setLngLat(popupLngLat)
             .setMaxWidth("300px");
         if (htmlOrEl instanceof Object) {
             popup.setDOMContent(htmlOrEl)
