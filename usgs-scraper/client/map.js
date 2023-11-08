@@ -335,6 +335,7 @@ function LidarScraperMap() {
         })
     }
 
+    let lastPopup;
     function initPopupObject(htmlOrEl, popupLngLat, onOpenCallback) {
         var markerHeight = 50, markerRadius = 10, linearOffset = 25;
         var popupOffsets = {
@@ -347,7 +348,10 @@ function LidarScraperMap() {
             'left': [markerRadius, (markerHeight - markerRadius) * -1],
             'right': [-markerRadius, (markerHeight - markerRadius) * -1]
         };
-        const popup = new mapboxgl.Popup({
+        if (lastPopup) {
+            lastPopup.setHTML(''); // reset
+        }
+        lastPopup = new mapboxgl.Popup({
             offset: popupOffsets,
             className: 'my-class',
             closeOnClick: true,
@@ -356,15 +360,15 @@ function LidarScraperMap() {
             .setLngLat(popupLngLat)
             .setMaxWidth("300px");
         if (htmlOrEl instanceof Object) {
-            popup.setDOMContent(htmlOrEl)
+            lastPopup.setDOMContent(htmlOrEl)
         } else {
-            popup.setHTML(htmlOrEl)
+            lastPopup.setHTML(htmlOrEl)
         }
         if (onOpenCallback) {
-            popup.on('open', onOpenCallback);
+            lastPopup.on('open', onOpenCallback);
         }
-        popup.addTo(map)
-        return popup
+        lastPopup.addTo(map);
+        return lastPopup
     }
 
 
