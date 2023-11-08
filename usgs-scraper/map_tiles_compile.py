@@ -60,6 +60,8 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
             continue
         bounds = {}
         file=open(dir+file_name, 'r')
+        laz_dir_name_file=open('projects/'+project+'/_index/current/laz_dir.txt')
+        laz_dir_name = laz_dir_name_file.read().replace('\n', '')
         for line in file:
             line=line.replace('\n', '')
             line_pieces=line.split(':')
@@ -123,7 +125,8 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
              "project": project,
              "date_start": date_start,
              "date_end": date_end,
-             "leaves": leaves_on_off
+             "leaves": leaves_on_off,
+             "lazTilePath": laz_dir_name+'/'+file_name.replace('.xml.txt', '.laz'),
            }
          }))
 
