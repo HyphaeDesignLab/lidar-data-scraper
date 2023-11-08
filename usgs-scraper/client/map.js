@@ -1,9 +1,14 @@
 function LidarScraperMap() {
+    const USGS_URL_BASE = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/'
     if (LidarScraperMap.__IS_INIT) {
         return;
     }
     LidarScraperMap.__IS_INIT = true
 
+    if (window.location.search.indexOf('map=fake') > 0) {
+        window.mapboxgl = FakeMapboxglMap;
+        window.MapboxDraw = FakeMapboxDraw;
+    }
     const log = window.location.search.indexOf('debug=') < 0 ? () => {} : (...things) => {
         things.forEach(thing => {
             console.log(thing)
@@ -371,7 +376,7 @@ function LidarScraperMap() {
     }
 
 
-
+    const renderedElements = {};
     const controlsEl = document.querySelector('[data-controls=container]');
     controlsEl.toggleEl = document.querySelector('[data-controls=toggle]')
     controlsEl.contentEl = document.querySelector('[data-controls=content]')
@@ -393,51 +398,157 @@ function LidarScraperMap() {
         el.innerHTML = `<div>${project}</div>`
         controlsEl.contentEl.appendChild(el);
     }
-    function addControlEl(el) {
-        controlsEl.contentEl.appendChild(el);
+    function addControlEl(el, parentEl=null) {
+        (parentEl ? parentEl : controlsEl.contentEl).appendChild(el);
     }
 
 
-    // ------------------- Polygon Intersection -------------------
-    const polygonIntersectControlTemplateEl = document.querySelector('[data-controls=polygon-intersect]');
-    polygonIntersectControlTemplateEl.parentElement.remove(polygonIntersectControlTemplateEl);
-    function initPolygonIntersectionControl() {
-        const polygonIntersectControlEl = polygonIntersectControlTemplateEl.cloneNode(true)
-        const drawBtn = polygonIntersectControlEl.querySelector('button[data-button="draw"]');
-        const textArea = polygonIntersectControlEl.querySelector('textarea');
-        drawBtn.innerText = drawBtn.dataset.textOff;
-        drawBtn.addEventListener('click', e => {
-            const newState = drawBtn.state = !drawBtn.state;
-            drawBtn.innerText = drawBtn.dataset[newState ? 'textOn' : 'textOff'];
-            toggleMapClick(!newState); // invert-set map click when in "draw on map" mode
-            if (newState) {
-                if (!drawBtn.mapboxDrawObj) {
-                    drawBtn.mapboxDrawObj = new MapboxDraw({
-                        displayControlsDefault: false,
-                        controls: {
-                            polygon: true,
-                            trash: true
-                        }
-                        // styles: MapboxDrawDefaultTheme
-                    });
-                    drawBtn.mapboxDrawObj.onAdd(map);
-                    //map.addControl(drawBtn.mapboxDrawObj, 'top-right');
-                }
-                drawBtn.mapboxDrawObj.changeMode('draw_polygon')
-            } else {
-                const featureCollection = drawBtn.mapboxDrawObj.getAll();
-                textArea.value = JSON.stringify(featureCollection.features.length ? featureCollection.features[0] : []);
-                drawBtn.mapboxDrawObj.changeMode('simple_select')
-                drawBtn.mapboxDrawObj.deleteAll();
-                mapSources.highlight.setData(featureCollection);
+    // ------------------- Area of Interest Intersection Tools -------------------
+    const newAoiControlTemplateEl = document.querySelector('[data-controls=add-area-of-interest]');
+    newAoiControlTemplateEl.parentElement.removeChild(newAoiControlTemplateEl);
+    const initNewAoiControl = () => {
+        const setAoiData = featureCollection => {
+            //mapSources.highlight.setData(featureCollection);
+            initAoiControl(featureCollection)
+        }
+
+        const el = newAoiControlTemplateEl.cloneNode(true);
+
+        const methodLinks = el.querySelectorAll('[data-aoi-method-link]');
+        const methodContainers = el.querySelectorAll('[data-aoi-method]');
+        methodContainers.forEach(el => el.style.display='none');
+        methodLinks.forEach(el => {
+            el.addEventListener('click', e => {
+                methodLinks.forEach(el_ => el_.style.background = el === el_ ?'lightgrey':'unset');
+                methodContainers.forEach(containerEl => {
+                    containerEl.style.display = el.dataset.aoiMethodLink === containerEl.dataset.aoiMethod ? '':'none';
+                });
+
+                e.preventDefault();
+                return false;
+            })
+        })
+
+        const drawStartBtn = el.querySelector('[data-aoi-method="draw"] [data-aoi-draw=start]');
+        const drawStopBtn = el.querySelector('[data-aoi-method="draw"] [data-aoi-draw=stop]');
+        const drawCancelBtn = el.querySelector('[data-aoi-method="draw"] [data-aoi-draw=cancel]');
+
+        drawStopBtn.style.display='none';
+        drawCancelBtn.style.display='none';
+
+        let drawState = false;
+        let mapboxDrawObj = false;
+        drawStartBtn.addEventListener('click', e => {
+            if (drawState) {
+                return;
             }
+            drawState = true;
+            toggleMapClick(!drawState); // invert-set map click when in "draw on map" mode
+
+            drawStartBtn.style.display='none';
+            drawStopBtn.style.display='';
+            drawCancelBtn.style.display='';
+
+            if (!mapboxDrawObj) {
+                mapboxDrawObj = new MapboxDraw({
+                    displayControlsDefault: false,
+                    controls: {
+                        polygon: true,
+                        trash: true
+                    }
+                    // styles: MapboxDrawDefaultTheme
+                });
+                mapboxDrawObj.onAdd(map);
+                //map.addControl(drawBtn.mapboxDrawObj, 'top-right');
+            }
+            mapboxDrawObj.changeMode('draw_polygon')
+        });
+        drawStopBtn.addEventListener('click', e => {
+            if (!drawState) {
+                return;
+            }
+            drawState = false;
+            toggleMapClick(!drawState); // invert-set map click when in "draw on map" mode
+
+            drawStartBtn.style.display='';
+            drawStopBtn.style.display='none';
+            drawCancelBtn.style.display='none';
+
+            const featureCollection = mapboxDrawObj.getAll();
+            mapboxDrawObj.changeMode('simple_select')
+            mapboxDrawObj.deleteAll();
+            setAoiData(featureCollection);
+        });
+        drawCancelBtn.addEventListener('click', e => {
+            if (!drawState) {
+                return;
+            }
+            drawState = false;
+            toggleMapClick(!drawState); // invert-set map click when in "draw on map" mode
+
+            drawStartBtn.style.display='';
+            drawStopBtn.style.display='none';
+            drawCancelBtn.style.display='none';
+
+            mapboxDrawObj.changeMode('simple_select')
+            mapboxDrawObj.deleteAll();
+            setAoiData(null);
         });
 
-        polygonIntersectControlEl.querySelector('button[data-button="intersect"]').addEventListener('click', e => {
-            const json = JSON.parse(textArea.value);
-            const intersectionTurfPolygon = turf.polygon(json.type ? json.geometry.coordinates : [json]);
-            const bbox = turf.bbox(intersectionTurfPolygon);
-            const center = turf.center(intersectionTurfPolygon);
+        const fileEl = el.querySelector('[data-aoi-method="file"] input');
+        const fileAddEl = el.querySelector('[data-aoi-method="file"] button');
+        fileAddEl.addEventListener('click', e => {
+            var reader = new FileReader();
+            reader.readAsText(fileEl.files[0], 'UTF-8');
+            reader.onload = function(e) {
+                setAoiData(JSON.parse(e.target.result));
+            }
+        })
+
+        const manualTextEl = el.querySelector('[data-aoi-method="manual"] textarea');
+        const manualTextAddEl = el.querySelector('[data-aoi-method="manual"] button');
+        manualTextAddEl.addEventListener('click', e => {
+            setAoiData(JSON.parse(manualTextEl.value));
+        })
+
+        addControlEl(el);
+    }
+
+    const aoiListControlTemplateEl = document.querySelector('[data-controls=area-of-interest-list]');
+    aoiListControlTemplateEl.parentElement.removeChild(aoiListControlTemplateEl);
+    const initAoiListControl = () => {
+        const el = renderedElements.aoiList = aoiListControlTemplateEl.cloneNode(true);
+        addControlEl(el)
+    };
+
+    const aoiControlTemplateEl = document.querySelector('[data-controls=area-of-interest]');
+    aoiControlTemplateEl.parentElement.removeChild(aoiControlTemplateEl);
+    const initAoiControl = (data) => {
+        let aoiTurf;
+        switch(data.type) {
+            case 'FeatureCollection':
+                data = data.features[0].geometry
+                break;
+            case 'Feature':
+                aoiTurf = data.geometry
+                break;
+        }
+        switch(data.type) {
+            case 'Polygon':
+                aoiTurf = turf.polygon(data.coordinates);
+                break;
+            case 'MultiPolygon':
+                aoiTurf = turf.multiPolygon(data.coordinates);
+                break;
+            default:
+                // assume outer polygon ring coordinates [ [x,y], [x2,y2], ... ]
+                aoiTurf = turf.polygon([data]);
+        }
+
+        const el = aoiControlTemplateEl.cloneNode(true);
+        const findIntersection = () => {
+            const bbox = turf.bbox(aoiTurf);
+            const center = turf.center(aoiTurf);
             const canvasStyle = getComputedStyle(map.getCanvas());
             let lastZoom;
             const adjustZoom = () => {
@@ -470,7 +581,7 @@ function LidarScraperMap() {
             const loadDataPromises = [];
             turfData.all.features.forEach(feature => {
                 const turfProjectPoly = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
-                if (turf.intersect(intersectionTurfPolygon, turfProjectPoly)) {
+                if (turf.booleanIntersects(aoiTurf, turfProjectPoly)) {
                     intersectingProjects.push(feature.properties.project);
                     const loadPromise = loadProjectData(feature.properties.project, feature.id, false);
                     loadDataPromises.push(loadPromise);
@@ -478,22 +589,30 @@ function LidarScraperMap() {
             })
             Promise.all(loadDataPromises).then(() => {
                 const combinedFeatures = [];
+                const lazUrls = [];
                 intersectingProjects.forEach(project => {
                     mapData[project].features.forEach(feature => {
                         const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
-                        if (turf.intersect(intersectionTurfPolygon, turfProjectTilePoly)) {
+                        if (turf.booleanIntersects(aoiTurf, turfProjectTilePoly)) {
                             combinedFeatures.push(feature);
+                            lazUrls.push(`${USGS_URL_BASE}/${feature.properties.project}/${feature.properties.lazTilePath}`)
                         }
                     });
                 });
                 mapSources.project.setData({type: 'FeatureCollection', features: combinedFeatures});
-                mapSources.highlight.setData(intersectionTurfPolygon);
+                mapSources.highlight.setData(aoiTurf);
+
+                el.querySelector('[data-laz-list]').value = lazUrls.join('\n');
+                el.querySelector('[data-tiles-geojson]').value = JSON.stringify({type: 'FeatureCollection', features: combinedFeatures})
             })
-        })
-        addControlEl(polygonIntersectControlEl)
+        };
+        el.querySelector('button[data-button="intersect"]').addEventListener('click', findIntersection);
+        addControlEl(el, renderedElements.aoiList)
 
     }
-    initPolygonIntersectionControl()
+
+    initNewAoiControl();
+    initAoiListControl();
 
 
 

@@ -9,6 +9,7 @@
     <script src='client/third-party/api.mapbox.com_mapbox-gl-js_plugins_mapbox-gl-draw_v1.4.3_mapbox-gl-draw.js'></script>
     <link href='client/third-party/api.mapbox.com_mapbox-gl-js_plugins_mapbox-gl-draw_v1.4.3_mapbox-gl-draw.css' rel='stylesheet'/>
     <script src="client/map.js"></script>
+    <script src="client/mapbox-fake.js"></script>
     <script src="client/mapbox-draw-theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -24,9 +25,7 @@
         #map-controls input {
             display: block;
         }
-        .mapboxgl-popup-content {
-            background: rgba(255,255,255, 0.75);
-        }
+
         [data-controls=container] {
             position: fixed; top: 0; right: 0; z-index: 123;
             max-width: 500px;
@@ -44,6 +43,22 @@
             background-color: rgba(255, 255, 255, .85);
             border: 1px solid black;
         }
+
+        [data-aoi-method-link] {
+            padding: 3px;
+            border: 1px solid grey;
+            border-radius: 5px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        [data-aoi-method] {
+            padding: 5px;
+        }
+        textarea {
+            width: 90%;
+            height: 100px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -55,12 +70,48 @@
 <div id='map' style='width: 100vw; height: 100vh;'></div>
 
 <div style="display:none;">
-    <div data-controls="polygon-intersect">
-        <h3>Polygon Intersect Tool</h3>
-        <button data-button="draw" data-text-off="select on map" data-text-on="done selecting"></button>
-        <textarea placeholder="enter full GeoJSON or a simple array of polygon vertices' coordinates"></textarea>
-        <br/>
-        <button data-button="intersect">find intersection</button>
+    <div data-controls="add-area-of-interest">
+        <h3>Add Area of Interest</h3>
+        <div>
+            <a href="#draw" data-aoi-method-link="draw">draw on map</a>
+            <a href="#file" data-aoi-method-link="file">upload file</a>
+            <a href="#manual" data-aoi-method-link="manual">manual</a>
+        </div>
+        <div data-aoi-method="draw">
+            <button data-aoi-draw="start">select/draw on map</button>
+            <button data-aoi-draw="stop">done drawing</button>
+            <button data-aoi-draw="cancel" style="display: none;">cancel</button>
+        </div>
+        <div data-aoi-method="file">
+            <input type="file" />
+            <button>Add</button>
+        </div>
+        <div data-aoi-method="manual">
+            <textarea placeholder="enter full GeoJSON or a simple array of polygon vertices' coordinates"></textarea>
+            <button>Add</button>
+            <div data-errors></div>
+        </div>
+    </div>
+    <div data-controls="area-of-interest">
+        <button data-button="intersect">find intersecting projects/tiles</button>
+
+        <div>Tiles GeoJSON:
+            <textarea data-tiles-geojson></textarea>
+        </div>
+        <div>
+            LAZ URLs:
+            <textarea data-laz-list></textarea>
+        </div>
+    </div>
+    <div data-controls="area-of-interest-list">
+    </div>
+    <div data-controls="projects">
+        <div data-controls="loaded">1</div>
+        <div data-controls="other">1</div>
+    </div>
+    <div data-controls="projects">
+        <div data-controls="loaded">1</div>
+        <div data-controls="other">1</div>
     </div>
 </div>
 
