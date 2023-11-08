@@ -435,9 +435,9 @@ function LidarScraperMap() {
 
         polygonIntersectControlEl.querySelector('button[data-button="intersect"]').addEventListener('click', e => {
             const json = JSON.parse(textArea.value);
-            const turfPolygon = turf.polygon(json.type ? json.geometry.coordinates : [json]);
-            const bbox = turf.bbox(turfPolygon);
-            const center = turf.center(turfPolygon);
+            const intersectionTurfPolygon = turf.polygon(json.type ? json.geometry.coordinates : [json]);
+            const bbox = turf.bbox(intersectionTurfPolygon);
+            const center = turf.center(intersectionTurfPolygon);
             const canvasStyle = getComputedStyle(map.getCanvas());
             let lastZoom;
             const adjustZoom = () => {
@@ -470,17 +470,25 @@ function LidarScraperMap() {
             const intersectingProjects = [];
             const loadDataPromises = [];
             turfData.all.features.forEach(feature => {
-                const turfFeatureGeometry = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
-                if (turf.intersect(turfPolygon, turfFeatureGeometry)) {
+                const turfProjectPoly = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
+                if (turf.intersect(intersectionTurfPolygon, turfProjectPoly)) {
                     intersectingProjects.push(feature.properties.project);
-                    const loadPromise = loadProjectData(feature.properties.project, feature.id);
+                    const loadPromise = loadProjectData(feature.properties.project, feature.id, false);
                     loadDataPromises.push(loadPromise);
                 }
             })
             Promise.all(loadDataPromises).then(() => {
                 const combinedFeatures = [];
-                intersectingProjects.forEach(project => { combinedFeatures.push(...mapData[project].features); });
-                mapSources.highlight.setData({type: 'FeatureCollection', features: combinedFeatures});
+                intersectingProjects.forEach(project => {
+                    mapData[project].features.forEach(feature => {
+                        const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
+                        if (turf.intersect(intersectionTurfPolygon, turfProjectTilePoly)) {
+                            combinedFeatures.push(feature);
+                        }
+                    });
+                });
+                mapSources.project.setData({type: 'FeatureCollection', features: combinedFeatures});
+                mapSources.highlight.setData(intersectionTurfPolygon);
             })
         })
         addControlEl(polygonIntersectControlEl)
