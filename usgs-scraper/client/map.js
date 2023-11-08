@@ -442,7 +442,6 @@ function LidarScraperMap() {
             let lastZoom;
             const adjustZoom = () => {
                 const currentZoom = map.getZoom();
-                log('move/zoom end, now adjusting zoom', currentZoom, map.getCenter())
                 if (currentZoom === lastZoom) {
                     return; // sometimes the zoom might max out, then stop recursing
                 }
@@ -451,7 +450,7 @@ function LidarScraperMap() {
                 const bboxWidth = Math.abs(bboxInPixels[1] - bboxInPixels[3]);
                 const canvasHeight = parseInt(canvasStyle.height);
                 const canvasWidth = parseInt(canvasStyle.width);
-                log(bboxInPixels, bboxHeight, bboxWidth, canvasHeight, canvasWidth)
+                log(`move/zoom end, now adjusting zoom :: bboxInPixels: ${bboxInPixels}, bboxHeight: ${bboxHeight}, bboxWidth: ${bboxWidth}, canvasHeight: ${canvasHeight}, canvasWidth: ${canvasWidth},  currentZoom: ${currentZoom}, center: ${map.getCenter()}`);
                 if (bboxInPixels[0] < 0 || bboxInPixels[0] > canvasWidth
                     || bboxInPixels[2] < 0 || bboxInPixels[2] > canvasWidth
                     || bboxInPixels[1] < 0 || bboxInPixels[1] > canvasHeight
