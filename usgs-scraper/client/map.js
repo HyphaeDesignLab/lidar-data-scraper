@@ -1,5 +1,5 @@
 function LidarScraperMap() {
-    const USGS_URL_BASE = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects/'
+    const USGS_URL_BASE = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
     if (LidarScraperMap.__IS_INIT) {
         return;
     }
@@ -9,13 +9,15 @@ function LidarScraperMap() {
         window.mapboxgl = FakeMapboxglMap;
         window.MapboxDraw = FakeMapboxDraw;
     }
-    const log = window.location.search.indexOf('debug=') < 0 ? () => {} : (...things) => {
+    const log = window.location.search.indexOf('debug=') < 0 ? () => {
+    } : (...things) => {
         things.forEach(thing => {
             console.log(thing)
         });
     };
 
-    window.map=null
+    window.map = null
+
     function initMap() {
         mapboxgl.accessToken = 'pk.eyJ1IjoiaHlwaGFlLWxhYiIsImEiOiJjazN4czF2M2swZmhkM25vMnd2MXZrYm11In0.LS_KIw8THi2qIethuAf2mw';
 
@@ -40,9 +42,8 @@ function LidarScraperMap() {
     }
 
 
-
     let layersToQuery = ['all'];
-    const mapSources = {'highlight': null, 'all':null, 'project': null}
+    const mapSources = {'highlight': null, 'all': null, 'project': null}
     const mapData = {};
 
     function initData() {
@@ -53,7 +54,7 @@ function LidarScraperMap() {
                 customDataFile = customDataFileMatch[1]
             }
         }
-        const dataFile = customDataFile ? customDataFile : 'projects/leaves-status.json'
+        const dataFile = customDataFile ? customDataFile : 'projects/map_tiles.json'
         fetch(dataFile)
             .then(response => response.json())
             .then(data => loadAllProjectsData(data));
@@ -71,6 +72,7 @@ function LidarScraperMap() {
             ["rgba", 252, 81, 121, .2] // "#fc5179"
         ]
     }
+
     function loadAllProjectsData(data) {
         mapData.all = data;
         log(data)
@@ -115,7 +117,10 @@ function LidarScraperMap() {
             }
         });
 
-        map.addSource('project', {type: 'geojson', data: {type: 'FeatureCollection', features: []}});
+        map.addSource('project', {
+            type: 'geojson',
+            data: {type: 'FeatureCollection', features: []}
+        });
         mapSources.project = map.getSource('project')
         map.addLayer({
             'id': 'project',
@@ -149,7 +154,9 @@ function LidarScraperMap() {
         toggleMapClick(true);
     }
 
-    function loadProjectData(project, parentFeatureId, immediatelyDisplayLoadedData=true) {
+    function loadProjectData(projectFeature, immediatelyDisplayLoadedData = true) {
+        const project = projectFeature.properties.project;
+        const parentFeatureId = parseInt(projectFeature.id);
         const loadData_ = () => {
             if (immediatelyDisplayLoadedData) {
                 mapSources.project.setData(mapData[project]); // update
@@ -160,8 +167,7 @@ function LidarScraperMap() {
             loadData_()
             return Promise.resolve();
         } else {
-            parentFeatureId = parseInt(parentFeatureId)
-            return fetch(`projects/${project}/xml_tiles.json`)
+            return fetch(`projects/${project}/map_tiles.json`)
                 .then(response => response.json())
                 .then(data => {
                     if (!data.features[0].id) {
@@ -171,7 +177,10 @@ function LidarScraperMap() {
                         })
                     }
                     data.features.forEach(feature => {
+                        // fill in missing pieces that do not need to be transferred via WEB
                         feature.properties.type = 'project'
+                        feature.properties.project = project
+                        feature.properties.laz_url_dir = projectFeature.properties.laz_url_dir;
                     })
 
                     // update source
@@ -183,9 +192,10 @@ function LidarScraperMap() {
     }
 
     let clickMode = 'all'
+
     function setClickMode(mode) {
         clickMode = mode;
-        switch(mode) {
+        switch (mode) {
             case 'all':
                 layersToQuery = ['all'];
                 map.setPaintProperty('all', 'fill-color', allProjectsFillColorForMode.all);
@@ -196,6 +206,7 @@ function LidarScraperMap() {
                 break;
         }
     }
+
     function toggleMapClick(newState) {
         if (newState) {
             map.on('click', onMapClick);
@@ -203,6 +214,7 @@ function LidarScraperMap() {
             map.off('click', onMapClick);
         }
     }
+
     function onMapClick(clickEvent) {
         var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
         log(features);
@@ -223,6 +235,7 @@ function LidarScraperMap() {
             renderPopup(feature, clickEvent.lngLat)
         }
     }
+
     function renderMultiLayerChooser(features, mapClickEventLngLat) {
         const listEl = document.createElement('ul');
         listEl.style.padding = '0';
@@ -234,12 +247,12 @@ function LidarScraperMap() {
             const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
             const name = !feature.properties.is_bbox ?
                 `tile ${feature.id} (${projectName})`
-                :`project ${projectName} with ${feature.properties.tile_count} tiles`;
+                : `project ${projectName} with ${feature.properties.tile_count} tiles`;
             const el = document.createElement('li');
-            el.style.cursor='pointer'
-            el.style.textDecoration='underline'
-            el.style.margin='0'
-            el.style.marginLeft='10px'
+            el.style.cursor = 'pointer'
+            el.style.textDecoration = 'underline'
+            el.style.margin = '0'
+            el.style.marginLeft = '10px'
             el.innerText = name;
             el.addEventListener('click', e => {
                 popup.remove();
@@ -249,6 +262,7 @@ function LidarScraperMap() {
         })
         popup = initPopupObject(listEl, mapClickEventLngLat);
     }
+
     function onMultiLayerChooserClick(feature, mapClickEventLngLat) {
         mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
         renderPopup(feature, mapClickEventLngLat)
@@ -259,7 +273,6 @@ function LidarScraperMap() {
         const dateEnd = feature.properties.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')
         const leavesStatus = feature.properties.leaves.toUpperCase();
         const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
-        const projectId = feature.properties.project;
         const tileCount = feature.properties.tile_count;
 
         // if the feature clicked on to show popup for is the "bounding box" tile of a project (not the individual tile within a project)
@@ -278,16 +291,16 @@ function LidarScraperMap() {
     <div>
     <div data-load-more-tiles="error" style="color: red; display: none"></div>
     <span data-load-more-tiles="loading" style="display: none">loading tiles...</span>
-    <a href="#"
-        data-load-more-tiles="start"
-        data-project="${projectId}"
-        data-feature-id="${feature.id}">
-        see tiles</a>
+    <a href="#" data-load-more-tiles="start">see tiles</a>
     </div>
 </div>
 `;
-            clickHandlers = addProjectPopupClickHandlers;
+            clickHandlers = () => {
+                addProjectPopupClickHandlers(feature)
+            };
         } else {
+            const lazUrl = makeLazUrl(feature);
+            const lazSize = feature.properties.laz_size;
             html = `
 <div><strong>Project TILE ${feature.id}: <br/></strong> (${projectName})</div>
 <div>
@@ -297,11 +310,7 @@ function LidarScraperMap() {
     <div>
     <div data-load-more-tiles="error" style="color: red; display: none"></div>
     <span data-load-more-tiles="loading" style="display: none">downloading tiles...</span>
-    <a href="#"
-        data-load-more-tiles="start"
-        data-project="${projectId}"
-        data-feature-id="${feature.id}">
-        download tile</a>
+    <a href="${lazUrl}" target="_blank">download LAZ tile (${lazSize})</a>
     </div>
 </div>
 `;
@@ -309,7 +318,7 @@ function LidarScraperMap() {
         initPopupObject(html, mapClickLngLat, clickHandlers);
     }
 
-    function addProjectPopupClickHandlers() {
+    function addProjectPopupClickHandlers(projectFeature) {
         const loadTilesEl = document.querySelector('[data-load-more-tiles=start]');
         const loadTilesErrorEl = document.querySelector('[data-load-more-tiles=error]');
         const loadingTilesEl = document.querySelector('[data-load-more-tiles=loading]');
@@ -321,7 +330,7 @@ function LidarScraperMap() {
             loadTilesErrorEl.innerText = '';
             loadTilesErrorEl.style.display = 'none';
             setTimeout(() => {
-                loadProjectData(e.target.dataset.project, e.target.dataset.featureId)
+                loadProjectData(projectFeature)
                     .then(() => {
                         loadTilesEl.style.display = 'none';
                         loadingTilesEl.style.display = 'none'
@@ -338,6 +347,7 @@ function LidarScraperMap() {
     }
 
     let lastPopup;
+
     function initPopupObject(htmlOrEl, popupLngLat, onOpenCallback) {
         var markerHeight = 50, markerRadius = 10, linearOffset = 25;
         var popupOffsets = {
@@ -391,12 +401,14 @@ function LidarScraperMap() {
     function addProjectControlEl(project) {
         //renderProjectControlEl(project)
     }
+
     function renderProjectControlEl(project) {
         const el = document.createElement('div')
         el.innerHTML = `<div>${project}</div>`
         controlsEl.contentEl.appendChild(el);
     }
-    function addControlEl(el, parentEl=null) {
+
+    function addControlEl(el, parentEl = null) {
         (parentEl ? parentEl : controlsEl.contentEl).appendChild(el);
     }
 
@@ -419,10 +431,10 @@ function LidarScraperMap() {
 
         const methodLinks = el.querySelectorAll('[data-aoi-method-link]');
         const methodContainers = el.querySelectorAll('[data-aoi-method]');
-        const updateMethodLinksAndContainers = (activeType=false) => {
+        const updateMethodLinksAndContainers = (activeType = false) => {
             methodLinks.forEach(el => el.style.background = el.dataset.aoiMethodLink === activeType ? 'lightgrey' : 'unset');
             methodContainers.forEach(el => {
-                el.style.display = el.dataset.aoiMethod === activeType ? '':'none';
+                el.style.display = el.dataset.aoiMethod === activeType ? '' : 'none';
                 if (activeType !== 'draw' && el.dataset.aoiMethod === 'draw') {
                     !!drawCancel && drawCancel();
                 }
@@ -441,8 +453,8 @@ function LidarScraperMap() {
         const drawStopBtn = el.querySelector('[data-aoi-method="draw"] [data-aoi-draw=stop]');
         const drawCancelBtn = el.querySelector('[data-aoi-method="draw"] [data-aoi-draw=cancel]');
 
-        drawStopBtn.style.display='none';
-        drawCancelBtn.style.display='none';
+        drawStopBtn.style.display = 'none';
+        drawCancelBtn.style.display = 'none';
 
         let drawState = false;
         let mapboxDrawObj = false;
@@ -453,9 +465,9 @@ function LidarScraperMap() {
             drawState = true;
             toggleMapClick(!drawState); // invert-set map click when in "draw on map" mode
 
-            drawStartBtn.style.display='none';
-            drawStopBtn.style.display='';
-            drawCancelBtn.style.display='';
+            drawStartBtn.style.display = 'none';
+            drawStopBtn.style.display = '';
+            drawCancelBtn.style.display = '';
 
             if (!mapboxDrawObj) {
                 mapboxDrawObj = new MapboxDraw({
@@ -480,9 +492,9 @@ function LidarScraperMap() {
             drawState = false;
             toggleMapClick(!drawState); // invert-set map click when in "draw on map" mode
 
-            drawStartBtn.style.display='';
-            drawStopBtn.style.display='none';
-            drawCancelBtn.style.display='none';
+            drawStartBtn.style.display = '';
+            drawStopBtn.style.display = 'none';
+            drawCancelBtn.style.display = 'none';
 
             const featureCollection = mapboxDrawObj.getAll();
             mapboxDrawObj.changeMode('simple_select')
@@ -498,9 +510,9 @@ function LidarScraperMap() {
             drawState = false;
             toggleMapClick(!drawState); // invert-set map click when in "draw on map" mode
 
-            drawStartBtn.style.display='';
-            drawStopBtn.style.display='none';
-            drawCancelBtn.style.display='none';
+            drawStartBtn.style.display = '';
+            drawStopBtn.style.display = 'none';
+            drawCancelBtn.style.display = 'none';
 
             mapboxDrawObj.changeMode('simple_select')
             mapboxDrawObj.deleteAll();
@@ -514,7 +526,7 @@ function LidarScraperMap() {
         fileEl.addEventListener('change', e => {
             var reader = new FileReader();
             reader.readAsText(fileEl.files[0], 'UTF-8');
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 setAoiData(JSON.parse(e.target.result));
             }
         })
@@ -538,7 +550,7 @@ function LidarScraperMap() {
     const aoiControlTemplateEl = document.querySelector('[data-controls=area-of-interest]');
     aoiControlTemplateEl.parentElement.removeChild(aoiControlTemplateEl);
     const initAoiControl = (data) => {
-        switch(data.type) {
+        switch (data.type) {
             case 'FeatureCollection':
                 data = data.features[0].geometry
                 break;
@@ -550,7 +562,7 @@ function LidarScraperMap() {
                 break;
         }
         let aoiDataTurf;
-        switch(data.type) {
+        switch (data.type) {
             case 'Polygon':
                 aoiDataTurf = turf.polygon(data.coordinates);
                 break;
@@ -565,11 +577,11 @@ function LidarScraperMap() {
         const el = aoiControlTemplateEl.cloneNode(true);
         const nameEl = el.querySelector('[data-name]')
         const nameEditEl = el.querySelector('[data-name-edit]')
-        nameEl.innerText = `New area of interest ${String(new Date()).substring(0,21)}`
+        nameEl.innerText = `New area of interest ${String(new Date()).substring(0, 21)}`
         nameEditEl.addEventListener('click', e => {
             nameEl._isContentEditable = !nameEl._isContentEditable; // custom property boolean
             nameEl.contentEditable = nameEl._isContentEditable; // string proper DOM property; assignment will cast boolean to string
-            nameEditEl.innerText = nameEl._isContentEditable ? 'save':'edit name';
+            nameEditEl.innerText = nameEl._isContentEditable ? 'save' : 'edit name';
             if (nameEl._isContentEditable) {
                 nameEl.focus();
             } else {
@@ -580,15 +592,15 @@ function LidarScraperMap() {
         el.detailsEl = el.querySelector('[data-details]')
         const detailsToggleEl = el.querySelector('[data-details-toggle]')
         const intersectBtn = el.querySelector('button[data-button="intersect"]')
-        const lazUrlsEl = el.querySelector('[data-laz-list]');
-        const tilesGeoJsonEl = el.querySelector('[data-tiles-geojson]')
         const missingLazTilesEl = el.querySelector('[data-missing-tiles]')
+        const selectedProjectsLazSizeEl = el.querySelector('[data-selected-laz-size]')
         const bbox = turf.bbox(aoiDataTurf);
         const center = turf.center(aoiDataTurf);
         const canvasStyle = getComputedStyle(map.getCanvas());
 
         const intersectingTiles = {};
         const intersectingTilesLazUrls = {};
+        const intersectingTilesLazSizes = {};
         const intersectingProjects = {};
         const intersectingProjectsSelected = {};
         const findIntersection = () => {
@@ -599,10 +611,10 @@ function LidarScraperMap() {
 
             const loadDataPromises = [];
             mapData.all.features.forEach(feature => {
-                const turfProjectPoly = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
+                const turfProjectPoly = turf[typeof (feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon' : 'multiPolygon'](feature.geometry.coordinates, feature.properties)
                 if (turf.booleanIntersects(aoiDataTurf, turfProjectPoly)) {
                     intersectingProjects[feature.properties.project] = feature.properties;
-                    const loadPromise = loadProjectData(feature.properties.project, feature.id, false);
+                    const loadPromise = loadProjectData(feature, false);
                     loadDataPromises.push(loadPromise);
                 }
             })
@@ -616,11 +628,15 @@ function LidarScraperMap() {
                             if (!intersectingTiles[project]) {
                                 intersectingTiles[project] = [];
                                 intersectingTilesLazUrls[project] = [];
+                                intersectingTilesLazSizes[project] = 0;
                             }
-                            if (!feature.properties.lazTilePath || feature.properties.lazTilePath !== 'missing') {
-                                intersectingTiles[project].push(feature);
-                                intersectingTilesLazUrls[project].push(`${USGS_URL_BASE}/${feature.properties.project}/${feature.properties.lazTilePath}`)
-                                intersectingProjectsSelected[project] = true;
+                            intersectingProjectsSelected[project] = true;
+                            intersectingTiles[project].push(feature);
+                            if (feature.properties.laz_tile) {
+                                intersectingTilesLazUrls[project].push(makeLazUrl(feature))
+                                if (feature.properties.laz_size) {
+                                    intersectingTilesLazSizes[project] += parseLazSize(feature.properties.laz_size)
+                                }
                             } else {
                                 missingLazTilesCount++;
                             }
@@ -631,12 +647,13 @@ function LidarScraperMap() {
                 addProjectSelector();
                 addTextboxes();
                 hightlightIntersectionTiles();
+                updateSelectedSize();
 
                 intersectBtn.style.display = 'none';
                 el.isActive = true;
                 el.detailsEl.style.display = '';
                 if (missingLazTilesCount > 0) {
-                    missingLazTilesEl.style.display='';
+                    missingLazTilesEl.style.display = '';
                     missingLazTilesEl.children[0].innerText = missingLazTilesCount;
                 }
             })
@@ -648,7 +665,7 @@ function LidarScraperMap() {
             const adjustZoom = () => {
                 const currentZoom = map.getZoom();
 
-                const bboxInPixels = [ ...Object.values(map.project([bbox[0], bbox[1]])), ...Object.values(map.project([bbox[2], bbox[3]])) ].map(n => Math.round(n*10)/10);
+                const bboxInPixels = [...Object.values(map.project([bbox[0], bbox[1]])), ...Object.values(map.project([bbox[2], bbox[3]]))].map(n => Math.round(n * 10) / 10);
                 const bboxHeight = Math.abs(bboxInPixels[0] - bboxInPixels[2]);
                 const bboxWidth = Math.abs(bboxInPixels[1] - bboxInPixels[3]);
                 const canvasHeight = parseInt(canvasStyle.height);
@@ -679,7 +696,7 @@ function LidarScraperMap() {
             map.once('moveend', adjustZoom);
 
         }
-        const hightlightIntersectionTiles = ()  => {
+        const hightlightIntersectionTiles = () => {
             const features = [];
             Object.keys(intersectingProjectsSelected).forEach(project => {
                 if (intersectingProjectsSelected[project]) {
@@ -689,23 +706,35 @@ function LidarScraperMap() {
             mapSources.project.setData({type: 'FeatureCollection', features});
             mapSources.highlight.setData(aoiDataTurf);
         }
-        const addProjectSelector = ()  => {
+        const updateSelectedSize = () => {
+            let size = 0;
+            Object.keys(intersectingProjectsSelected).forEach(project => {
+                if (intersectingProjectsSelected[project]) {
+                    size += intersectingTilesLazSizes[project];
+                }
+            });
+            selectedProjectsLazSizeEl.innerText = makeLazSizeReadable(size);
+        }
+        const addProjectSelector = () => {
             const containerEl = el.querySelector('[data-intersecting-projects]');
             const templateEl = el.querySelector('[data-intersecting-project]');
             templateEl.parentElement.removeChild(templateEl);
             Object.keys(intersectingProjects).forEach(projectName => {
                 const project = intersectingProjects[projectName];
                 const projectEl = templateEl.cloneNode(true);
-                projectEl.querySelector('span').innerText = `${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')}, ${projectName.replaceAll('_', ' ')} `
-                projectEl.querySelector('input').addEventListener('click', e => {
+                projectEl.querySelector('span').innerText = `${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')}, ${makeLazSizeReadable(intersectingTilesLazSizes[projectName])} (${projectName.replaceAll('_', ' ')})`
+                const input = projectEl.querySelector('input');
+                input.checked = true;
+                input.addEventListener('click', e => {
                     log(e.target.checked);
-                    intersectingProjectsSelected[projectName] = e.target.checked
+                    intersectingProjectsSelected[projectName] = e.target.checked;
                     hightlightIntersectionTiles();
+                    updateSelectedSize();
                 });
                 containerEl.appendChild(projectEl);
             })
         }
-        const addTextboxes = ()  => {
+        const addTextboxes = () => {
             el.querySelector('[data-tiles-geojson]').addEventListener('click', e => {
                 const features = [];
                 Object.keys(intersectingProjectsSelected).forEach(project => {
@@ -764,29 +793,60 @@ function LidarScraperMap() {
     initAoiContainerControl();
 
 
-
     initMap()
     map.on('load', initData);
-}
 
-const makeGlobalCopyPasteTextarea = text => {
-    const containerEl = document.createElement('div');
-    containerEl.classList.add('copy-paste-global-popup');
-    const closeEl = document.createElement('div');
-    closeEl.innerText = 'close (x)'
-    const el = document.createElement('textarea');
-    el.readOnly = true;
-    el.value = text;
-    el.addEventListener('click', e => { el.focus(); el.select(); })
-    closeEl.addEventListener('click', e => containerEl.parentElement.removeChild(containerEl))
-    containerEl.appendChild(el);
-    containerEl.appendChild(closeEl);
-    document.querySelector('body').appendChild(containerEl);
-}
-const geoHelpers = {
-    getPolygonFirstCoordinate: featureOrCoordinates => {
-        const coordinates = featureOrCoordinates.geometry ? featureOrCoordinates.geometry.coordinates : featureOrCoordinates;
-        const isMulti = typeof(coordinates[0][0][0]) === 'object';
-        return isMulti ? coordinates[0][0][0] : coordinates[0][0];
+
+    const makeGlobalCopyPasteTextarea = text => {
+        const containerEl = document.createElement('div');
+        containerEl.classList.add('copy-paste-global-popup');
+        const closeEl = document.createElement('div');
+        closeEl.innerText = 'close (x)'
+        const el = document.createElement('textarea');
+        el.readOnly = true;
+        el.value = text;
+        el.addEventListener('click', e => {
+            el.focus();
+            el.select();
+        })
+        closeEl.addEventListener('click', e => containerEl.parentElement.removeChild(containerEl))
+        containerEl.appendChild(el);
+        containerEl.appendChild(closeEl);
+        document.querySelector('body').appendChild(containerEl);
+    }
+    const geoHelpers = {
+        getPolygonFirstCoordinate: featureOrCoordinates => {
+            const coordinates = featureOrCoordinates.geometry ? featureOrCoordinates.geometry.coordinates : featureOrCoordinates;
+            const isMulti = typeof (coordinates[0][0][0]) === 'object';
+            return isMulti ? coordinates[0][0][0] : coordinates[0][0];
+        }
+    }
+    const makeLazUrl = (tileFeature) => {
+        const props = tileFeature.properties;
+        const [project, subproject] = props.project.split('/');
+        const tileName = props.laz_tile.replace('{u}', 'USGS_LPC_').replace('{prj}', project).replace('{sprj}', subproject);
+        return `${USGS_URL_BASE}/${props.project}/${props.laz_url_dir}/${tileName}.laz`
+    }
+    const makeLazSizeReadable = (size) => {
+        let factor = 30;
+        let suffix = 'GB';
+        if (size < Math.pow(2, 20)) {
+            factor = 10;
+            suffix = 'KB';
+        } else if (size < Math.pow(2, 30)) {
+            factor = 20;
+            suffix = 'MB';
+        }
+        return String(Math.round(10 * size / Math.pow(2, factor))/10).replace(/(\.\d).+$/, '$1') + suffix;
+    }
+    const parseLazSize = (sizeString) => {
+        const sizeNumber = parseFloat(sizeString);
+        const sizeFactor = sizeString.toUpperCase().replace(/[0-9\.]/g, '')
+        const sizeFactorNumber = Math.pow(2, ({
+            K: 10,
+            M: 20,
+            G: 30
+        })[sizeFactor]); // KiloByte = 2 ^ 10, MB = 2 ^ 20, GB = 2 ^ 30
+        return sizeNumber * sizeFactorNumber;
     }
 }

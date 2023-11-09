@@ -11,7 +11,7 @@ import time
 def run():
     leaves_report_file=open('projects/leaves-status.txt', 'r')
 
-    all_tiles_file = open('projects/leaves-status.json', 'w')
+    all_tiles_file = open('projects/map_tiles.json', 'w')
     all_tiles_file.write('{"type": "FeatureCollection", "features": [\n')
     all_tiles_file.close()
     is_first_line = True
@@ -34,10 +34,19 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     if not os.path.isdir(f'projects/{project}'):
         print(f'projects/{project}')
         return
+    project_pieces = project.split('/')
+
     start_time = time.time()
-    dir = 'projects/'+project+'/meta/'
-    # Get the list of files in the directory
-    files = os.listdir(dir)
+    meta_dir = 'projects/'+project+'/meta'
+    laz_dir = 'projects/'+project+'/laz'
+
+    laz_url_dir_name=None
+    laz_dir_name_file_name = 'projects/'+project+'/_index/current/laz_dir.txt'
+    if os.path.isfile(laz_dir_name_file_name):
+        laz_dir_name_file=open(laz_dir_name_file_name)
+        laz_url_dir_name = laz_dir_name_file.read().replace('\n', '')
+        laz_dir_name_file.close()
+
     # Print the file names
     date_start=None
     date_end=None
@@ -45,32 +54,43 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     #bbox = { "west": None, "east": None, "north": None, "south":  None}
     project_tiles_union = None
     project_tiles_arr = []
-    project_tiles_file = open ('projects/'+project+'/xml_tiles.json', 'w')
+    project_tiles_file = open ('projects/'+project+'/map_tiles.json', 'w')
     project_tiles_file.write('{"type": "FeatureCollection", "features": [')
 
     is_first_tile=True
     file_count=0
-    for file_name in files:
-        if '.xml.txt' not in file_name:
-            continue
+    # Get the list of XML files
+    xml_files_list_filename = meta_dir+'/_index/current/xml_files.txt'
+    xml_files_list_file = open(xml_files_list_filename)
+    for file_name in xml_files_list_file:
         file_count=file_count+1
+
+    laz_files_list_filename = laz_dir+'/_index/current/files_details.txt'
+    laz_files_list_file = open(laz_files_list_filename)
+    laz_details = {}
+    for line_details in laz_files_list_file:
+        line_details = line_details.replace('\n', '')
+        laz_details_i = line_details.split('~')
+        laz_details[laz_details_i[0]] = { 'size':  laz_details_i[2], 'date_modified':  laz_details_i[1] }
+
+
 
     print ('%s project has %d tiles\n' % (project, file_count))
 
     deltas_sum = 0
-    for file_name in files:
-        if '.xml.txt' not in file_name:
-            continue
+    xml_files_list_file.seek(0)
+    for file_name_no_extension_abbreviated in xml_files_list_file:
+        file_name_no_extension_abbreviated = file_name_no_extension_abbreviated.replace('\n', '')
+        file_name_no_extension = file_name_no_extension_abbreviated.replace('{u}', 'USGS_LPC_').replace('{prj}', project_pieces[0])
+        if len(project_pieces) > 1 and '{sprj}' in file_name_no_extension:
+            file_name_no_extension = file_name_no_extension.replace('{sprj}', project_pieces[1])
+
+        file_name = file_name_no_extension + '.xml.txt'
         bounds = {}
-        file=open(dir+file_name, 'r')
+        if not os.path.isfile(meta_dir+'/'+file_name):
+            continue
 
-
-        laz_dir_name=None
-        laz_dir_name_file_name = 'projects/'+project+'/_index/current/laz_dir.txt'
-        if os.path.isfile(laz_dir_name_file_name):
-            laz_dir_name_file=open(laz_dir_name_file_name)
-            laz_dir_name = laz_dir_name_file.read().replace('\n', '')
-            laz_dir_name_file.close()
+        file=open(meta_dir+'/'+file_name, 'r')
 
         for line in file:
             line=line.replace('\n', '')
@@ -132,11 +152,11 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
            },
            "properties": {
              "is_bbox": False,
-             "project": project,
              "date_start": date_start,
              "date_end": date_end,
              "leaves": leaves_on_off,
-             "lazTilePath": 'missing' if not laz_dir_name else laz_dir_name+'/'+file_name.replace('.xml.txt', '.laz')
+             "laz_tile": file_name_no_extension_abbreviated if file_name_no_extension_abbreviated in laz_details else '',
+             "laz_size": laz_details[file_name_no_extension_abbreviated]['size'] if file_name_no_extension_abbreviated in laz_details else ''
            }
          }))
 
@@ -179,6 +199,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
                  "tile_count": file_count,
                  "is_bbox": True,
                  "project": project,
+                 "laz_url_dir": laz_url_dir_name,
                  "date_start": date_start,
                  "date_end": date_end,
                  "leaves": leaves_on_off
