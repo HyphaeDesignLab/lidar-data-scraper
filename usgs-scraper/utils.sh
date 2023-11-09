@@ -114,6 +114,7 @@ curl_scrape() {
   curl \
     --location \
     -f \
+    --connect-timeout 5 \
     --retry 4 --retry-connrefused \
     -w '%{http_code}' \
     -s -S \
