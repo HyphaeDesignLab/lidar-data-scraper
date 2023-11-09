@@ -1,4 +1,7 @@
 ___utils_sh_included=1
+if [ "$LIDAR_SCRAPER_DEBUG" ]; then
+  set -x
+fi
 
 has_arg_search_args=''
 init_has_arg () {
