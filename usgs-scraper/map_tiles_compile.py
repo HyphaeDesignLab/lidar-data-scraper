@@ -68,11 +68,11 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     laz_details = {'size':'', 'date_modified':''}
     laz_files_list_filename = laz_dir+'/_index/current/files_details.txt'
     if os.path.isfile(laz_files_list_filename):
-    laz_files_list_file = open(laz_files_list_filename)
-    for line_details in laz_files_list_file:
-        line_details = line_details.replace('\n', '')
-        laz_details_i = line_details.split('~')
-        laz_details[laz_details_i[0]] = { 'size':  laz_details_i[2], 'date_modified':  laz_details_i[1] }
+        laz_files_list_file = open(laz_files_list_filename)
+        for line_details in laz_files_list_file:
+            line_details = line_details.replace('\n', '')
+            laz_details_i = line_details.split('~')
+            laz_details[laz_details_i[0]] = { 'size':  laz_details_i[2], 'date_modified':  laz_details_i[1] }
 
 
 
