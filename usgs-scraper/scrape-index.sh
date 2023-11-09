@@ -5,6 +5,7 @@ if [ ! "$___utils_stats_sh_included" ]; then . ./utils-stats.sh; fi
 
 . ./scrape-index-helper.sh
 . ./scrape-meta-index-helper.sh
+. ./scrape-laz-index-helper.sh
 
 echo;
 
@@ -160,6 +161,29 @@ scrape_index() {
           scrape_meta_index_helper $project $mode
         else
           echo "$indentation metadata scrape mode UNKNOWN";
+        fi
+      fi
+      echo_if_debug "scrape-index.sh LAZ index scrape: $project_path/_index/current/laz_dir.txt "
+      if [ -f  $project_path/_index/current/laz_dir.txt ]; then
+        if [ "$mode" = 'normal' ]; then
+          if scrape_laz_index_helper__is_not_started $project; then
+            echo "$indentation LAZ index scraping";
+            scrape_laz_index_helper $project $mode
+          else
+            echo "$indentation LAZ index already scraped";
+          fi
+        elif [ "$mode" = 'if_updated' ]; then
+          if scrape_laz_index_helper__has_been_updated_on_server $project; then
+            echo "$indentation LAZ index dir has changed... scraping";
+            scrape_laz_index_helper $project $mode
+          else
+            echo "$indentation LAZ index dir has NOT changed";
+          fi
+        elif [ "$mode" = 'force' ]; then
+          echo "$indentation LAZ index force-scraping";
+          scrape_laz_index_helper $project $mode
+        else
+          echo "$indentation LAZ scrape mode UNKNOWN";
         fi
       fi
     fi
