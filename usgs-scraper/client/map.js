@@ -408,22 +408,32 @@ function LidarScraperMap() {
     newAoiControlTemplateEl.parentElement.removeChild(newAoiControlTemplateEl);
     const initNewAoiControl = () => {
         const setAoiData = featureCollection => {
-            //mapSources.highlight.setData(featureCollection);
-            initAoiControl(featureCollection)
+            if (featureCollection) {
+                mapSources.highlight.setData(featureCollection);
+                initAoiControl(featureCollection)
+            } else {
+                mapSources.highlight.setData({type: "FeatureCollection", features: []});
+            }
+            updateMethodLinksAndContainers();
         }
 
         const el = newAoiControlTemplateEl.cloneNode(true);
 
         const methodLinks = el.querySelectorAll('[data-aoi-method-link]');
         const methodContainers = el.querySelectorAll('[data-aoi-method]');
-        methodContainers.forEach(el => el.style.display='none');
+        const updateMethodLinksAndContainers = (activeType=false) => {
+            methodLinks.forEach(el => el.style.background = el.dataset.aoiMethodLink === activeType ? 'lightgrey' : 'unset');
+            methodContainers.forEach(el => {
+                el.style.display = el.dataset.aoiMethod === activeType ? '':'none';
+                if (activeType !== 'draw' && el.dataset.aoiMethod === 'draw') {
+                    !!drawCancel && drawCancel();
+                }
+            });
+        }
+
         methodLinks.forEach(el => {
             el.addEventListener('click', e => {
-                methodLinks.forEach(el_ => el_.style.background = el === el_ ?'lightgrey':'unset');
-                methodContainers.forEach(containerEl => {
-                    containerEl.style.display = el.dataset.aoiMethodLink === containerEl.dataset.aoiMethod ? '':'none';
-                });
-
+                updateMethodLinksAndContainers(el.dataset.aoiMethodLink)
                 e.preventDefault();
                 return false;
             })
@@ -438,7 +448,7 @@ function LidarScraperMap() {
 
         let drawState = false;
         let mapboxDrawObj = false;
-        drawStartBtn.addEventListener('click', e => {
+        const drawStart = e => {
             if (drawState) {
                 return;
             }
@@ -462,8 +472,10 @@ function LidarScraperMap() {
                 //map.addControl(drawBtn.mapboxDrawObj, 'top-right');
             }
             mapboxDrawObj.changeMode('draw_polygon')
-        });
-        drawStopBtn.addEventListener('click', e => {
+        };
+        drawStartBtn.addEventListener('click', drawStart);
+
+        const drawStop = e => {
             if (!drawState) {
                 return;
             }
@@ -478,8 +490,10 @@ function LidarScraperMap() {
             mapboxDrawObj.changeMode('simple_select')
             mapboxDrawObj.deleteAll();
             setAoiData(featureCollection);
-        });
-        drawCancelBtn.addEventListener('click', e => {
+        };
+        drawStopBtn.addEventListener('click', drawStop);
+
+        const drawCancel = e => {
             if (!drawState) {
                 return;
             }
@@ -493,11 +507,13 @@ function LidarScraperMap() {
             mapboxDrawObj.changeMode('simple_select')
             mapboxDrawObj.deleteAll();
             setAoiData(null);
-        });
+        };
+        drawCancelBtn.addEventListener('click', drawCancel);
+
+        updateMethodLinksAndContainers();
 
         const fileEl = el.querySelector('[data-aoi-method="file"] input');
-        const fileAddEl = el.querySelector('[data-aoi-method="file"] button');
-        fileAddEl.addEventListener('click', e => {
+        fileEl.addEventListener('change', e => {
             var reader = new FileReader();
             reader.readAsText(fileEl.files[0], 'UTF-8');
             reader.onload = function(e) {
@@ -531,6 +547,9 @@ function LidarScraperMap() {
             case 'Feature':
                 data = data.geometry
                 break;
+            case 'GeometryCollection':
+                data = data.geometries[0]
+                break;
         }
         let aoiDataTurf;
         switch(data.type) {
@@ -547,7 +566,19 @@ function LidarScraperMap() {
 
         const el = aoiControlTemplateEl.cloneNode(true);
         const nameEl = el.querySelector('[data-name]')
+        const nameEditEl = el.querySelector('[data-name-edit]')
         nameEl.innerText = `New area of interest ${String(new Date()).substring(0,21)}`
+        nameEditEl.addEventListener('click', e => {
+            nameEl._isContentEditable = !nameEl._isContentEditable; // custom property boolean
+            nameEl.contentEditable = nameEl._isContentEditable; // string proper DOM property; assignment will cast boolean to string
+            nameEditEl.innerText = nameEl._isContentEditable ? 'save':'edit name';
+            if (nameEl._isContentEditable) {
+                nameEl.focus();
+            } else {
+                nameEditEl.focus();
+            }
+        });
+
         el.detailsEl = el.querySelector('[data-details]')
         const detailsToggleEl = el.querySelector('[data-details-toggle]')
         const intersectBtn = el.querySelector('button[data-button="intersect"]')
@@ -609,29 +640,36 @@ function LidarScraperMap() {
         };
         const setCenterAndZoom = () => {
             let lastZoom;
+            let lastZoomIn;
+            let lastZoomOut;
             const adjustZoom = () => {
                 const currentZoom = map.getZoom();
-                if (currentZoom === lastZoom || currentZoom > 16) {
-                    return; // sometimes the zoom might max out, then stop recursing
-                }
-                const bboxInPixels = [ ...Object.values(map.project([bbox[0], bbox[1]])), ...Object.values(map.project([bbox[2], bbox[3]])) ]
+
+                const bboxInPixels = [ ...Object.values(map.project([bbox[0], bbox[1]])), ...Object.values(map.project([bbox[2], bbox[3]])) ].map(n => Math.round(n*10)/10);
                 const bboxHeight = Math.abs(bboxInPixels[0] - bboxInPixels[2]);
                 const bboxWidth = Math.abs(bboxInPixels[1] - bboxInPixels[3]);
                 const canvasHeight = parseInt(canvasStyle.height);
                 const canvasWidth = parseInt(canvasStyle.width);
+                log(`lastZoom: ${lastZoom}, lastZoomIn: ${lastZoomIn}, lastZoomOut: ${lastZoomOut}`)
                 log(`move/zoom end, now adjusting zoom :: bboxInPixels: ${bboxInPixels}, bboxHeight: ${bboxHeight}, bboxWidth: ${bboxWidth}, canvasHeight: ${canvasHeight}, canvasWidth: ${canvasWidth},  currentZoom: ${currentZoom}, center: ${map.getCenter()}`);
+                if (currentZoom === lastZoom || currentZoom > 16 || (lastZoomIn && lastZoomOut)) {
+                    return; // sometimes the zoom might max out, then stop recursing
+                }
+                lastZoom = currentZoom;
                 if (bboxInPixels[0] < 0 || bboxInPixels[0] > canvasWidth
                     || bboxInPixels[2] < 0 || bboxInPixels[2] > canvasWidth
                     || bboxInPixels[1] < 0 || bboxInPixels[1] > canvasHeight
                     || bboxInPixels[3] < 0 || bboxInPixels[3] > canvasHeight
                 ) {
+                    lastZoomOut = true;
                     map.once('moveend', adjustZoom)
-                    map.setZoom(currentZoom * .9);
+                    map.setZoom(currentZoom * .98);
                 } else if (bboxHeight < canvasHeight * .9 && bboxWidth < canvasWidth * .9) {
+                    lastZoomIn = true;
                     map.once('moveend', adjustZoom)
-                    map.setZoom(currentZoom * 1.02);
+                    map.setZoom(currentZoom * 1.05);
                 }
-                lastZoom = currentZoom;
+
             }
 
             map.flyTo({center: center.geometry.coordinates});

@@ -77,7 +77,7 @@
 
 <div style="display:none;">
     <div data-controls="add-area-of-interest">
-        <h3>Add Area of Interest</h3>
+        <h3>+ Add Area of Interest</h3>
         <div>
             <a href="#draw" data-aoi-method-link="draw">draw on map</a>
             <a href="#file" data-aoi-method-link="file">upload file</a>
@@ -90,7 +90,6 @@
         </div>
         <div data-aoi-method="file">
             <input type="file" />
-            <button>Add</button>
         </div>
         <div data-aoi-method="manual">
             <textarea placeholder="enter full GeoJSON or a simple array of polygon vertices' coordinates"></textarea>
@@ -100,22 +99,23 @@
     </div>
     <div data-controls="area-of-interest">
         <h4 data-name></h4>
+        <button data-name-edit>edit name</button>
         <button data-button="intersect">find intersecting project tiles</button>
-        <button data-details-toggle>+/- details</button>
+        <button data-details-toggle>details</button>
         <div data-details style="display: none">
             <div data-missing-tiles style="display: none; color: red;">Missing tiles: <span></span></div>
-            <div data-tiles-geojson>Tiles GeoJSON:
+            <div data-tiles-geojson>Intersecting Project Tiles GeoJSON:
                 <textarea readonly></textarea>
             </div>
             <div data-laz-list>
-                LAZ URLs:
+                Intersecting Project Tiles LAZ URLs:
                 <textarea readonly></textarea>
             </div>
         </div>
 
     </div>
     <div data-controls="area-of-interest-container">
-        <h3>Area of Interests</h3>
+        <h3>Saved Areas of Interests</h3>
     </div>
     <div data-controls="projects">
         <div data-controls="loaded">1</div>
