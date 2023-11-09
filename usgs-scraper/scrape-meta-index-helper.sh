@@ -124,7 +124,6 @@ scrape_meta_index_helper__diff() {
   local current_dir="$backup_dir/../../current"
 
   ### START DIFF/STATS
-  local data_type=$(cat $backup_dir/contents-type.txt)
   ### MAKE STATS / DIFF with previous (currents)
   if [ -d $current_dir ]; then
     # diff on xml (meta) index
