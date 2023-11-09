@@ -31,6 +31,9 @@ def run():
     all_tiles_file.close()
 
 def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles_file, is_first_feature=False):
+    if not os.path.isdir(f'projects/{project}'):
+        print(f'projects/{project}')
+        return
     start_time = time.time()
     dir = 'projects/'+project+'/meta/'
     # Get the list of files in the directory
@@ -60,8 +63,15 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
             continue
         bounds = {}
         file=open(dir+file_name, 'r')
-        laz_dir_name_file=open('projects/'+project+'/_index/current/laz_dir.txt')
-        laz_dir_name = laz_dir_name_file.read().replace('\n', '')
+
+
+        laz_dir_name=None
+        laz_dir_name_file_name = 'projects/'+project+'/_index/current/laz_dir.txt'
+        if os.path.isfile(laz_dir_name_file_name):
+            laz_dir_name_file=open(laz_dir_name_file_name)
+            laz_dir_name = laz_dir_name_file.read().replace('\n', '')
+            laz_dir_name_file.close()
+
         for line in file:
             line=line.replace('\n', '')
             line_pieces=line.split(':')
@@ -126,7 +136,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
              "date_start": date_start,
              "date_end": date_end,
              "leaves": leaves_on_off,
-             "lazTilePath": laz_dir_name+'/'+file_name.replace('.xml.txt', '.laz'),
+             "lazTilePath": 'missing' if not laz_dir_name else laz_dir_name+'/'+file_name.replace('.xml.txt', '.laz')
            }
          }))
 
