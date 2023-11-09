@@ -391,7 +391,7 @@ function LidarScraperMap() {
     });
 
     function addProjectControlEl(project) {
-        renderProjectControlEl(project)
+        //renderProjectControlEl(project)
     }
     function renderProjectControlEl(project) {
         const el = document.createElement('div')
@@ -514,46 +514,104 @@ function LidarScraperMap() {
         addControlEl(el);
     }
 
-    const aoiListControlTemplateEl = document.querySelector('[data-controls=area-of-interest-list]');
-    aoiListControlTemplateEl.parentElement.removeChild(aoiListControlTemplateEl);
-    const initAoiListControl = () => {
-        const el = renderedElements.aoiList = aoiListControlTemplateEl.cloneNode(true);
+    const aoiContainerControlTemplateEl = document.querySelector('[data-controls=area-of-interest-container]');
+    aoiContainerControlTemplateEl.parentElement.removeChild(aoiContainerControlTemplateEl);
+    const initAoiContainerControl = () => {
+        const el = renderedElements.aoiContainer = aoiContainerControlTemplateEl.cloneNode(true);
         addControlEl(el)
     };
 
     const aoiControlTemplateEl = document.querySelector('[data-controls=area-of-interest]');
     aoiControlTemplateEl.parentElement.removeChild(aoiControlTemplateEl);
     const initAoiControl = (data) => {
-        let aoiTurf;
         switch(data.type) {
             case 'FeatureCollection':
                 data = data.features[0].geometry
                 break;
             case 'Feature':
-                aoiTurf = data.geometry
+                data = data.geometry
                 break;
         }
+        let aoiDataTurf;
         switch(data.type) {
             case 'Polygon':
-                aoiTurf = turf.polygon(data.coordinates);
+                aoiDataTurf = turf.polygon(data.coordinates);
                 break;
             case 'MultiPolygon':
-                aoiTurf = turf.multiPolygon(data.coordinates);
+                aoiDataTurf = turf.multiPolygon(data.coordinates);
                 break;
             default:
                 // assume outer polygon ring coordinates [ [x,y], [x2,y2], ... ]
-                aoiTurf = turf.polygon([data]);
+                aoiDataTurf = turf.polygon([data]);
         }
 
         const el = aoiControlTemplateEl.cloneNode(true);
+        const nameEl = el.querySelector('[data-name]')
+        nameEl.innerText = `New area of interest ${String(new Date()).substring(0,21)}`
+        el.detailsEl = el.querySelector('[data-details]')
+        const detailsToggleEl = el.querySelector('[data-details-toggle]')
+        const intersectBtn = el.querySelector('button[data-button="intersect"]')
+        const lazUrlsEl = el.querySelector('[data-laz-list]');
+        const tilesGeoJsonEl = el.querySelector('[data-tiles-geojson]')
+        const missingLazTilesEl = el.querySelector('[data-missing-tiles]')
+        const bbox = turf.bbox(aoiDataTurf);
+        const center = turf.center(aoiDataTurf);
+        const canvasStyle = getComputedStyle(map.getCanvas());
+
+        let intersectionTiles;
         const findIntersection = () => {
-            const bbox = turf.bbox(aoiTurf);
-            const center = turf.center(aoiTurf);
-            const canvasStyle = getComputedStyle(map.getCanvas());
+            setCenterAndZoom();
+
+            intersectBtn.disabled = true;
+
+            const intersectingProjects = [];
+            const loadDataPromises = [];
+            turfData.all.features.forEach(feature => {
+                const turfProjectPoly = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
+                if (turf.booleanIntersects(aoiDataTurf, turfProjectPoly)) {
+                    intersectingProjects.push(feature.properties.project);
+                    const loadPromise = loadProjectData(feature.properties.project, feature.id, false);
+                    loadDataPromises.push(loadPromise);
+                }
+            })
+            Promise.all(loadDataPromises).then(() => {
+                const combinedFeatures = [];
+                const lazUrls = [];
+                missingLazTilesCount = 0;
+                intersectingProjects.forEach(project => {
+                    mapData[project].features.forEach(feature => {
+                        const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
+                        if (turf.booleanIntersects(aoiDataTurf, turfProjectTilePoly)) {
+                            combinedFeatures.push(feature);
+                            if (!feature.properties.lazTilePath || feature.properties.lazTilePath !== 'missing') {
+                                lazUrls.push(`${USGS_URL_BASE}/${feature.properties.project}/${feature.properties.lazTilePath}`)
+                            } else {
+                                missingLazTilesCount++;
+                            }
+                        }
+                    });
+                });
+
+                intersectionTiles = {type: 'FeatureCollection', features: combinedFeatures};
+                hightlightIntersectionTiles();
+
+                intersectBtn.style.display = 'none';
+                el.isActive = true;
+
+                el.detailsEl.style.display = '';
+                lazUrlsEl.children[0].value = lazUrls.join('\n');
+                tilesGeoJsonEl.children[0].value = JSON.stringify(intersectionTiles)
+                if (missingLazTilesCount > 0) {
+                    missingLazTilesEl.style.display='';
+                    missingLazTilesEl.children[0].innerText = missingLazTilesCount;
+                }
+            })
+        };
+        const setCenterAndZoom = () => {
             let lastZoom;
             const adjustZoom = () => {
                 const currentZoom = map.getZoom();
-                if (currentZoom === lastZoom) {
+                if (currentZoom === lastZoom || currentZoom > 16) {
                     return; // sometimes the zoom might max out, then stop recursing
                 }
                 const bboxInPixels = [ ...Object.values(map.project([bbox[0], bbox[1]])), ...Object.values(map.project([bbox[2], bbox[3]])) ]
@@ -566,10 +624,12 @@ function LidarScraperMap() {
                     || bboxInPixels[2] < 0 || bboxInPixels[2] > canvasWidth
                     || bboxInPixels[1] < 0 || bboxInPixels[1] > canvasHeight
                     || bboxInPixels[3] < 0 || bboxInPixels[3] > canvasHeight
-                    || (bboxHeight < canvasHeight * .9 && bboxWidth < canvasWidth * .9)
                 ) {
-                    map.setZoom(currentZoom * 1.02);
                     map.once('moveend', adjustZoom)
+                    map.setZoom(currentZoom * .9);
+                } else if (bboxHeight < canvasHeight * .9 && bboxWidth < canvasWidth * .9) {
+                    map.once('moveend', adjustZoom)
+                    map.setZoom(currentZoom * 1.02);
                 }
                 lastZoom = currentZoom;
             }
@@ -577,42 +637,48 @@ function LidarScraperMap() {
             map.flyTo({center: center.geometry.coordinates});
             map.once('moveend', adjustZoom);
 
-            const intersectingProjects = [];
-            const loadDataPromises = [];
-            turfData.all.features.forEach(feature => {
-                const turfProjectPoly = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
-                if (turf.booleanIntersects(aoiTurf, turfProjectPoly)) {
-                    intersectingProjects.push(feature.properties.project);
-                    const loadPromise = loadProjectData(feature.properties.project, feature.id, false);
-                    loadDataPromises.push(loadPromise);
+        }
+        const hightlightIntersectionTiles = ()  => {
+            mapSources.project.setData(intersectionTiles);
+            mapSources.highlight.setData(aoiDataTurf);
+        }
+        intersectBtn.addEventListener('click', findIntersection);
+        detailsToggleEl.addEventListener('click', e => {
+            el.isActive = !el.isActive;
+            el.detailsEl.style.display = el.isActive ? '' : 'none';
+            if (el.isActive) {
+                setCenterAndZoom();
+                hightlightIntersectionTiles();
+            }
+            renderedElements.aois.forEach(el_ => {
+                if (el === el_) {
+                    return;
                 }
-            })
-            Promise.all(loadDataPromises).then(() => {
-                const combinedFeatures = [];
-                const lazUrls = [];
-                intersectingProjects.forEach(project => {
-                    mapData[project].features.forEach(feature => {
-                        const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
-                        if (turf.booleanIntersects(aoiTurf, turfProjectTilePoly)) {
-                            combinedFeatures.push(feature);
-                            lazUrls.push(`${USGS_URL_BASE}/${feature.properties.project}/${feature.properties.lazTilePath}`)
-                        }
-                    });
-                });
-                mapSources.project.setData({type: 'FeatureCollection', features: combinedFeatures});
-                mapSources.highlight.setData(aoiTurf);
+                el_.detailsEl.style.display = 'none';
+                el_.isActive = false;
+            });
+        });
 
-                el.querySelector('[data-laz-list]').value = lazUrls.join('\n');
-                el.querySelector('[data-tiles-geojson]').value = JSON.stringify({type: 'FeatureCollection', features: combinedFeatures})
-            })
-        };
-        el.querySelector('button[data-button="intersect"]').addEventListener('click', findIntersection);
-        addControlEl(el, renderedElements.aoiList)
+        // init AOIs render element array
+        if (!renderedElements.aois) {
+            renderedElements.aois = [];
+        }
+        // hide other AOI details
+        renderedElements.aois.forEach(el => {
+            el.detailsEl.style.display = 'none';
+            el.isActive = false;
+        });
+        // add current AOI to list
+        renderedElements.aois.push(el);
+
+        // finally, RENDER IT
+        addControlEl(el, renderedElements.aoiContainer)
+
 
     }
 
     initNewAoiControl();
-    initAoiListControl();
+    initAoiContainerControl();
 
 
 

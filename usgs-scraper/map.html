@@ -13,6 +13,9 @@
     <script src="client/mapbox-draw-theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+        h1, h2, h3, h4, h5 {
+            margin: 2px;
+        }
         #map-controls {
             position: fixed;
             top: 0;
@@ -54,6 +57,9 @@
         [data-aoi-method] {
             padding: 5px;
         }
+        [data-controls=area-of-interest] {
+            padding: 10px;
+        }
         textarea {
             width: 90%;
             height: 100px;
@@ -93,17 +99,23 @@
         </div>
     </div>
     <div data-controls="area-of-interest">
-        <button data-button="intersect">find intersecting projects/tiles</button>
+        <h4 data-name></h4>
+        <button data-button="intersect">find intersecting project tiles</button>
+        <button data-details-toggle>+/- details</button>
+        <div data-details style="display: none">
+            <div data-missing-tiles style="display: none; color: red;">Missing tiles: <span></span></div>
+            <div data-tiles-geojson>Tiles GeoJSON:
+                <textarea readonly></textarea>
+            </div>
+            <div data-laz-list>
+                LAZ URLs:
+                <textarea readonly></textarea>
+            </div>
+        </div>
 
-        <div>Tiles GeoJSON:
-            <textarea data-tiles-geojson></textarea>
-        </div>
-        <div>
-            LAZ URLs:
-            <textarea data-laz-list></textarea>
-        </div>
     </div>
-    <div data-controls="area-of-interest-list">
+    <div data-controls="area-of-interest-container">
+        <h3>Area of Interests</h3>
     </div>
     <div data-controls="projects">
         <div data-controls="loaded">1</div>
