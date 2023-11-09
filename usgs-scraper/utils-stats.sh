@@ -1,9 +1,9 @@
 ___utils_stats_sh_included=1
 
 started_scrape() {
-    projects_path=projects
+    local projects_path=projects
     if [ "$1" ]; then
-        projects_path=projects/$project
+        projects_path=projects/$1
     fi
     # find returns a list of dirs ending on /
     find $projects_path -mindepth 1 -maxdepth 1 -type d ! -name '_index' ! -name 'meta' | sed -e "s@$projects_path/@@" | sort;
@@ -72,7 +72,8 @@ started_scrape_subproject_not_in_index() {
     done
 }
 cache_stats() {
-    project=$1
+    local project=$1
+    local subproject
     if [ "$project" ]; then
         project_info $project > projects/$project/_stats.txt
         for subproject in $(started_scrape $project); do
@@ -134,9 +135,9 @@ xml_extracted_data_files_contents() {
 }
 
 xml_files_downloaded_count() {
-  project=$1
-  subproject=$2
-  project_path=''
+  local project=$1
+  local subproject=$2
+  local project_path=''
 
   if [ "$subproject" ]; then
     project_path="-path \*$project\*"
@@ -153,13 +154,14 @@ xml_file_download_in_progress() {
 }
 
 xml_file_downloaded_vs_todownload_by_project() {
-  projects=$(started_scrape)
+  local projects=$(started_scrape)
   local xml_downloaded_count="0"
-  xml_downloaded_project_names_filename=__xml_downloaded_projects.txt
-  echo > $xml_downloaded_project_names_filename
+  local xml_downloaded_project_names_filename=__xml_downloaded_projects.txt
+  echo > $xml_downloaded_project_names_filename;
+  local project
   for project in $projects; do
-    project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
-    project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
+    local project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
+    local project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
 
     if  [ "$project_state" ] && [ "$project_state" != "none" ] && [ "$(grep $project_state states-to-scrape.txt)" = "" ]; then
         continue
@@ -171,13 +173,14 @@ xml_file_downloaded_vs_todownload_by_project() {
       #echo $project expr $xml_downloaded_count + $project_xml_downloaded
       ((xml_downloaded_count = xml_downloaded_count + project_xml_downloaded))
     else
-      subprojects_count=$(started_scrape $project | wc -l | xargs echo -n)
+      local subprojects_count=$(started_scrape $project | wc -l | xargs echo -n)
       if [ "$subprojects_count" != "0" ]; then
+        local subproject;
         for subproject in $(started_scrape $projects); do
           if [ -f projects/$project/$subproject/meta/xml_files.txt ]; then
             #echo '__' $subproject $xml_downloaded_count \+ $subproject_xml_downloaded
-            subproject_xml_downloaded=$(xml_files_downloaded_count $project $subproject)
-            xml_downloaded_count=$((xml_downloaded_count + subproject_xml_downloaded))
+            local subproject_xml_downloaded=$(xml_files_downloaded_count $project $subproject)
+            ((xml_downloaded_count = xml_downloaded_count + subproject_xml_downloaded))
           fi
         done;
       fi
@@ -188,11 +191,12 @@ xml_file_downloaded_vs_todownload_by_project() {
 }
 
 xml_file_downloaded_vs_todownload() {
-  projects=$(started_scrape)
+  local projects=$(started_scrape)
   local xml_downloaded_count="0"
   local xml_to_download_count="0"
 
-  file_path_prefix=/tmp/lidar-scrape-$(date +%s);
+  local file_path_prefix=/tmp/lidar-scrape-$(date +%s);
+  local project;
   for project in $projects; do
     grep "${project}~" projects/_index/current/index_with_year_and_state.txt > ${file_path_prefix}-year-state.txt
     sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/' ${file_path_prefix}-year-state.txt > ${file_path_prefix}-year.txt
@@ -204,10 +208,12 @@ xml_file_downloaded_vs_todownload() {
       fi
     fi
     cat projects/$project/meta/xml_files.txt projects/$project/*/meta/xml_files.txt 2>/dev/null | wc -l > ${file_path_prefix}-xml-to-download-count.txt
+    local xml_to_download_count_i
     read -r xml_to_download_count_i < ${file_path_prefix}-xml-to-download-count.txt
     ((xml_to_download_count = xml_to_download_count + xml_to_download_count_i))
 
     xml_files_downloaded_count $project > ${file_path_prefix}-xml-downloaded-count.txt
+    local xml_downloaded_count_i;
     read -r xml_downloaded_count_i < ${file_path_prefix}-xml-downloaded-count.txt
     ((xml_downloaded_count = xml_downloaded_count + xml_downloaded_count_i))
   done
@@ -219,37 +225,41 @@ projects_with_zip_count() {
 }
 
 project_info() {
-    project=$1
-    subproject=$2
-    project_path=$project
+    local project=$1
+    local subproject=$2
+    local project_path=$project
     if [ "$subproject" ]; then
         project_path=$project/$subproject
     fi
 
-    index_count=$(get_line_count projects/$project_path/_index/current/index.txt)
-    metadata_dir=$(cat projects/$project_path/_index/current/metadata_dir.txt 2>/dev/null | xargs echo -n)
-    laz_dir=$(cat projects/$project_path/_index/current/laz_dir.txt 2>/dev/null | xargs echo -n)
-    las_dir=$(cat projects/$project_path/_index/current/las_dir.txt 2>/dev/null | xargs echo -n)
+    local index_count='';
+    if [ -f projects/$project_path/_index/current/index.txt ]; then
+      index_count=$(get_line_count projects/$project_path/_index/current/index.txt);
+    fi;
 
-    if [ "$index_count" = "0" ]; then
+    local metadata_dir=$(cat projects/$project_path/_index/current/metadata_dir.txt 2>/dev/null | xargs echo -n)
+    local laz_dir=$(cat projects/$project_path/_index/current/laz_dir.txt 2>/dev/null | xargs echo -n)
+    local las_dir=$(cat projects/$project_path/_index/current/las_dir.txt 2>/dev/null | xargs echo -n)
+
+    if [ "$index_count" = "0" ] || [ ! "$index_count" ]; then
       if [ "$metadata_dir" ]; then
         echo "meta_dir";
         if [ ! -d projects/$project_path/meta ]; then
             echo 'meta_not_scraped';
         else
-            xml_file_count=$(get_line_count projects/$project_path/meta/xml_files.txt)
+            local xml_file_count=$(get_line_count projects/$project_path/meta/xml_files.txt)
             echo "meta_xml:$xml_file_count"
-            xml_file_downloaded_count=$(ls -1 projects/$project_path/meta/*.xml 2>/dev/null | wc -l)
+            local xml_file_downloaded_count=$(ls -1 projects/$project_path/meta/*.xml 2>/dev/null | wc -l)
             echo "meta_xml_downloaded:$xml_file_downloaded_count"
-            xml_file_processed_count=$(ls -1 projects/$project_path/meta/*.xml.txt 2>/dev/null | wc -l)
+            local xml_file_processed_count=$(ls -1 projects/$project_path/meta/*.xml.txt 2>/dev/null | wc -l)
             echo "meta_xml_processed:$xml_file_processed_count"
-            zip_file_count=$(get_line_count projects/$project_path/meta/zip_files.txt)
+            local zip_file_count=$(get_line_count projects/$project_path/meta/zip_files.txt)
             echo "meta_zip:$zip_file_count"
         fi
       fi
       if [ "$laz_dir" ]; then
         echo 'laz_dir';
-        laz_files_downloaded=$(ls -1 projects/$project_path/meta/*.xml.txt 2>/dev/null | wc -l)
+        local laz_files_downloaded=$(ls -1 projects/$project_path/laz/*.laz 2>/dev/null | wc -l)
         echo "laz_downloaded:$laz_files_downloaded"
 
       fi
