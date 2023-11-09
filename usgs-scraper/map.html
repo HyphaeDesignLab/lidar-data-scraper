@@ -58,12 +58,39 @@
             padding: 5px;
         }
         [data-controls=area-of-interest] {
-            padding: 10px;
+            padding: 3px;
+            margin: 7px;
+            border: 1px dashed black;
         }
         textarea {
             width: 90%;
             height: 100px;
             display: block;
+        }
+
+        .copy-paste-global-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 100vw;
+            background: rgba(255,255,255,.5);
+            z-index: 9000;
+        }
+        .copy-paste-global-popup textarea {
+            position: fixed;
+            z-index: 9001;
+            top: 10vh;
+            left: 10vw;
+            height: 80vh;
+            width: 80vw;
+        }
+        .copy-paste-global-popup div {
+            position: absolute;
+            z-index: 9002;
+            top: 10vh;
+            right: 10vw;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -104,12 +131,13 @@
         <button data-details-toggle>details</button>
         <div data-details style="display: none">
             <div data-missing-tiles style="display: none; color: red;">Missing tiles: <span></span></div>
-            <div data-tiles-geojson>Intersecting Project Tiles GeoJSON:
-                <textarea readonly></textarea>
-            </div>
-            <div data-laz-list>
-                Intersecting Project Tiles LAZ URLs:
-                <textarea readonly></textarea>
+            <div>
+                Intersecting Project Tiles:
+                <div data-intersecting-projects>
+                    <div data-intersecting-project><input type="checkbox" value="" /> <span></span></div>
+                </div>
+                <button data-tiles-geojson>GeoJSON</button>
+                <button data-laz-list>LAZ URLs</button>
             </div>
         </div>
 

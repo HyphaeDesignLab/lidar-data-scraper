@@ -587,33 +587,40 @@ function LidarScraperMap() {
         const center = turf.center(aoiDataTurf);
         const canvasStyle = getComputedStyle(map.getCanvas());
 
-        let intersectionTiles;
+        const intersectingTiles = {};
+        const intersectingTilesLazUrls = {};
+        const intersectingProjects = {};
+        const intersectingProjectsSelected = {};
         const findIntersection = () => {
             setCenterAndZoom();
 
             intersectBtn.disabled = true;
 
-            const intersectingProjects = [];
+
             const loadDataPromises = [];
             mapData.all.features.forEach(feature => {
                 const turfProjectPoly = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
                 if (turf.booleanIntersects(aoiDataTurf, turfProjectPoly)) {
-                    intersectingProjects.push(feature.properties.project);
+                    intersectingProjects[feature.properties.project] = feature.properties;
                     const loadPromise = loadProjectData(feature.properties.project, feature.id, false);
                     loadDataPromises.push(loadPromise);
                 }
             })
             Promise.all(loadDataPromises).then(() => {
-                const combinedFeatures = [];
-                const lazUrls = [];
+
                 let missingLazTilesCount = 0;
-                intersectingProjects.forEach(project => {
+                Object.keys(intersectingProjects).forEach(project => {
                     mapData[project].features.forEach(feature => {
                         const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
                         if (turf.booleanIntersects(aoiDataTurf, turfProjectTilePoly)) {
-                            combinedFeatures.push(feature);
+                            if (!intersectingTiles[project]) {
+                                intersectingTiles[project] = [];
+                                intersectingTilesLazUrls[project] = [];
+                            }
                             if (!feature.properties.lazTilePath || feature.properties.lazTilePath !== 'missing') {
-                                lazUrls.push(`${USGS_URL_BASE}/${feature.properties.project}/${feature.properties.lazTilePath}`)
+                                intersectingTiles[project].push(feature);
+                                intersectingTilesLazUrls[project].push(`${USGS_URL_BASE}/${feature.properties.project}/${feature.properties.lazTilePath}`)
+                                intersectingProjectsSelected[project] = true;
                             } else {
                                 missingLazTilesCount++;
                             }
@@ -621,15 +628,13 @@ function LidarScraperMap() {
                     });
                 });
 
-                intersectionTiles = {type: 'FeatureCollection', features: combinedFeatures};
+                addProjectSelector();
+                addTextboxes();
                 hightlightIntersectionTiles();
 
                 intersectBtn.style.display = 'none';
                 el.isActive = true;
-
                 el.detailsEl.style.display = '';
-                lazUrlsEl.children[0].value = lazUrls.join('\n');
-                tilesGeoJsonEl.children[0].value = JSON.stringify(intersectionTiles)
                 if (missingLazTilesCount > 0) {
                     missingLazTilesEl.style.display='';
                     missingLazTilesEl.children[0].innerText = missingLazTilesCount;
@@ -675,8 +680,50 @@ function LidarScraperMap() {
 
         }
         const hightlightIntersectionTiles = ()  => {
-            mapSources.project.setData(intersectionTiles);
+            const features = [];
+            Object.keys(intersectingProjectsSelected).forEach(project => {
+                if (intersectingProjectsSelected[project]) {
+                    features.push(...intersectingTiles[project]);
+                }
+            })
+            mapSources.project.setData({type: 'FeatureCollection', features});
             mapSources.highlight.setData(aoiDataTurf);
+        }
+        const addProjectSelector = ()  => {
+            const containerEl = el.querySelector('[data-intersecting-projects]');
+            const templateEl = el.querySelector('[data-intersecting-project]');
+            templateEl.parentElement.removeChild(templateEl);
+            Object.keys(intersectingProjects).forEach(projectName => {
+                const project = intersectingProjects[projectName];
+                const projectEl = templateEl.cloneNode(true);
+                projectEl.querySelector('span').innerText = `${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')}, ${projectName.replaceAll('_', ' ')} `
+                projectEl.querySelector('input').addEventListener('click', e => {
+                    log(e.target.checked);
+                    intersectingProjectsSelected[projectName] = e.target.checked
+                    hightlightIntersectionTiles();
+                });
+                containerEl.appendChild(projectEl);
+            })
+        }
+        const addTextboxes = ()  => {
+            el.querySelector('[data-tiles-geojson]').addEventListener('click', e => {
+                const features = [];
+                Object.keys(intersectingProjectsSelected).forEach(project => {
+                    if (intersectingProjectsSelected[project]) {
+                        features.push(...intersectingTiles[project]);
+                    }
+                })
+                makeGlobalCopyPasteTextarea(JSON.stringify({type: 'FeatureCollection', features}))
+            })
+            el.querySelector('[data-laz-list]').addEventListener('click', e => {
+                const urls = [];
+                Object.keys(intersectingProjectsSelected).forEach(project => {
+                    if (intersectingProjectsSelected[project]) {
+                        urls.push(...intersectingTilesLazUrls[project]);
+                    }
+                });
+                makeGlobalCopyPasteTextarea(urls.join("\n"))
+            })
         }
         intersectBtn.addEventListener('click', findIntersection);
         detailsToggleEl.addEventListener('click', e => {
@@ -722,6 +769,20 @@ function LidarScraperMap() {
     map.on('load', initData);
 }
 
+const makeGlobalCopyPasteTextarea = text => {
+    const containerEl = document.createElement('div');
+    containerEl.classList.add('copy-paste-global-popup');
+    const closeEl = document.createElement('div');
+    closeEl.innerText = 'close (x)'
+    const el = document.createElement('textarea');
+    el.readOnly = true;
+    el.value = text;
+    el.addEventListener('click', e => { el.focus(); el.select(); })
+    closeEl.addEventListener('click', e => containerEl.parentElement.removeChild(containerEl))
+    containerEl.appendChild(el);
+    containerEl.appendChild(closeEl);
+    document.querySelector('body').appendChild(containerEl);
+}
 const geoHelpers = {
     getPolygonFirstCoordinate: featureOrCoordinates => {
         const coordinates = featureOrCoordinates.geometry ? featureOrCoordinates.geometry.coordinates : featureOrCoordinates;
