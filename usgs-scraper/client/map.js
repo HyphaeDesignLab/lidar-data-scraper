@@ -43,8 +43,7 @@ function LidarScraperMap() {
 
     let layersToQuery = ['all'];
     const mapSources = {'highlight': null, 'all':null, 'project': null}
-    window.mapData = {};
-    window.turfData = {};
+    const mapData = {};
 
     function initData() {
         let customDataFile = null;
@@ -75,7 +74,6 @@ function LidarScraperMap() {
     function loadAllProjectsData(data) {
         mapData.all = data;
         log(data)
-        turfData.all = turf.featureCollection(data.features)
 
         data.features.forEach((feature, i) => {
             feature.properties.type = 'all'
@@ -597,7 +595,7 @@ function LidarScraperMap() {
 
             const intersectingProjects = [];
             const loadDataPromises = [];
-            turfData.all.features.forEach(feature => {
+            mapData.all.features.forEach(feature => {
                 const turfProjectPoly = turf[ typeof(feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon':'multiPolygon'](feature.geometry.coordinates, feature.properties)
                 if (turf.booleanIntersects(aoiDataTurf, turfProjectPoly)) {
                     intersectingProjects.push(feature.properties.project);
@@ -608,7 +606,7 @@ function LidarScraperMap() {
             Promise.all(loadDataPromises).then(() => {
                 const combinedFeatures = [];
                 const lazUrls = [];
-                missingLazTilesCount = 0;
+                let missingLazTilesCount = 0;
                 intersectingProjects.forEach(project => {
                     mapData[project].features.forEach(feature => {
                         const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
