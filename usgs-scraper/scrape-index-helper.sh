@@ -13,9 +13,6 @@ scrape_index_helper() {
   # Make a new back-up dir, download/parse new data into it
   local backup_dir=$project_path/_index/backup/$(date +%Y-%m-%d---%H-%M-%S)
 
-  # Compare it to the current (about to become last-backup)
-  local current_dir=$project_path/_index/current
-
   # DOWNLOAD
   scrape_index_helper__curl $backup_dir $project
 
@@ -23,10 +20,10 @@ scrape_index_helper() {
   scrape_index_helper__parse_index $backup_dir
 
   # Do diff with previous backup (aka current current)
-  scrape_index_helper__diff $backup_dir $current_dir
+  scrape_index_helper__diff $backup_dir
 
   # Backup: make new back-up => current
-  scrape_index_helper__backup $backup_dir $current_dir
+  scrape_index_helper__backup $backup_dir
 
   # Update parent project to tell it that its child has gotten updated
   scrape_index_helper__mark_updated_in_parent $project
