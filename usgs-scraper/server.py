@@ -5,7 +5,8 @@ import os
 import sys
 import json
 import ssl
-import datetime from datetime
+from datetime import datetime
+import requests
 
 def get_env():
     env = {}
@@ -33,23 +34,14 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         if not self.check_secret():
             return
-        if self.path.startswith('/test/post'):
-            self.test_post()
+        if self.path.startswith('/map-tile-edit'):
+            self.edit_map_tile()
         else:
             self.blank_response()
 
     def do_GET(self):
-        if not self.check_secret():
-            return
+        http.server.SimpleHTTPRequestHandler.do_GET(self)
 
-        if self.path.startswith('/test/job'):
-            self.test()
-        elif self.path.startswith('/test/post'):
-            self.test_post_form()
-        elif self.path.startswith('/other'):
-            self.blank_response()
-        else:
-            self.blank_response()
     def check_secret(self):
         path_and_query = self.path.split('?') if self.path else [None, None]
         if len(path_and_query) < 2 or not path_and_query[1] or  not 'secret='+env['secret'] in path_and_query[1]:
@@ -69,55 +61,19 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write('n/s'.encode('utf-8'))
 
-    def test_post(self):
+    def edit_map_tile(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length).decode('utf-8')
-        self.wfile.write((str(len(post_data)) + ', ' + post_data[0:100]).encode('utf-8'))
 
-    def test_post_form(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        content = '<form method="post" action="">' + \
-            '<textarea style="display: none;" name="test">' + \
-            ('123456789_' * 1650000) + \
-            '</textarea><input type="submit" value="Submit"></form>'
-        self.wfile.write(content.encode('utf-8'))
-
-    def test(self):
-        output = ''
-
-        check_process = subprocess.run('ps aux | grep test/loop.sh | grep -v grep | tr -d "\n"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        cmd = ["tests/loop.sh"]
-        child_pid = None
-        try:
-            process = subprocess.Popen(
-                ['nohup'] + cmd,
-                shell=True
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-                text=True
-            )
-        except Exception as e:
-            output = f"Error starting the process: {e}"
-            print(output)
-        else:
-            # The child process is running in the background and will continue to run
-            # even if the Python process terminates.
-
-            # Optionally, you can get the PID of the child process
-            child_pid = process.pid
-            output = f"Child process PID: {child_pid}"
-            print(output)
+        print(post_data)
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
-        self.wfile.write(f'running test loop in background {child_pid}'.encode('utf-8'))
+        self.wfile.write('ok'.encode('utf-8'))
 
 def start_server():
     with socketserver.TCPServer(("", int(env['port'])), ScraperServer) as httpd:
