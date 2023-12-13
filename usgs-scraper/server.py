@@ -51,7 +51,7 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith('/test/map-tile-edit'):
             self.test_edit_map_tile_form()
         else:
-            http.server.SimpleHTTPRequestHandler.do_GET(self)
+            super().do_GET(self)
 
     def read_query(self, method='get'):
         if method == 'post':
@@ -87,8 +87,6 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
         parsed_query = parse_qs(self.query)
         json_string = parsed_query.get('json', [])[0]
         project = parsed_query.get('project', [])[0]
-
-
         file_name = f'projects/{project}/map_tiles.json'
 
         # backup, if it exists
