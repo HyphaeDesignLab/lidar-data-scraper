@@ -6,7 +6,6 @@ import sys
 import json
 import ssl
 from datetime import datetime
-import requests
 from urllib.parse import parse_qs
 
 def get_env():

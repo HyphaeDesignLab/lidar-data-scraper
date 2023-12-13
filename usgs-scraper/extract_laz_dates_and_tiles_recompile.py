@@ -12,6 +12,8 @@ from shapely.ops import unary_union
 import geopandas
 import subprocess
 
+import requests
+
 def get_env():
     env = {}
     if os.path.isfile('.env'):
