@@ -14,10 +14,18 @@ import subprocess
 
 import requests
 
-def get_env():
+def get_env(env_file_path=None):
     env = {}
-    if os.path.isfile('.env'):
-        file = open('.env', 'r')
+    if env_file_path == None:
+        # look for .env inside same directory as script itself
+        dir = os.path.dirname(sys.argv[0])
+        if dir:
+            env_file_path = dir + '/.env'
+        else:
+            env_file_path = '.env'
+
+    if os.path.isfile(env_file_path):
+        file = open(env_file_path, 'r')
         for line in file:
             if not '=' in line:
                 continue
@@ -34,7 +42,7 @@ def get_env():
             else:
                 env[key] = value
     return env
-env = get_env()
+env = get_env(sys.argv[1] if len(sys.argv) > 1 else None)
 
 def run(list_file_name='list.txt'):
     # open LAZ URL download list
