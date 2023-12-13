@@ -51,7 +51,7 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith('/test/map-tile-edit'):
             self.test_edit_map_tile_form()
         else:
-            super().do_GET(self)
+            super().do_GET()
 
     def read_query(self, method='get'):
         if method == 'post':
