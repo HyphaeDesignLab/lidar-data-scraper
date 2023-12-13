@@ -52,7 +52,7 @@ def run(list_file_name='list.txt'):
 
     # build a list curl commands to download map_tile downloads for each project ID from Lidar server
     tile_json_download_cmds = []
-    tile_json_url_base = env.server_url + env.projects_url_path
+    tile_json_url_base = env['server_url'] + env['projects_url_path']
     for project_id in project_lazs_by_id:
         # since multiple project/subproject files get downloaded in same dir (for current download job)
         #   make sure to preserve project---subproject IDs in map-tile file name
@@ -91,7 +91,7 @@ def run(list_file_name='list.txt'):
         map_tile_geojson_file = open(project_id_without_slashes+'.new.json', 'w')
         json.dump(map_tile_geojson_obj, map_tile_geojson_file)
         map_tile_geojson_file.close()
-        requests.post(env.server_url + env.tiles_edit_url_path, data={'secret': env.secret, 'json': json.dumps(map_tile_geojson_obj), 'project': project_id })
+        requests.post(env['server_url'] + env['tiles_edit_url_path'], data={'secret': env['secret'], 'json': json.dumps(map_tile_geojson_obj), 'project': project_id })
     # /end-for-loop
 
 
