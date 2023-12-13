@@ -45,6 +45,10 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         self.read_query('get')
+        if self.path.endswith('/') and not os.path.isfile(self.path + 'index.html'):
+            self.blank_response()
+            return
+
         if self.path.startswith('/test/map-tile-edit'):
             self.test_edit_map_tile_form()
         else:
