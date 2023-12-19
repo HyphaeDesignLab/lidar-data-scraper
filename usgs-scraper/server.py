@@ -90,17 +90,46 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
         file_name = f'projects/{project}/map_tiles.json'
 
         # backup, if it exists
+        features = {}
         if os.path.isfile(file_name):
             f = open(file_name)
             now_string = datetime.now().strftime("%Y%m%d_%H%M%S")
             f_copy = open(f'projects/{project}/map_tiles_{now_string}.json', 'w')
             f_copy.write(f.read())
             f_copy.close()
+
+            f.seek(0)
+            features = json.load(f)
             f.close()
 
         # write new
         f = open(file_name, 'w')
         f.write(json_string)
+
+        # write dates to *.xml.txt files as well (from which the map_tiles.json file is compiled)
+        project_id_parts = project.split('/')
+        for f in features['features']:
+          tile_id = f['properties']['laz_tile']
+          tile_id = tile_id.replace('{u}', 'USGS_LPC_')
+          tile_id = tile_id.replace('{prj}', project_id_parts[0])
+          if len(project_id_parts) > 1:
+            tile_id = tile_id.replace('{sprj}', project_id_parts[1])
+          xml_txt_file_path = f'projects/{project}/meta/{tile_id}.xml.txt'
+          print(xml_txt_file_path)
+          if os.path.isfile(xml_txt_file_path):
+            print('does not exist')
+            xml_txt_file = open(xml_txt_file_path)
+            xml_txt = ''
+            for line in xml_txt_file:
+                if 'date_start:' in line:
+                    line = 'date_start:'+f['properties']['date_start']+'\n'
+                if 'date_end:' in line:
+                    line = 'date_end:'+f['properties']['date_end']+'\n'
+                xml_txt = xml_txt + line
+            xml_txt_file.close()
+            xml_txt_file = open(xml_txt_file_path, 'w')
+            xml_txt_file.write(xml_txt)
+            xml_txt_file.close()
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')

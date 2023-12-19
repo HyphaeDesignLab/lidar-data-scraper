@@ -94,9 +94,9 @@ def run(list_file_name='list.txt'):
                     continue
                 print(feature['properties']['laz_tile'], laz_scan_dates_obj, feature['properties']['date_start'], feature['properties']['date_end'])
                 feature['properties']['date_project_start'] = feature['properties']['date_start']
-                feature['properties']['date_start'] = laz_scan_dates_obj[0]
+                feature['properties']['date_start'] = laz_scan_dates_obj['date_start']
                 feature['properties']['date_project_end'] = feature['properties']['date_end']
-                feature['properties']['date_end'] = laz_scan_dates_obj[1]
+                feature['properties']['date_end'] = laz_scan_dates_obj['date_end']
 
         map_tile_geojson_file = open(project_id_without_slashes+'.new.json', 'w')
         json.dump(map_tile_geojson_obj, map_tile_geojson_file)
@@ -133,9 +133,9 @@ def laz_extract_data(file_path, point_limit=0):
         if point_limit > 0 and i <= 0:
           break
 
-    return '\n'.join([
-        'date_start:'+datetime.fromtimestamp(date_start).strftime('%Y%m%d%H%M%S'), #now turn the unix timstamp to a local timestamp:
-        'date_end:'+datetime.fromtimestamp(date_end).strftime('%Y%m%d%H%M%S')
-    ])
+    return {
+        'date_start': datetime.fromtimestamp(date_start).strftime('%Y%m%d%H%M%S'), #now turn the unix timstamp to a local timestamp:
+        'date_end': datetime.fromtimestamp(date_end).strftime('%Y%m%d%H%M%S')
+    }
 if (__name__ == '__main__'):
     run()
