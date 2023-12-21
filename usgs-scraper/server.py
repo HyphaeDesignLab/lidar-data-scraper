@@ -10,7 +10,11 @@ from urllib.parse import parse_qs
 
 def get_env():
     env = {}
-    if os.path.isfile('.env'):
+    env_file = os.path.dirname(sys.argv[0]) + '/.env'
+    if not os.path.isfile(env_file):
+        env_file = '.env'
+
+    if os.path.isfile(env_file):
         file = open('.env', 'r')
         for line in file:
             if not '=' in line:
