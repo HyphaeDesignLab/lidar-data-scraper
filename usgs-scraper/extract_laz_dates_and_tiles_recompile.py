@@ -97,6 +97,8 @@ def run(list_file_name='list.txt'):
                 feature['properties']['date_start'] = laz_scan_dates_obj['date_start']
                 feature['properties']['date_project_end'] = feature['properties']['date_end']
                 feature['properties']['date_end'] = laz_scan_dates_obj['date_end']
+                feature['properties']['leaves'] = are_leaves_on_or_off(laz_scan_dates_obj['date_start'][0:4+2+2], laz_scan_dates_obj['date_start'][0:4+2+2])
+
 
         map_tile_geojson_file = open(project_id_without_slashes+'.new.json', 'w')
         json.dump(map_tile_geojson_obj, map_tile_geojson_file)
@@ -104,6 +106,22 @@ def run(list_file_name='list.txt'):
         requests.post(env['server_url'] + env['tiles_edit_url_path'], data={'secret': env['secret'], 'json': json.dumps(map_tile_geojson_obj), 'project': project_id })
     # /end-for-loop
 
+def are_leaves_on_or_off(date_start, date_end):
+    if int(date_start[0:4]) == int(date_end[0:4]):
+        print('same year')
+        if int(date_start[4:]) > 430 and int(date_end[4:]) < 1001:
+            return 'on'
+        elif int(date_end[4:]) <= 430 or int(date_start[4:]) >= 1001:
+            return 'off'
+        else:
+            return 'mixed'
+    elif  int(date_end[0:4]) - int(date_start[0:4]) == 1:
+        print('1 year diff')
+        if int(date_start[4:]) >= 1001 and int(date_end[4:]) <= 430:
+            return 'off'
+        else:
+            return 'mixed'
+    return 'mixed'
 
 def laz_extract_data(file_path, point_limit=0):
     # Buffered read to extract all dates of individual points

@@ -30,9 +30,11 @@ is_date_leaves_on() {
 is_date_leaves_off() {
   # return boolean (1 or 0) of
   # if year is SAME
-  #   if month1+day1
-  # if year1 = year2  AND ( month1 > month2 > 1031 OR month1 < month2 < 0401 )
-  # if year2 > year1 AND (month1 > 1031 AND month2 < 0401 )
+  #   month1 > 1031 OR month2 < 0401 )
+  # if year is DIFFERENT
+  #   year2 > year1 AND (month1 > 1031 AND month2 < 0401 )
+
+
   eval $(sed -E -e 's/([0-9]{4})([0-9][0-9])([0-9][0-9])-([0-9]{4})([0-9][0-9])([0-9][0-9])/expr \\( \4 - \1 = 1 \\\& \2\3 - 1031 \\> 0 \\\& \5\6 - 0401 \\< 0 \\) \\| \\( \4 - \1 = 0 \\\& \\( \5\6 - 0401 \\< 0 \\| \2\3 - 1031 \\> 0 \\) \\)/' <<< "$1")
 }
 

@@ -93,18 +93,30 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
 
         file=open(meta_dir+'/'+file_name, 'r')
 
+        tile_date_start =None
+        tile_date_end = None
         for line in file:
             line=line.replace('\n', '')
             line_pieces=line.split(':')
             if line_pieces[0] == 'date_start':
-                date_start=line_pieces[1]
+                tile_date_start=line_pieces[1]
             elif line_pieces[0] == 'date_end':
-                date_end=line_pieces[1]
+                tile_date_end=line_pieces[1]
             elif line_pieces[0] in ['south', 'north', 'east', 'west']:
                 try:
                     bounds[line_pieces[0]]=float(line_pieces[1])
                 except Exception as e:
                     print ('%s has error: %s' % (file_name, e))
+
+        if date_start == None:
+            date_start = tile_date_start[0:4+2+2]
+        elif int(tile_date_start[0:4+2+2]) <= int(date_start):
+            date_start = tile_date_start[0:4+2+2]
+
+        if date_end == None:
+            date_end = tile_date_end[0:4+2+2]
+        elif int(tile_date_end[0:4+2+2]) >= int(date_end):
+            date_end = tile_date_end[0:4+2+2]
 
         if 'east' not in bounds or 'west' not in bounds or 'south' not in bounds or 'north' not in bounds:
             continue
@@ -153,9 +165,9 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
            },
            "properties": {
              "is_bbox": False,
-             "date_start": date_start,
-             "date_end": date_end,
-             "leaves": leaves_on_off,
+             "date_start": tile_date_start,
+             "date_end": tile_date_end,
+             "leaves": are_leaves_on_or_off(tile_date_start[0:4+2+2], tile_date_end[0:4+2+2]),
              "laz_tile": file_name_no_extension_abbreviated if file_name_no_extension_abbreviated in laz_details else '',
              "laz_size": laz_details[file_name_no_extension_abbreviated]['size'] if file_name_no_extension_abbreviated in laz_details else ''
            }
@@ -203,7 +215,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
                  "laz_url_dir": laz_url_dir_name,
                  "date_start": date_start,
                  "date_end": date_end,
-                 "leaves": leaves_on_off
+                 "leaves": are_leaves_on_or_off(date_start, date_end)
                }
              }))
     all_tiles_file.close()
@@ -211,6 +223,23 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     end_time = time.time()
     total_time = round(end_time - start_time, 1)
     print(f'done... in {total_time} seconds')
+
+def are_leaves_on_or_off(date_start, date_end):
+    if int(date_start[0:4]) == int(date_end[0:4]):
+        print('same year')
+        if int(date_start[4:]) > 430 and int(date_end[4:]) < 1001:
+            return 'on'
+        elif int(date_end[4:]) <= 430 or int(date_start[4:]) >= 1001:
+            return 'off'
+        else:
+            return 'mixed'
+    elif  int(date_end[0:4]) - int(date_start[0:4]) == 1:
+        print('1 year diff')
+        if int(date_start[4:]) >= 1001 and int(date_end[4:]) <= 430:
+            return 'off'
+        else:
+            return 'mixed'
+    return 'mixed'
 
 if (__name__ == '__main__'):
     run()
