@@ -1,3 +1,5 @@
+#!/bin/bash
+
 HOME_DIR_SENSORS=$HOME/lai-algorithm-training-scraper
 function hyphae-github-help {
   echo "Copy and paste these commands to init GITHUB"
@@ -6,11 +8,6 @@ function hyphae-github-help {
 }
 hyphae-check-scrapes() {
   ps aux | grep scrape | grep -v grep
-}
-hyphae-stop-scrapes() {
-  for projects_dir in $(find ./ -mindepth 2 -maxdepth 2 -type d -name 'projects' ); do
-    echo > $projects_dir/STOP_SCRAPE.txt
-  done;
 }
 
 function hyphae-github-repo-init {
@@ -64,4 +61,33 @@ hyphae-help() {
     echo ' hyphae-github-pull ';
     echo ' hyphae-self-update ';
 
+}
+
+hyphae_server_pid() {
+  ps aux | grep server.py | grep -v grep | sed -E -e 's/^([^ ]+) +([0-9]+) .+/\2/'
+}
+hyphae_server_status() {
+  local pid=$(hyphae_server_pid)
+  if [ "$pid" ]; then
+    echo "server is running: pid $pid"
+  else
+    echo 'server is NOT running'
+  fi
+}
+hyphae_server_stop() {
+  local pid=$(hyphae_server_pid)
+  if [ "$pid" ]; then
+    echo "stopping $pid"
+    kill -9 $pid
+  else
+    echo 'no server process to stop'
+  fi
+}
+hyphae_server_start() {
+  local pid=$(hyphae_server_pid)
+  if [ ! "$pid" ]; then
+    nohup python3 HOME_DIR_SENSORS/usgs-scraper/server.py run 1>>HOME_DIR_SENSORS/usgs-scraper/map_server.log 2>>HOME_DIR_SENSORS/usgs-scraper/map_server.error &
+  else
+    echo "server is already running: pid $pid"
+  fi
 }
