@@ -10,7 +10,7 @@ from urllib.parse import parse_qs
 
 def get_env():
     env = {}
-    env_file = os.path.dirname(sys.argv[0]) + '/.env'
+    env_file = __FILE__ + '/.env'
     if not os.path.isfile(env_file):
         env_file = '.env'
 
