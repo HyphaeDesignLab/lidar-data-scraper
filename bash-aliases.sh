@@ -86,7 +86,7 @@ hyphae_server_stop() {
 hyphae_server_start() {
   local pid=$(hyphae_server_pid)
   if [ ! "$pid" ]; then
-    nohup python3 HOME_DIR_SENSORS/usgs-scraper/server.py run 1>>HOME_DIR_SENSORS/usgs-scraper/map_server.log 2>>HOME_DIR_SENSORS/usgs-scraper/map_server.error &
+    nohup python3 $HOME_DIR_SENSORS/usgs-scraper/server.py run 1>>$HOME_DIR_SENSORS/usgs-scraper/map_server.log 2>>$HOME_DIR_SENSORS/usgs-scraper/map_server.error &
   else
     echo "server is already running: pid $pid"
   fi
