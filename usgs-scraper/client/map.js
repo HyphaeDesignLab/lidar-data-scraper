@@ -269,8 +269,10 @@ function LidarScraperMap() {
     }
 
     function renderPopup(feature, mapClickLngLat) {
-        const dateStart = feature.properties.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')
-        const dateEnd = feature.properties.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')
+        const dateStart = feature.properties.date_start.replace(/^(\d{4})(\d\d)(\d\d).*/, '$1-$2-$3')
+        const timeStart = feature.properties.date_start.length > 4+2+2 ? feature.properties.date_start.substring(4+2+2).replace(/^(\d\d)(\d\d)(\d\d)?/, '$1:$2:$3') : '';
+        const dateEnd = feature.properties.date_end.replace(/^(\d{4})(\d\d)(\d\d).*/, '$1-$2-$3');
+        const timeEnd = feature.properties.date_end.length > 4+2+2 ? feature.properties.date_end.substring(4+2+2).replace(/^(\d\d)(\d\d)(\d\d)?/, '$1:$2:$3') : '';
         const leavesStatus = feature.properties.leaves.toUpperCase();
         const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
         const tileCount = feature.properties.tile_count;
@@ -300,12 +302,13 @@ function LidarScraperMap() {
             };
         } else {
             const lazUrl = makeLazUrl(feature);
+            const tileId = getLazTileId(feature);
             const lazSize = feature.properties.laz_size;
             html = `
-<div><strong>Project TILE ${feature.id}: <br/></strong> (${projectName})</div>
+<div><strong>Project TILE (${tileId} #${feature.id}): <br/></strong> (${projectName})</div>
 <div>
     leaves are ${leavesStatus}<br/>
-    from ${dateStart} to ${dateEnd}<br/>
+    from ${dateStart} ${timeStart} to ${dateEnd} ${timeEnd}<br/>
     <br/>
     <div>
     <div data-load-more-tiles="error" style="color: red; display: none"></div>
@@ -827,6 +830,11 @@ function LidarScraperMap() {
         const tileName = props.laz_tile.replace('{u}', 'USGS_LPC_').replace('{prj}', project).replace('{sprj}', subproject);
         return `${USGS_URL_BASE}/${props.project}/${props.laz_url_dir}/${tileName}.laz`
     }
+    const getLazTileId = (tileFeature) => {
+        const props = tileFeature.properties;
+        return props.laz_tile.replace(/\{(u|s?prj)\}_*/g, '');
+    }
+
     const makeLazSizeReadable = (size) => {
         let factor = 30;
         let suffix = 'GB';
