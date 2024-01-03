@@ -4,13 +4,14 @@ import subprocess
 import os
 import sys
 import json
-import ssl
+import re
+
 from datetime import datetime
 from urllib.parse import parse_qs
 
 def get_env():
     env = {}
-    env_file = __FILE__ + '/.env'
+    env_file = os.path.dirname(__file__) + '/.env'
     if not os.path.isfile(env_file):
         env_file = '.env'
 
@@ -38,29 +39,54 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         self.read_query('post')
-        if not self.check_secret():
-            print('no secret')
+        if not self.check_path():
+            self.blank_response()
             return
+
+        if not self.check_secret():
+            self.blank_response()
+            return
+
         if self.path.startswith('/map-tile-edit'):
             self.edit_map_tile()
+        elif not os.path.isfile(os.getcwd() + self.path):
+            self.blank_response(True)
+            return
         else:
-            self.blank_response()
+            self.blank_response(True)
+            return
 
     def do_GET(self):
         self.read_query('get')
-        if self.path.endswith('/') and not os.path.isfile(self.path + 'index.html'):
+        if not self.check_path():
             self.blank_response()
             return
 
+        if self.path.endswith('/'):
+            self.path = self.path + 'index.html'
+
         if self.path.startswith('/test/map-tile-edit'):
             self.test_edit_map_tile_form()
+        elif not os.path.isfile(os.getcwd() + self.path):
+            self.blank_response()
+            return
         else:
             super().do_GET()
+
+    def check_path(self):
+        if not self.path:
+            return True
+        bad_chars_re = re.compile('[^a-z0-9\-_/\.]', re.IGNORECASE)
+        bad_chars_match = bad_chars_re.search(self.path)
+        print(bad_chars_match)
+        if bad_chars_match:
+            return False
+        return True
+
 
     def read_query(self, method='get'):
         if method == 'post':
             content_length = int(self.headers['Content-Length'])
-            print(content_length)
             self.query = self.rfile.read(content_length).decode('utf-8')
         else:
             path_and_query = self.path.split('?') if self.path else [None, None]
@@ -68,6 +94,7 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
                 self.query = None
             else:
                 self.query = path_and_query[1]
+            self.path = path_and_query[0]
 
     def check_secret(self):
         if not self.query or not 'secret='+env['secret'] in self.query:
@@ -151,6 +178,7 @@ def start_server(custom_port=None):
     port = int(custom_port) if custom_port else int(env['port'])
     with socketserver.TCPServer(("", port), ScraperServer) as httpd:
         if 'ssl' in env and env['ssl'] == 'true':
+            import ssl
             httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=env['ssl_cert_key_file'], certfile=env['ssl_cert_file'], server_side=True)
         print("Server running at http://localhost:{}".format(port))
         httpd.serve_forever()
