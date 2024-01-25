@@ -95,8 +95,14 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
 
         tile_date_start =None
         tile_date_end = None
+        is_xml_file_empty=True
         for line in file:
-            line=line.replace('\n', '')
+            line=line.replace('\n', '').strip()
+
+            if not line:
+                continue
+            is_xml_file_empty=False
+
             line_pieces=line.split(':')
             if line_pieces[0] == 'date_start':
                 tile_date_start=line_pieces[1]
@@ -107,6 +113,8 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
                     bounds[line_pieces[0]]=float(line_pieces[1])
                 except Exception as e:
                     print ('%s has error: %s' % (file_name, e))
+        if is_xml_file_empty:
+            continue
 
         if date_start == None:
             date_start = tile_date_start[0:4+2+2]
