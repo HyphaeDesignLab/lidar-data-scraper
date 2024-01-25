@@ -101,6 +101,9 @@ function LidarScraperMap() {
         mapSources.highlight = map.getSource('highlight')
 
         map.addSource('all', {type: 'geojson', data});
+        map.on('styledata', e => {
+
+        });
         mapSources.all = map.getSource('all')
         map.addLayer({
             'id': 'all',
@@ -576,7 +579,7 @@ function LidarScraperMap() {
                 // assume outer polygon ring coordinates [ [x,y], [x2,y2], ... ]
                 aoiDataTurf = turf.polygon([data]);
         }
-        // simplify polygon/multi-polygon selections: they can be extraordinarily complex without a real need. and make intesections client-side 
+        // simplify polygon/multi-polygon selections: they can be extraordinarily complex without a real need. and make intesections client-side
         if (aoiDataTurf) {
             aoiDataTurf = turf.simplify(aoiDataTurf, {tolerance: 0.0001, highQuality: false});
         }
@@ -799,17 +802,36 @@ function LidarScraperMap() {
     initNewAoiControl();
     initAoiContainerControl();
 
-
+    HygeoLoadingSpinnerEl.INSTANCE.start();
     initMap()
     map.on('load', initData);
+    map.on('styledata', e => {
+        HygeoLoadingSpinnerEl.INSTANCE.stop();
+    });
 
+    const makeGlobalOverlay = text => {
+        const containerEl = document.createElement('div');
+        containerEl.classList.add('closeable-overlay');
+        const closeEl = document.createElement('div');
+        closeEl.dataset.el='close';
+        closeEl.innerText = 'close (x)'
+        const el = document.createElement('div');
+        el.innerHTML = text;
+        el.dataset.el = 'content';
+        closeEl.addEventListener('click', e => containerEl.parentElement.removeChild(containerEl))
+        containerEl.appendChild(el);
+        containerEl.appendChild(closeEl);
+        document.querySelector('body').appendChild(containerEl);
+    }
 
     const makeGlobalCopyPasteTextarea = text => {
         const containerEl = document.createElement('div');
-        containerEl.classList.add('copy-paste-global-popup');
+        containerEl.classList.add('closeable-overlay');
         const closeEl = document.createElement('div');
+        closeEl.dataset.el='close';
         closeEl.innerText = 'close (x)'
         const el = document.createElement('textarea');
+        el.dataset.el = 'content';
         el.readOnly = true;
         el.value = text;
         el.addEventListener('click', e => {
@@ -821,6 +843,7 @@ function LidarScraperMap() {
         containerEl.appendChild(closeEl);
         document.querySelector('body').appendChild(containerEl);
     }
+
     const geoHelpers = {
         getPolygonFirstCoordinate: featureOrCoordinates => {
             const coordinates = featureOrCoordinates.geometry ? featureOrCoordinates.geometry.coordinates : featureOrCoordinates;
