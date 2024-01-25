@@ -339,6 +339,7 @@ function LidarScraperMap() {
             loadTilesEl.style.display = 'none';
             loadTilesErrorEl.innerText = '';
             loadTilesErrorEl.style.display = 'none';
+            HygeoLoadingSpinnerEl.INSTANCE.start();
             setTimeout(() => {
                 loadProjectData(projectFeature)
                     .then(() => {
@@ -618,6 +619,8 @@ function LidarScraperMap() {
         const intersectingProjects = {};
         const intersectingProjectsSelected = {};
         const findIntersection = () => {
+            HygeoLoadingSpinnerEl.INSTANCE.start();
+
             setCenterAndZoom();
 
             intersectBtn.disabled = true;
@@ -670,6 +673,7 @@ function LidarScraperMap() {
                     missingLazTilesEl.style.display = '';
                     missingLazTilesEl.children[0].innerText = missingLazTilesCount;
                 }
+                HygeoLoadingSpinnerEl.INSTANCE.stop();
             })
         };
         const setCenterAndZoom = () => {
