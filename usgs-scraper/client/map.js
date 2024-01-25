@@ -576,6 +576,10 @@ function LidarScraperMap() {
                 // assume outer polygon ring coordinates [ [x,y], [x2,y2], ... ]
                 aoiDataTurf = turf.polygon([data]);
         }
+        // simplify polygon/multi-polygon selections: they can be extraordinarily complex without a real need. and make intesections client-side 
+        if (aoiDataTurf) {
+            aoiDataTurf = turf.simplify(aoiDataTurf, {tolerance: 0.0001, highQuality: false});
+        }
 
         const el = aoiControlTemplateEl.cloneNode(true);
         const nameEl = el.querySelector('[data-name]')
