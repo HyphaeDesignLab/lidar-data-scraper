@@ -58,6 +58,10 @@ function LidarScraperMap() {
         fetch(dataFile)
             .then(response => response.json())
             .then(data => loadAllProjectsData(data));
+
+        map.on('styledata', e => {
+            HygeoLoadingSpinnerEl.INSTANCE.stop();
+        });
     }
 
     const allProjectsFillColorForMode = {
@@ -805,9 +809,6 @@ function LidarScraperMap() {
     HygeoLoadingSpinnerEl.INSTANCE.start();
     initMap()
     map.on('load', initData);
-    map.on('styledata', e => {
-        HygeoLoadingSpinnerEl.INSTANCE.stop();
-    });
 
     const makeGlobalOverlay = text => {
         const containerEl = document.createElement('div');
