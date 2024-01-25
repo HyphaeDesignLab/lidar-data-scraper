@@ -78,7 +78,6 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
             return True
         bad_chars_re = re.compile('[^a-z0-9\-_/\.]', re.IGNORECASE)
         bad_chars_match = bad_chars_re.search(self.path)
-        print(bad_chars_match)
         if bad_chars_match:
             return False
         return True
@@ -146,9 +145,8 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
           if len(project_id_parts) > 1:
             tile_id = tile_id.replace('{sprj}', project_id_parts[1])
           xml_txt_file_path = f'projects/{project}/meta/{tile_id}.xml.txt'
-          print(xml_txt_file_path)
+
           if os.path.isfile(xml_txt_file_path):
-            print('does not exist')
             xml_txt_file = open(xml_txt_file_path)
             xml_txt = ''
             for line in xml_txt_file:
