@@ -207,6 +207,8 @@ elif [ "$1" = 'project' ]; then
   scrape_xml_files $2 $3
 elif [ "$1" = 'xml_extract_data' ]; then
   extract_xml_data $2 $3
+elif [ "$1" = 'extract_xml_data_of_single_file' ]; then
+  extract_xml_data_of_single_file $2 $3
 elif [ "$1" != "" ]; then
     if [ "$2" = "" ]; then
         scrape_xml $1;
