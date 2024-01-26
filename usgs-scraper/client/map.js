@@ -387,17 +387,28 @@ function LidarScraperMap() {
     let lastPopup;
 
     function initPopupObject(htmlOrEl, popupLngLat, onOpenCallback) {
-        var markerHeight = 50, markerRadius = 10, linearOffset = 25;
-        var popupOffsets = {
+        const popupOffsets = {
+            'top': [0, 10],
+            'top-left': [10, 10],
+            'top-right': [-10, 10],
+            'bottom': [0, -10],
+            'bottom-left': [10, -10],
+            'bottom-right': [-10,-10],
+            'left': [10, 0],
+            'right': [-10, 0]
+        };
+        /*
+        {
             'top': [0, 0],
             'top-left': [0, 0],
             'top-right': [0, 0],
-            'bottom': [0, -markerHeight],
-            'bottom-left': [linearOffset, (markerHeight - markerRadius + linearOffset) * -1],
-            'bottom-right': [-linearOffset, (markerHeight - markerRadius + linearOffset) * -1],
-            'left': [markerRadius, (markerHeight - markerRadius) * -1],
-            'right': [-markerRadius, (markerHeight - markerRadius) * -1]
-        };
+            'bottom': [0, -50],
+            'bottom-left': [25, (65) * -1],
+            'bottom-right': [-25, (65) * -1],
+            'left': [10, (40) * -1],
+            'right': [-10, (40) * -1]
+        }
+        */
         if (lastPopup) {
             lastPopup.setHTML(''); // reset
         }
