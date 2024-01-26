@@ -42,7 +42,7 @@ function LidarScraperMap() {
     }
 
 
-    let layersToQuery = ['all'];
+    let layersToQuery = ['all', 'project'];
     const mapSources = {'highlight': null, 'all': null, 'project': null}
     const mapData = {};
 
@@ -105,9 +105,7 @@ function LidarScraperMap() {
         mapSources.highlight = map.getSource('highlight')
 
         map.addSource('all', {type: 'geojson', data});
-        map.on('styledata', e => {
 
-        });
         mapSources.all = map.getSource('all')
         map.addLayer({
             'id': 'all',
@@ -171,9 +169,15 @@ function LidarScraperMap() {
             setClickMode('project')
         }
         if (mapData[project]) {
+            // no need to run loading/spinner as data is already loaded
             loadData_()
             return Promise.resolve();
         } else {
+            // if the call was made to display immediately (i.e. not in a group/batch call),
+            //    show the loading/spinner (else the spinner was started elsewhere by parent/caller)
+            if (immediatelyDisplayLoadedData) {
+                HygeoLoadingSpinnerEl.INSTANCE.start();
+            }
             return fetch(`projects/${project}/map_tiles.json`)
                 .then(response => response.json())
                 .then(data => {
@@ -204,12 +208,10 @@ function LidarScraperMap() {
         clickMode = mode;
         switch (mode) {
             case 'all':
-                layersToQuery = ['all'];
                 map.setPaintProperty('all', 'fill-color', allProjectsFillColorForMode.all);
                 break;
             case 'project':
                 map.setPaintProperty('all', 'fill-color', allProjectsFillColorForMode.project);
-                layersToQuery = ['project'];
                 break;
         }
     }
@@ -223,7 +225,7 @@ function LidarScraperMap() {
     }
 
     function onMapClick(clickEvent) {
-        var features = map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
+        let features = map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
         log(features);
 
         if (!features.length) {
@@ -231,16 +233,29 @@ function LidarScraperMap() {
             mapSources.highlight.setData({type: 'FeatureCollection', features: []});
             return;
         }
+
         if (features.length > 1) {
-            renderMultiLayerChooser(features, clickEvent.lngLat)
-        } else {
-            const feature = features[0];
-            // weird behavior of mapbox selecting partial complex polygon returned by queryRenderedFeatures() at various zoom levels
-            // const feature = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
-            mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
-            log(feature)
-            renderPopup(feature, clickEvent.lngLat)
+            if (clickMode === 'project') {
+                // if in "PROJECT" mode,
+                // only show the project tile features (skip the project Bbox)
+                features = features.filter(f => !f.properties.is_bbox);
+                if (features.length > 1) {
+                    renderMultiLayerChooser(features, clickEvent.lngLat);
+                    return;
+                }
+                // else continue to logic for feature.length === 0 below
+            } else {
+                renderMultiLayerChooser(features, clickEvent.lngLat)
+                return;
+            }
         }
+
+        const feature = features[0];
+        // weird behavior of mapbox selecting partial complex polygon returned by queryRenderedFeatures() at various zoom levels
+        // const feature = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
+        mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
+        log(feature)
+        renderPopup(feature, clickEvent.lngLat)
     }
 
     function renderMultiLayerChooser(features, mapClickEventLngLat) {
@@ -271,6 +286,11 @@ function LidarScraperMap() {
     }
 
     function onMultiLayerChooserClick(feature, mapClickEventLngLat) {
+        // if feature selected is a project tile (i.e. NOT a project bbox)
+        //   then switch to 'project' mode
+        if (!feature.properties.is_bbox) {
+            setClickMode('project')
+        }
         mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
         renderPopup(feature, mapClickEventLngLat)
     }
@@ -339,7 +359,7 @@ function LidarScraperMap() {
             loadTilesEl.style.display = 'none';
             loadTilesErrorEl.innerText = '';
             loadTilesErrorEl.style.display = 'none';
-            HygeoLoadingSpinnerEl.INSTANCE.start();
+
             setTimeout(() => {
                 loadProjectData(projectFeature)
                     .then(() => {
