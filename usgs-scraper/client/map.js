@@ -218,14 +218,15 @@ function LidarScraperMap() {
 
     function toggleMapClick(newState) {
         if (newState) {
-            map.on('click', onMapClick);
+            map.on('click', layersToQuery, onMapClick);
         } else {
-            map.off('click', onMapClick);
+            map.off('click', layersToQuery, onMapClick);
         }
     }
 
     function onMapClick(clickEvent) {
-        let features = map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
+        log(clickEvent);
+        let features = clickEvent.features; // map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
         log(features);
 
         if (!features.length) {
