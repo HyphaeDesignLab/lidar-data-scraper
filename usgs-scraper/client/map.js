@@ -353,6 +353,10 @@ function LidarScraperMap() {
         const loadTilesErrorEl = document.querySelector('[data-load-more-tiles=error]');
         const loadingTilesEl = document.querySelector('[data-load-more-tiles=loading]');
         loadTilesEl.addEventListener('click', e => {
+            if (loadTilesEl.isClicked) {
+                return; // clicked already, prevent double clicking
+            }
+            loadTilesEl.isClicked = true;
             e.preventDefault();
             e.stopPropagation();
             loadingTilesEl.style.display = '';
@@ -363,17 +367,19 @@ function LidarScraperMap() {
             setTimeout(() => {
                 loadProjectData(projectFeature)
                     .then(() => {
+                        loadTilesEl.isClicked = false;
                         loadTilesEl.style.display = 'none';
                         loadingTilesEl.style.display = 'none'
                         loadTilesErrorEl.style.display = 'none'
                     })
                     .catch(e => {
+                        loadTilesEl.isClicked = false;
                         loadTilesErrorEl.style.display = ''
                         loadTilesErrorEl.innerText = e.message
                         loadingTilesEl.style.display = 'none'
                         loadTilesEl.style.display = ''
                     });
-            }, 2000)
+            }, 1)
         })
     }
 
