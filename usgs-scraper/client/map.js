@@ -414,7 +414,7 @@ function LidarScraperMap() {
         }
         lastPopup = new mapboxgl.Popup({
             offset: popupOffsets,
-            className: 'my-class',
+            className: 'transparent-popup',
             closeOnClick: true,
             closeOnMove: false
         })
