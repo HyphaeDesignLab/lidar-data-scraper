@@ -236,28 +236,27 @@ function LidarScraperMap() {
 
     function toggleMapClick(newState) {
         if (newState) {
-            map.on('click', layersToQuery, onMapClick);
+            map.on('click', onMapClick);
         } else {
-            map.off('click', layersToQuery, onMapClick);
+            map.off('click', onMapClick);
         }
     }
 
     function onMapClick(clickEvent) {
         log(clickEvent);
-        let features = clickEvent.features; // map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
+        let features = map.queryRenderedFeatures(clickEvent.point, {layers: layersToQuery});
         log(features);
 
         if (!features.length) {
-            setClickMode('all')
             mapSources.highlight.setData({type: 'FeatureCollection', features: []});
             return;
         }
 
         if (features.length > 1) {
-            if (clickMode === 'project') {
+            if (clickMode === 'project' && !!tileFeatures.length) {
                 // if in "PROJECT" mode,
                 // only show the project tile features (skip the project Bbox)
-                features = features.filter(f => !f.properties.is_bbox);
+                features = tileFeatures;
                 if (features.length > 1) {
                     renderMultiLayerChooser(features, clickEvent.lngLat);
                     return;
@@ -325,7 +324,7 @@ function LidarScraperMap() {
 
         // if the feature clicked on to show popup for is the "bounding box" tile of a project (not the individual tile within a project)
         const isBbox = feature.properties.is_bbox;
-
+        setClickMode(isBbox ? 'all' : 'project');
         let clickHandlers = null;
         let html = '';
         if (isBbox) {
