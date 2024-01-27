@@ -33,12 +33,30 @@ function LidarScraperMap() {
                 customZoom = parseInt(customZoomMatch[1])
             }
         }
+        if (!customCenter || !customZoom) {
+            let customCenterZoomFromLocalStorage = localStorage.getItem('lidar-scraper:zoom-center');
+            if (customCenterZoomFromLocalStorage) {
+                customCenterZoomFromLocalStorage = JSON.parse(customCenterZoomFromLocalStorage);
+                if (!customCenter) {
+                    customCenter = customCenterZoomFromLocalStorage.center;
+                }
+                if (!customZoom) {
+                    customZoom = customCenterZoomFromLocalStorage.zoom;
+                }
+            }
+        }
         map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/hyphae-lab/clb2h2e48000015o4w0b0tyig',
             center: customCenter ?? [-121.87209750161911, 41.648412869824384],
             zoom: customZoom ?? 6.5
         });
+        map.on('moveend', function saveZoom() {
+            localStorage.setItem('lidar-scraper:zoom-center', JSON.stringify({
+                center: map.getCenter(),
+                zoom: map.getZoom()
+            }))
+        })
     }
 
 
