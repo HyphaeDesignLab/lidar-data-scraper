@@ -252,6 +252,7 @@ function LidarScraperMap() {
             return;
         }
 
+        const tileFeatures = features.filter(f => !f.properties.is_bbox);
         if (features.length > 1) {
             if (clickMode === 'project' && !!tileFeatures.length) {
                 // if in "PROJECT" mode,
