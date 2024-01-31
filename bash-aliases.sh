@@ -101,4 +101,8 @@ hyphae_server_check_and_restart() {
     hyphae_server_start >/dev/null;
   fi;
 }
-#
+
+#  Run functions directly, where aliases are not available (e.g. crontab)
+if [ "$2" = 'hyphae_server_check_and_restart' ]; then
+  hyphae_server_check_and_restart;
+fi;
