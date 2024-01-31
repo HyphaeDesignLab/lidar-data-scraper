@@ -50,7 +50,6 @@ function hyphae-self-update {
    echo ssh agent: $SSH_AGENT_PID
    git pull
    # self update bash aliases and re-load
-   cp ./bash-aliases.sh $HOME/.bash_aliases
    . $HOME/.bash_aliases
 }
 
