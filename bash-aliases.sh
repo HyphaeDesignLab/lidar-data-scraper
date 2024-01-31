@@ -1,6 +1,7 @@
 #!/bin/bash
 
-HOME_DIR_SENSORS=$HOME/lai-algorithm-training-scraper
+_HOME_DIR_LIDAR_SCRAPER=$HOME/$1
+
 function hyphae-github-help {
   echo "Copy and paste these commands to init GITHUB"
   echo 'eval "$(ssh-agent -s)"'
@@ -86,8 +87,18 @@ hyphae_server_stop() {
 hyphae_server_start() {
   local pid=$(hyphae_server_pid)
   if [ ! "$pid" ]; then
-    nohup python3 $HOME_DIR_SENSORS/usgs-scraper/server.py run 1>>$HOME_DIR_SENSORS/usgs-scraper/map_server.log 2>>$HOME_DIR_SENSORS/usgs-scraper/map_server.error &
+    nohup python3 $_HOME_DIR_LIDAR_SCRAPER/usgs-scraper/server.py run 1>>$_HOME_DIR_LIDAR_SCRAPER/usgs-scraper/map_server.log 2>>$_HOME_DIR_LIDAR_SCRAPER/usgs-scraper/map_server.error &
   else
     echo "server is already running: pid $pid"
   fi
+}
+
+hyphae_server_check_and_restart() {
+  local url=$(grep 'server_url' $_HOME_DIR_LIDAR_SCRAPER/usgs-scraper/.env | sed -e 's/server_url=//' | tr -d '\n')
+
+  if ! curl --retry 1 --max-time 5  --connect-timeout 3 -f -s $url/map.html >/dev/null 2>/dev/null; then
+    hyphae_server_stop >/dev/null;
+    sleep 20; # sleep because the port in use might need to be released before restart
+    hyphae_server_start >/dev/null;
+  fi;
 }
