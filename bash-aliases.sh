@@ -101,3 +101,4 @@ hyphae_server_check_and_restart() {
     hyphae_server_start >/dev/null;
   fi;
 }
+#
