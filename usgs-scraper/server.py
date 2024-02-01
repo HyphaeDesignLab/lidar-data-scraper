@@ -16,7 +16,7 @@ def get_env():
         env_file = '.env'
 
     if os.path.isfile(env_file):
-        file = open('.env', 'r')
+        file = open(env_file, 'r')
         for line in file:
             if not '=' in line:
                 continue
