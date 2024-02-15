@@ -173,13 +173,17 @@ class ScraperServer(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(html.encode('utf-8'))
 
 def start_server(custom_port=None):
-    port = int(custom_port) if custom_port else int(env['port'])
-    with socketserver.TCPServer(("", port), ScraperServer) as httpd:
-        if 'ssl' in env and env['ssl'] == 'true':
-            import ssl
-            httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=env['ssl_cert_key_file'], certfile=env['ssl_cert_file'], server_side=True)
-        print("Server running at http://localhost:{}".format(port))
-        httpd.serve_forever()
+    try:
+        port = int(custom_port) if custom_port else int(env['port'])
+        socketserver.TCPServer.allow_reuse_address = True
+        with socketserver.TCPServer(("", port), ScraperServer) as httpd:
+            if 'ssl' in env and env['ssl'] == 'true':
+                import ssl
+                httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=env['ssl_cert_key_file'], certfile=env['ssl_cert_file'], server_side=True)
+            print("Server running at http://localhost:{}".format(port))
+            httpd.serve_forever()
+    except Exception as e:
+        print(f"\nError: {e}")
 
 def start_job(type, project, indeces):
     project_subproject = project.split('/')
