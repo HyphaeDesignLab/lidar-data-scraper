@@ -223,8 +223,8 @@ if (env.env === 'prod') {
     const ca = fs.readFileSync(env.ssl_chain);
     const https = require('https');
     let server = https.createServer({key: key, cert: cert, ca }, app);
-    server.listen(3001);
+    server.listen(env.port);
 } else {
     console.log('serving apps/files on http://localhost:3001')
-    app.listen(3001);
+    app.listen(env.port);
 }
