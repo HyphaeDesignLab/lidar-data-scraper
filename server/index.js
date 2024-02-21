@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path')
+const date = require('date-and-time');
 
 // start running server by passing the ENV file (usually .env in same folder) that contains all environment variables
 let env = {};
@@ -203,6 +204,98 @@ app.get('/test/check', function (req, res) {
         const output = JSON.stringify({id: 0, error: error.message})
         res.status(500).send(output);
     }
+});
+
+app.get('/test-map-tile-edit', function(req, res) {
+    const html = `<form method="post" action="/map-tile-edit"><input name=secret value="${env.secret}"/><input name=project value="_test"/><textarea name=json>[1,2,3]</textarea><input type="submit" /></form>`;
+    res.status(200).send(html);
+});
+
+app.post('/map-tile-edit', function(req, res) {
+    const usgsProjectsPath = path.join(__dirname, '..', 'usgs-scraper', 'projects');
+
+    if (!req.body.secret || req.body.secret !== env.secret) {
+        res.status(500).send('n/s');
+        return;
+    }
+    if (!req.body.json || !req.body.project) {
+        res.status(500).send('project or tile json missing');
+        return;
+    }
+
+
+    try {
+        const tilesFeatureCollection = JSON.parse(req.body.json);
+        let errorMessage;
+        if (!tilesFeatureCollection.features) {
+            errorMessage = 'tiles features are missing from GeoJSON';
+        } else if (!tilesFeatureCollection.features.length) {
+            errorMessage = 'there are 0 tiles features in GeoJSON';
+        } else if (!tilesFeatureCollection.features[0].geometry) {
+            errorMessage = 'GeoJSON features are malformed: missing/malformed geometry';
+        } else if (!tilesFeatureCollection.features[0].properties || typeof tilesFeatureCollection.features[0].properties !== 'object') {
+            errorMessage = 'GeoJSON features are malformed: missing properties';
+        }
+        if (errorMessage) {
+            res.status(500).send(errorMessage);
+            return;
+        }
+    } catch(e) {
+        res.status(500).send({error: 'cannot parse the tile json:' + e.message});
+        return;
+    }
+
+    const project = req.body.project;
+    const mapTilesFilePath = `${usgsProjectsPath}/${project}/map_tiles.json`;
+    // backup, if it exists
+    try {
+        const mapTilesFileStats = fs.statSync(mapTilesFilePath);
+        const mapTilesFileMtime = date.format(new Date(mapTilesFileStats.mtimeMs), 'YYYYMMDD_HHmmss');
+        // make a backup of the OLD tiles file with the "last-modified" date-stamp
+        fs.copyFileSync(mapTilesFilePath, mapTilesFilePath.replace('map_tiles.json', `map_tiles_${mapTilesFileMtime}.json`))
+    } catch(e) {
+
+    }
+
+
+    fs.writeFileSync(mapTilesFilePath, req.body.json);
+
+    const nowString = date.format(new Date(), 'YYYYMMDD_HHmmss');
+    // make a copy of the NEW tile JSON with a 'now' date-stamp
+    //  why?   if the regular scraping process overwrites map_tiles.jon, then we want to keep a copy of that NEW file too
+    fs.copyFileSync(mapTilesFilePath, mapTilesFilePath.replace('map_tiles.json', `map_tiles_${nowString}_.json`));
+
+
+    // write tile-specific dates to *.xml.txt files as well (from which the map_tiles.json file is compiled)
+    const projectPieces = project.split('/');
+    const tileErrors = {};
+    JSON.parse(req.body.json).features.forEach((feature,i) => {
+        if (!feature.properties.laz_tile) {
+            return; // skip this one, move onto next
+        }
+        let tileId = feature.properties.laz_tile;
+        tileId = tileId.replace('{u}', 'USGS_LPC_').replace('{prj}', projectPieces[0]);
+        if (projectPieces[1]) {
+            tileId = tileId.replace('{sprj}', projectPieces[1]);
+        }
+        const xmlTxtFilePath = `${usgsProjectsPath}/${project}/meta/${tileId}.xml.txt`;
+        try {
+            const xmlTxtContents = fs.readFileSync(xmlTxtFilePath).toString();
+            let xmlTxtContentsNew = '';
+            xmlTxtContents.split('\n').forEach(line => {
+                if (line.indexOf('date_start') >= 0) {
+                    line = `date_start:${feature.properties.date_start}`
+                }
+                if (line.indexOf('date_end') >= 0) {
+                    line = `date_end:${feature.properties.date_end}`
+                }
+                xmlTxtContentsNew = (xmlTxtContentsNew ? xmlTxtContentsNew + '\n' : '') + line;
+            });
+            fs.writeFileSync(xmlTxtFilePath, xmlTxtContentsNew);
+        } catch (e) {}
+    });
+
+    res.status(200).send('ok');
 });
 
 //express.static.mime.define({'text/javascript': ['md']});
