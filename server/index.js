@@ -205,9 +205,8 @@ app.get('/test/check', function (req, res) {
     }
 });
 
-const staticPublicPath = path.join(__dirname, 'public');
 //express.static.mime.define({'text/javascript': ['md']});
-app.use(express.static(staticPublicPath));
+app.use('/apps', express.static(path.join(__dirname, 'public')));
 app.use('/usgs/map', express.static(path.join(__dirname, '..', 'usgs-scraper', 'client')));
 app.use('/usgs/map/projects', express.static(path.join(__dirname, '..', 'usgs-scraper', 'projects')));
 
