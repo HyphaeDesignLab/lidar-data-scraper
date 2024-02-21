@@ -63,24 +63,26 @@ hyphae_help() {
 
 }
 
-hyphae_server_pid() {
-  ps aux | grep server.py | grep -v grep | sed -E -e 's/^([^ ]+) +([0-9]+) .+/\2/'
-}
 hyphae_server_status() {
+  # https://pm2.keymetrics.io/docs/usage/quick-start/
   pm2 status lidar-scraper-server
   pm2 describe lidar-scraper-server
 }
 hyphae_server_stop() {
+  # https://pm2.keymetrics.io/docs/usage/quick-start/
   pm2 stop lidar-scraper-server
 }
 hyphae_server_start() {
+  # https://pm2.keymetrics.io/docs/usage/quick-start/
   pm2 start lidar-scraper-server
 }
 
 hyphae_server_check_and_restart() {
+
   local url=$(grep 'server_url' $_HOME_DIR_LIDAR_SCRAPER/usgs-scraper/.env | sed -e 's/server_url=//' | tr -d '\n')
 
   if ! curl --retry 1 --max-time 5  --connect-timeout 3 -f -s $url/map.html >/dev/null 2>/dev/null; then
+    # https://pm2.keymetrics.io/docs/usage/quick-start/
     pm2 restart lidar-scraper-server
   fi;
 }
