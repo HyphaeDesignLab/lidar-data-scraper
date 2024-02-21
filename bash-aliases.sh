@@ -2,23 +2,23 @@
 
 _HOME_DIR_LIDAR_SCRAPER=$HOME/$1
 
-function hyphae-github-help {
+function hyphae_github_help {
   echo "Copy and paste these commands to init GITHUB"
   echo 'eval "$(ssh-agent -s)"'
   echo 'ssh-add ~/.ssh/lai-algorithm-training-scraper'
 }
-hyphae-check-scrapes() {
+hyphae_check_scrapes() {
   ps aux | grep scrape | grep -v grep
 }
 
-function hyphae-github-repo-init {
-  hyphae-github-help;
+function hyphae_github_repo_init {
+  hyphae_github_help;
   read -p 'Did you run those commands already? (y/n): ' zzz
   if [ "$zzz" = 'y' ]; then
     git clone git@github.com:hyphae-lab/lai-algorithm-training-scraper.git
   fi;
 }
-function hyphae-github-ssh-init {
+function hyphae_github_ssh_init {
    if [ "$(ps aux | grep ssh-agent | grep -v grep)" != "" ]; then
 	  pidsToKill="$(ps aux | grep ssh-agent | grep -v grep | sed -E -e 's/^[a-z]+ +([0-9]+) +.+$/\1/' -e s/$SSH_AGENT_PID//)"
 	  kill $pidsToKill
@@ -33,9 +33,9 @@ function hyphae-github-ssh-init {
 	  echo $SSH_AGENT_PID
    fi
 }
-function hyphae-github-pull {
+function hyphae_github_pull {
    cd $HOME/lai-algorithm-training-scraper
-   hyphae-github-ssh-init;
+   hyphae_github_ssh_init;
 
    echo ssh agent: $SSH_AGENT_PID
    git pull
@@ -44,22 +44,22 @@ function hyphae-github-pull {
    cp ./bash-aliases.sh $HOME/.bash_aliases
    . $HOME/.bash_aliases
 }
-function hyphae-self-update {
+function hyphae_self_update {
    cd $HOME/lai-algorithm-training-scraper
-   hyphae-github-ssh-init;
+   hyphae_github_ssh_init;
    echo ssh agent: $SSH_AGENT_PID
    git pull
    # self update bash aliases and re-load
    . $HOME/.bash_aliases
 }
 
-hyphae-help() {
+hyphae_help() {
     echo 'Sample usage of Hyphae util functions: '
-    echo ' hyphae-github-help ';
-    echo ' hyphae-github-repo-init ';
-    echo ' hyphae-github-ssh-init ';
-    echo ' hyphae-github-pull ';
-    echo ' hyphae-self-update ';
+    echo ' hyphae_github_help ';
+    echo ' hyphae_github_repo_init ';
+    echo ' hyphae_github_ssh_init ';
+    echo ' hyphae_github_pull ';
+    echo ' hyphae_self_update ';
 
 }
 
