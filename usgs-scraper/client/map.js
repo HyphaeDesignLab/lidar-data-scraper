@@ -285,10 +285,10 @@ function LidarScraperMap() {
         listEl.appendChild(headingEl)
         let popup = null
         features.forEach(feature => {
-            const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
+            const projectId = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
             const name = !feature.properties.is_bbox ?
-                `tile ${feature.id} (${projectName})`
-                : `project ${projectName} with ${feature.properties.tile_count} tiles`;
+                `tile ${feature.id} (${projectId})`
+                : `project ${projectId} with ${feature.properties.tile_count} tiles`;
             const el = document.createElement('li');
             el.style.cursor = 'pointer'
             el.style.textDecoration = 'underline'
@@ -668,17 +668,13 @@ function LidarScraperMap() {
         el.detailsEl = el.querySelector('[data-details]')
         const detailsToggleEl = el.querySelector('[data-details-toggle]')
         const intersectBtn = el.querySelector('button[data-button="intersect"]')
-        const missingLazTilesEl = el.querySelector('[data-missing-tiles]')
-        const selectedProjectsLazSizeEl = el.querySelector('[data-selected-laz-size]')
+        const selectedProjectsStatsEl = el.querySelector('[data-selected-projects-stats]')
         const bbox = turf.bbox(aoiDataTurf);
         const center = turf.center(aoiDataTurf);
         const canvasStyle = getComputedStyle(map.getCanvas());
 
-        const intersectingTiles = {};
-        const intersectingTilesLazUrls = {};
-        const intersectingTilesLazSizes = {};
+        const intersectingProjectsTotals = {tileCount: 0, tileCountMissingLaz: 0, tileSize: 0}
         const intersectingProjects = {};
-        const intersectingProjectsSelected = {};
         const findIntersection = () => {
             HygeoLoadingSpinnerEl.INSTANCE.start();
 
@@ -691,32 +687,40 @@ function LidarScraperMap() {
             mapData.all.features.forEach(feature => {
                 const turfProjectPoly = turf[typeof (feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon' : 'multiPolygon'](feature.geometry.coordinates, feature.properties)
                 if (turf.booleanIntersects(aoiDataTurf, turfProjectPoly)) {
-                    intersectingProjects[feature.properties.project] = feature.properties;
+                    intersectingProjects[feature.properties.project] = {
+                        project: feature.properties,
+                        tileCountMissingLaz: 0,
+                        tileSize: 0,
+                        selected: 'all', // 'all', false or an object of leaves status: {on: true, off: true, mixed: true}
+                        tiles: []
+                    };
                     const loadPromise = loadProjectData(feature, false);
                     loadDataPromises.push(loadPromise);
                 }
             })
             Promise.all(loadDataPromises).then(() => {
-
-                let missingLazTilesCount = 0;
-                Object.keys(intersectingProjects).forEach(project => {
-                    mapData[project].features.forEach(feature => {
+                Object.keys(intersectingProjects).forEach(projectId => {
+                    if (!mapData[projectId] || !mapData[projectId].features || !mapData[projectId].features.length) {
+                        delete intersectingProjects[projectId];
+                        return;
+                    }
+                    mapData[projectId].features.forEach(feature => {
                         const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
                         if (turf.booleanIntersects(aoiDataTurf, turfProjectTilePoly)) {
-                            if (!intersectingTiles[project]) {
-                                intersectingTiles[project] = [];
-                                intersectingTilesLazUrls[project] = [];
-                                intersectingTilesLazSizes[project] = 0;
-                            }
-                            intersectingProjectsSelected[project] = true;
-                            intersectingTiles[project].push(feature);
-                            if (feature.properties.laz_tile) {
-                                intersectingTilesLazUrls[project].push(makeLazUrl(feature))
-                                if (feature.properties.laz_size) {
-                                    intersectingTilesLazSizes[project] += parseLazSize(feature.properties.laz_size)
-                                }
+                            intersectingProjects[projectId].tiles.push(feature);
+
+                            // Set the original totals of ALL projects tiles
+                            intersectingProjectsTotals.tileCount++;
+                            intersectingProjects[projectId].tileCount++;
+                            if (!feature.properties.laz_tile) {
+                                intersectingProjectsTotals.tileCountMissingLaz++;
+                                intersectingProjects[projectId].tileCountMissingLaz++;
                             } else {
-                                missingLazTilesCount++;
+                                if (feature.properties.laz_size) {
+                                    feature.properties.laz_size_number = parseLazSize(feature.properties.laz_size);
+                                    intersectingProjectsTotals.tileSize += feature.properties.laz_size_number;
+                                    intersectingProjects[projectId].tileSize += feature.properties.laz_size_number;
+                                }
                             }
                         }
                     });
@@ -725,15 +729,11 @@ function LidarScraperMap() {
                 addProjectSelector();
                 addTextboxes();
                 hightlightIntersectionTiles();
-                updateSelectedSize();
+                updateSelectedStats();
 
                 intersectBtn.style.display = 'none';
                 el.isActive = true;
                 el.detailsEl.style.display = '';
-                if (missingLazTilesCount > 0) {
-                    missingLazTilesEl.style.display = '';
-                    missingLazTilesEl.children[0].innerText = missingLazTilesCount;
-                }
                 HygeoLoadingSpinnerEl.INSTANCE.stop();
             })
         };
@@ -775,40 +775,112 @@ function LidarScraperMap() {
             map.once('moveend', adjustZoom);
 
         }
-        const hightlightIntersectionTiles = () => {
-            const features = [];
-            Object.keys(intersectingProjectsSelected).forEach(project => {
-                if (intersectingProjectsSelected[project]) {
-                    features.push(...intersectingTiles[project]);
+
+        const forEachSelectedProjectTile = callback => {
+            Object.keys(intersectingProjects).filter(projectId => !!intersectingProjects[projectId].selected).forEach(projectId => {
+                // if selecte flag is 'ALL'
+                //    or is an array of 3 elements (on, off, mixed), then select all (THAT SHOULD NEVER HAPPEN, just a fail safe)
+                if (intersectingProjects[projectId].selected === 'all') {
+                    // ALL
+                    intersectingProjects[projectId].tiles.forEach(feature => callback(feature))
+                } else if (intersectingProjects[projectId].selected instanceof Object) {
+                    // Specific Leave state selected;  check if the feature leaves status is in selected hash
+                    intersectingProjects[projectId].tiles
+                        .filter(feature => intersectingProjects[projectId].selected[feature.properties.leaves])
+                        .forEach(feature => callback(feature))
                 }
-            })
+            });
+        }
+        const hightlightIntersectionTiles = () => {
+            let features = [];
+            forEachSelectedProjectTile(feature => features.push(feature));
             mapSources.project.setData({type: 'FeatureCollection', features});
             mapSources.highlight.setData(aoiDataTurf);
         }
-        const updateSelectedSize = () => {
-            let size = 0;
-            Object.keys(intersectingProjectsSelected).forEach(project => {
-                if (intersectingProjectsSelected[project]) {
-                    size += intersectingTilesLazSizes[project];
+        const updateSelectedStats = () => {
+            let selectedTileSize = 0;
+            let selectedTileCount = 0;
+            let selectedTileCountMissingLaz = 0;
+            const addSelectedFeature = feature => {
+                // Set the original totals of ALL projects tiles
+                selectedTileCount++;
+                if (!feature.properties.laz_tile) {
+                    selectedTileCountMissingLaz++;
+                } else {
+                    if (feature.properties.laz_size) {
+                        selectedTileSize += feature.properties.laz_size_number;
+                    }
                 }
-            });
-            selectedProjectsLazSizeEl.innerText = makeLazSizeReadable(size);
+            };
+            // Show selected/total stats: size, count and tile count missing LAZ data
+            forEachSelectedProjectTile(addSelectedFeature);
+            selectedProjectsStatsEl.innerText = `
+                ${selectedTileCount}/${intersectingProjectsTotals.tileCount} tiles 
+                (${makeLazSizeReadable(selectedTileSize)}/${makeLazSizeReadable(intersectingProjectsTotals.tileSize)})
+                missing LAZ: ${selectedTileCountMissingLaz}/${intersectingProjectsTotals.tileCountMissingLaz}
+            `;
         }
         const addProjectSelector = () => {
             const containerEl = el.querySelector('[data-intersecting-projects]');
             const templateEl = el.querySelector('[data-intersecting-project]');
             templateEl.parentElement.removeChild(templateEl);
-            Object.keys(intersectingProjects).forEach(projectName => {
-                const project = intersectingProjects[projectName];
+            Object.keys(intersectingProjects).forEach(projectId => {
+                const project = intersectingProjects[projectId].project;
                 const projectEl = templateEl.cloneNode(true);
-                projectEl.querySelector('span').innerText = `${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')}, ${makeLazSizeReadable(intersectingTilesLazSizes[projectName])} (${projectName.replaceAll('_', ' ')})`
-                const input = projectEl.querySelector('input');
-                input.checked = true;
-                input.addEventListener('click', e => {
-                    log(e.target.checked);
-                    intersectingProjectsSelected[projectName] = e.target.checked;
+                projectEl.querySelector('span').innerText = `${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')}, ${intersectingProjects[projectId].tileSize} (${projectId.replaceAll('_', ' ')})`
+                const inputAll = projectEl.querySelector('input[data-all]');
+                const inputLeavesOn = projectEl.querySelector('input[data-leaves-on]');
+                const inputLeavesOff = projectEl.querySelector('input[data-leaves-off]');
+                const inputLeavesMixed = projectEl.querySelector('input[data-leaves-mixed]');
+                inputAll.checked = true;
+                inputLeavesOn.checked = true;
+                inputLeavesOff.checked = true;
+                inputLeavesMixed.checked = true;
+
+                const setProjectSelectedState = (type, state) => {
+                    if (type === 'all') {
+                        intersectingProjects[projectId].selected = state ? 'all' : false;
+                    } else {
+                        if (!intersectingProjects[projectId].selected || intersectingProjects[projectId].selected === 'all') {
+                            intersectingProjects[projectId].selected = {};
+                        }
+
+                        intersectingProjects[projectId].selected[type] = state;
+
+                        const selectedKeysLength = Object.keys(intersectingProjects[projectId].selected).filter(s => s).length;
+                        if (selectedKeysLength === 0) {
+                            intersectingProjects[projectId].selected = false;
+                        } else if (selectedKeysLength >= 3) {
+                            intersectingProjects[projectId].selected = 'all';
+                        }
+                    }
+
+                    if (intersectingProjects[projectId].selected === 'all' || intersectingProjects[projectId].selected === false) {
+                        inputAll.checked = !!intersectingProjects[projectId].selected;
+                        inputLeavesOn.checked = !!intersectingProjects[projectId].selected;
+                        inputLeavesOff.checked = !!intersectingProjects[projectId].selected;
+                        inputLeavesMixed.checked = !!intersectingProjects[projectId].selected;
+                    } else {
+                        inputAll.checked = true;
+                        inputLeavesOn.checked = intersectingProjects[projectId].selected['on'];
+                        inputLeavesOff.checked = intersectingProjects[projectId].selected['off'];
+                        inputLeavesMixed.checked = intersectingProjects[projectId].selected['mixed'];
+                    }
+
                     hightlightIntersectionTiles();
-                    updateSelectedSize();
+                    updateSelectedStats();
+                }
+                inputAll.addEventListener('click', e => {
+                    setProjectSelectedState('all', !!e.target.checked);
+                });
+                inputLeavesOn.addEventListener('click', e => {
+                    setProjectSelectedState('on', !!e.target.checked);
+                });
+                inputLeavesOff.addEventListener('click', e => {
+                    setProjectSelectedState('off', !!e.target.checked);
+                });
+                inputLeavesMixed.addEventListener('click', e => {
+                    setProjectSelectedState('mixed', !!e.target.checked);
                 });
                 containerEl.appendChild(projectEl);
             })
@@ -816,20 +888,12 @@ function LidarScraperMap() {
         const addTextboxes = () => {
             el.querySelector('[data-tiles-geojson]').addEventListener('click', e => {
                 const features = [];
-                Object.keys(intersectingProjectsSelected).forEach(project => {
-                    if (intersectingProjectsSelected[project]) {
-                        features.push(...intersectingTiles[project]);
-                    }
-                })
+                forEachSelectedProjectTile(feature => features.push(feature));
                 makeGlobalCopyPasteTextarea(JSON.stringify({type: 'FeatureCollection', features}))
             })
             el.querySelector('[data-laz-list]').addEventListener('click', e => {
                 const urls = [];
-                Object.keys(intersectingProjectsSelected).forEach(project => {
-                    if (intersectingProjectsSelected[project]) {
-                        urls.push(...intersectingTilesLazUrls[project]);
-                    }
-                });
+                forEachSelectedProjectTile(feature => urls.push(makeLazUrl(feature)));
                 makeGlobalCopyPasteTextarea(urls.join("\n"))
             })
         }
