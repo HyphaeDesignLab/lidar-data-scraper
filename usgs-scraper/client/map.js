@@ -347,9 +347,14 @@ function LidarScraperMap() {
                 addProjectPopupClickHandlers(feature)
             };
         } else {
-            const lazUrl = makeLazUrl(feature);
-            const tileId = getLazTileId(feature);
-            const lazSize = feature.properties.laz_size;
+            const tileId = getLazTileId(feature) || 'n/a';
+            let lazTileLink = '';
+            if (feature.properties.laz_tile) {
+                const lazSize = feature.properties.laz_size;
+                const lazUrl = makeLazUrl(feature);
+                lazTileLink = `<a href="${lazUrl}" target="_blank">download LAZ tile (${lazSize})</a>`
+            }
+
             html = `
 <div><strong>Project TILE (${tileId} #${feature.id}): <br/></strong> (${projectName})</div>
 <div>
@@ -357,9 +362,9 @@ function LidarScraperMap() {
     from ${dateStart} ${timeStart} to ${dateEnd} ${timeEnd}<br/>
     <br/>
     <div>
-    <div data-load-more-tiles="error" style="color: red; display: none"></div>
-    <span data-load-more-tiles="loading" style="display: none">downloading tiles...</span>
-    <a href="${lazUrl}" target="_blank">download LAZ tile (${lazSize})</a>
+        <div data-load-more-tiles="error" style="color: red; display: none"></div>
+        <span data-load-more-tiles="loading" style="display: none">downloading tiles...</span>
+        ${lazTileLink}
     </div>
 </div>
 `;
@@ -913,14 +918,19 @@ function LidarScraperMap() {
         }
     }
     const makeLazUrl = (tileFeature) => {
+        if (!tileFeature.properties.laz_tile) {
+            return '';
+        }
         const props = tileFeature.properties;
         const [project, subproject] = props.project.split('/');
         const tileName = props.laz_tile.replace('{u}', 'USGS_LPC_').replace('{prj}', project).replace('{sprj}', subproject);
         return `${USGS_URL_BASE}/${props.project}/${props.laz_url_dir}/${tileName}.laz`
     }
     const getLazTileId = (tileFeature) => {
-        const props = tileFeature.properties;
-        return props.laz_tile.replace(/\{(u|s?prj)\}_*/g, '');
+        if (!tileFeature.properties.laz_tile) {
+            return null;
+        }
+        return tileFeature.properties.laz_tile.replace(/\{(u|s?prj)\}_*/g, '');
     }
 
     const makeLazSizeReadable = (size) => {
