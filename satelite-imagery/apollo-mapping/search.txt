@@ -1,0 +1,15 @@
+cloudcover_max: 20
+offnadir_max: 29
+resolution_min: 0
+resolution_max: 0.5
+dem: false
+coords: [[-122.14393615722656,37.792422407988575],[-122.16178894042969,37.765286825037926],[-122.12677001953125,37.73271097867418],[-122.09175109863281,37.790251927933284]]
+seasonal: false
+monthly: false
+dateRange: true
+dateFilter: [{"startDate":"2021-05-01T07:00:00.000Z","endDate":"2021-09-30T07:00:00.000Z"}]
+stereo: false
+lazyLoad: true
+startDate: 2021-05-01T12:00:00
+endDate: 2021-09-30T12:00:00
+satellites: ["BJ3A","HEX","HEXD","GE1","K3A","PNEO","P1","SKYC","SKYV","SV1","SV2","SVN","WV1","WV2","WV3","WV4"]

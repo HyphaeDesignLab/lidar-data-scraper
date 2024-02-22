@@ -1,0 +1,7 @@
+https://imagehunter-api.apollomapping.com/ajax/get_preview_image
+
+catid: K3A_20210921101253_35838_00000099_L0F
+satellite: kompsat
+satelliteShortName: K3A
+isRefresh: false
+forceHighestQuality: false
