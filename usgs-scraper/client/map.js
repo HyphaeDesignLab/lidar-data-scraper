@@ -936,7 +936,7 @@ function LidarScraperMap() {
             el.querySelector('[data-laz-list]').addEventListener('click', e => {
                 const urls = [];
                 forEachSelectedProjectTile(feature => urls.push(makeLazUrl(feature)));
-                makeGlobalCopyPasteTextarea(urls.join("\n"))
+                makeGlobalCopyPasteTextarea(urls.filter(url => !!url).join("\n"))
             })
         }
         intersectBtn.addEventListener('click', findIntersection);
