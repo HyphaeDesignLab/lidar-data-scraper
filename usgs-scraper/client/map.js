@@ -711,7 +711,7 @@ function LidarScraperMap() {
                         project: feature.properties,
                         tileCountMissingLaz: 0,
                         tileSize: 0,
-                        selected: 'all', // 'all', false or an object of leaves status: {on: true, off: true, mixed: true}
+                        selected: {on: true, off: true, mixed: true}, // or false
                         tiles: []
                     };
                     const loadPromise = loadProjectData(feature, false);
@@ -800,10 +800,9 @@ function LidarScraperMap() {
 
         const forEachSelectedProjectTile = callback => {
             Object.keys(intersectingProjects).filter(projectId => !!intersectingProjects[projectId].selected).forEach(projectId => {
-                // if selecte flag is 'ALL'
-                //    or is an array of 3 elements (on, off, mixed), then select all (THAT SHOULD NEVER HAPPEN, just a fail safe)
-                if (intersectingProjects[projectId].selected === 'all') {
-                    // ALL
+                // if selected an array of 3 elements (on, off, mixed),
+                if (Object.values(intersectingProjects[projectId].selected).filter(v => v).length >= 3) {
+                    //  => ALL
                     intersectingProjects[projectId].tiles.forEach(feature => callback(feature))
                 } else if (intersectingProjects[projectId].selected instanceof Object) {
                     // Specific Leave state selected;  check if the feature leaves status is in selected hash
@@ -863,27 +862,25 @@ function LidarScraperMap() {
 
                 const setProjectSelectedState = (type, state) => {
                     if (type === 'all') {
-                        intersectingProjects[projectId].selected = state ? 'all' : false;
+                        intersectingProjects[projectId].selected = state ? {on: true, off: true, mixed: true} : false;
                     } else {
-                        if (!intersectingProjects[projectId].selected || intersectingProjects[projectId].selected === 'all') {
+                        if (!intersectingProjects[projectId].selected) {
                             intersectingProjects[projectId].selected = {};
                         }
 
                         intersectingProjects[projectId].selected[type] = state;
 
-                        const selectedKeysLength = Object.keys(intersectingProjects[projectId].selected).filter(s => s).length;
+                        const selectedKeysLength = Object.values(intersectingProjects[projectId].selected).filter(v => v).length;
                         if (selectedKeysLength === 0) {
                             intersectingProjects[projectId].selected = false;
-                        } else if (selectedKeysLength >= 3) {
-                            intersectingProjects[projectId].selected = 'all';
                         }
                     }
 
-                    if (intersectingProjects[projectId].selected === 'all' || intersectingProjects[projectId].selected === false) {
-                        inputAll.checked = !!intersectingProjects[projectId].selected;
-                        inputLeavesOn.checked = !!intersectingProjects[projectId].selected;
-                        inputLeavesOff.checked = !!intersectingProjects[projectId].selected;
-                        inputLeavesMixed.checked = !!intersectingProjects[projectId].selected;
+                    if (intersectingProjects[projectId].selected === false) {
+                        inputAll.checked = false;
+                        inputLeavesOn.checked = false;
+                        inputLeavesOff.checked = false;
+                        inputLeavesMixed.checked = false;
                     } else {
                         inputAll.checked = true;
                         inputLeavesOn.checked = intersectingProjects[projectId].selected['on'];
