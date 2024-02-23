@@ -77,6 +77,8 @@ function LidarScraperMap() {
             .then(response => response.json())
             .then(data => loadAllProjectsData(data));
 
+        renderSavedAoiControls(); // after all is done and loaded
+
         map.on('styledata', e => {
             HygeoLoadingSpinnerEl.INSTANCE.stop();
         });
@@ -621,7 +623,19 @@ function LidarScraperMap() {
 
     const aoiControlTemplateEl = document.querySelector('[data-controls=area-of-interest]');
     aoiControlTemplateEl.parentElement.removeChild(aoiControlTemplateEl);
-    const initAoiControl = (data) => {
+    const initAoiControl = (data, name=null, id=null) => {
+        let aoiName = name || `New area of interest ${String(new Date()).substring(0, 21)}`;
+        let aoiId = id;
+        if (!aoiId) {
+            aoiId = new Date().getTime();
+            const savedAoiIds = localStorage.getItem('lidar-scraper:aoi-list');
+            localStorage.setItem('lidar-scraper:aoi-list', (savedAoiIds ? savedAoiIds+';':'') + aoiId);
+            localStorage.setItem(`lidar-scraper:aoi:${aoiId}`,JSON.stringify({
+                name: aoiName,
+                data: data
+            }));
+        }
+
         switch (data.type) {
             case 'FeatureCollection':
                 data = data.features[0].geometry
@@ -653,7 +667,7 @@ function LidarScraperMap() {
         const el = aoiControlTemplateEl.cloneNode(true);
         const nameEl = el.querySelector('[data-name]')
         const nameEditEl = el.querySelector('[data-name-edit]')
-        nameEl.innerText = `New area of interest ${String(new Date()).substring(0, 21)}`
+        nameEl.innerText = aoiName;
         nameEditEl.addEventListener('click', e => {
             nameEl._isContentEditable = !nameEl._isContentEditable; // custom property boolean
             nameEl.contentEditable = nameEl._isContentEditable; // string proper DOM property; assignment will cast boolean to string
@@ -662,6 +676,13 @@ function LidarScraperMap() {
                 nameEl.focus();
             } else {
                 nameEditEl.focus();
+                if (nameEl.innerText !== aoiName) {
+                    aoiName = nameEl.innerText;
+                    localStorage.setItem(`lidar-scraper:aoi:${aoiId}`,JSON.stringify({
+                        name: aoiName,
+                        data: data
+                    }));
+                }
             }
         });
 
@@ -957,7 +978,20 @@ function LidarScraperMap() {
 
     initNewAoiControl();
     initAoiContainerControl();
-
+    const renderSavedAoiControls = () => {
+        const savedAoiIds = localStorage.getItem('lidar-scraper:aoi-list');
+        if (savedAoiIds) {
+            savedAoiIds.split(';').forEach(id => {
+                let aoi = localStorage.getItem(`lidar-scraper:aoi:${id}`);
+                if (aoi) {
+                    try {
+                        aoi = JSON.parse(aoi);
+                        initAoiControl(aoi.data, aoi.name, id)
+                    } catch(e) {}
+                }
+            });
+        }
+    }
     HygeoLoadingSpinnerEl.INSTANCE.start();
     initMap()
     map.on('load', initData);
