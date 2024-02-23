@@ -657,7 +657,7 @@ function LidarScraperMap() {
         nameEditEl.addEventListener('click', e => {
             nameEl._isContentEditable = !nameEl._isContentEditable; // custom property boolean
             nameEl.contentEditable = nameEl._isContentEditable; // string proper DOM property; assignment will cast boolean to string
-            nameEditEl.innerText = nameEl._isContentEditable ? 'save' : 'edit name';
+            nameEditEl.innerHTML = nameEl._isContentEditable ? 'save' : '&#x270e;';
             if (nameEl._isContentEditable) {
                 nameEl.focus();
             } else {
@@ -666,7 +666,27 @@ function LidarScraperMap() {
         });
 
         el.detailsEl = el.querySelector('[data-details]')
-        const detailsToggleEl = el.querySelector('[data-details-toggle]')
+        el.detailsEl.style.overflow = 'overflow';
+        const detailsElHeightTransitionSpeedMs = 250;
+        el.detailsEl.style.transition = `height ${detailsElHeightTransitionSpeedMs}ms ease-in`;
+        const toggleDetailsEl = (el, state) => {
+            if (state) {
+                el.style.height = 0;
+                setTimeout(() => {
+                    el.style.height = '200px';
+                    setTimeout(() => {
+                        el.style.height = 'auto';
+                    }, detailsElHeightTransitionSpeedMs * 2);
+                }, 1)
+            } else {
+                el.style.height = '200px';
+                setTimeout(() => {
+                    el.style.height = '0';
+                }, 1)
+            }
+        }
+        el.detailsToggleEl = el.querySelector('[data-details-toggle]')
+        el.detailsToggleEl.style.display = 'none';
         const intersectBtn = el.querySelector('button[data-button="intersect"]')
         const selectedProjectsStatsEl = el.querySelector('[data-selected-projects-stats]')
         const bbox = turf.bbox(aoiDataTurf);
@@ -733,7 +753,9 @@ function LidarScraperMap() {
 
                 intersectBtn.style.display = 'none';
                 el.isActive = true;
-                el.detailsEl.style.display = '';
+                toggleDetailsEl(el.detailsEl, true)
+                el.detailsToggleEl.style.display = '';
+                el.detailsToggleEl.innerText = '(x) hide details';
                 HygeoLoadingSpinnerEl.INSTANCE.stop();
             })
         };
@@ -898,9 +920,11 @@ function LidarScraperMap() {
             })
         }
         intersectBtn.addEventListener('click', findIntersection);
-        detailsToggleEl.addEventListener('click', e => {
+        el.detailsToggleEl.addEventListener('click', e => {
             el.isActive = !el.isActive;
-            el.detailsEl.style.display = el.isActive ? '' : 'none';
+            toggleDetailsEl(el.detailsEl, el.isActive)
+            el.detailsToggleEl.innerText = el.isActive ? '(x) hide details' : '+ show details';
+
             if (el.isActive) {
                 setCenterAndZoom();
                 hightlightIntersectionTiles();
@@ -920,7 +944,7 @@ function LidarScraperMap() {
         }
         // hide other AOI details
         renderedElements.aois.forEach(el => {
-            el.detailsEl.style.display = 'none';
+            toggleDetailsEl(el.detailsEl, false);
             el.isActive = false;
         });
         // add current AOI to list

@@ -137,11 +137,10 @@
         </div>
     </div>
     <div data-controls="area-of-interest">
-        <h4 data-name></h4>
-        <button data-name-edit>edit name</button>
+        <div><h4 data-name style="display: inline-block"></h4><button data-name-edit>&#x270e;</button></div>
         <button data-button="intersect">find intersecting project tiles</button>
-        <button data-details-toggle>details</button>
-        <div data-details style="display: none">
+        <button data-details-toggle>+ show details</button>
+        <div data-details style="overflow:hidden; height: 0;">
             <div>
                 Intersecting Project Tiles: <span data-selected-projects-stats></span>
                 <div data-intersecting-projects>
