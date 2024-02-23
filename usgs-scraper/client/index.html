@@ -34,9 +34,10 @@
             position: fixed; top: 0; right: 0; z-index: 123;
             max-width: 500px;
             overflow-y: scroll;
-            background: rgba(255,155,255,.85);
-            max-height: 50%;
+            background: rgba(255,255,255,.85);
+            max-height: 100%;
             min-height: 300px;
+            padding: 4px;
         }
         [data-controls=toggle] {
             cursor: pointer;
@@ -62,6 +63,12 @@
             padding: 3px;
             margin: 7px;
             border: 1px dashed black;
+        }
+        [data-controls=area-of-interest] [data-details] {
+            padding: 8px;
+        }
+        [data-controls=area-of-interest] [data-details] [data-intersecting-project]{
+            padding: 8px;
         }
         textarea {
             width: 90%;
@@ -142,7 +149,7 @@
         <button data-details-toggle>+ show details</button>
         <div data-details style="overflow:hidden; height: 0;">
             <div>
-                Intersecting Project Tiles: <span data-selected-projects-stats></span>
+                <strong>Intersecting Project Tiles</strong>: <span data-selected-projects-stats></span>
                 <div data-intersecting-projects>
                     <div data-intersecting-project>
                         <input type="checkbox" value="" data-all />

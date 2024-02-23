@@ -836,10 +836,11 @@ function LidarScraperMap() {
             };
             // Show selected/total stats: size, count and tile count missing LAZ data
             forEachSelectedProjectTile(addSelectedFeature);
-            selectedProjectsStatsEl.innerText = `
+            const missingTilesHtml = selectedTileCountMissingLaz ? `<span style="color: red">missing LAZ: ${selectedTileCountMissingLaz}/${intersectingProjectsTotals.tileCountMissingLaz}</span>` : ''
+            selectedProjectsStatsEl.innerHTML = `
                 ${selectedTileCount}/${intersectingProjectsTotals.tileCount} tiles 
                 (${makeLazSizeReadable(selectedTileSize)}/${makeLazSizeReadable(intersectingProjectsTotals.tileSize)})
-                missing LAZ: ${selectedTileCountMissingLaz}/${intersectingProjectsTotals.tileCountMissingLaz}
+                ${missingTilesHtml}
             `;
         }
         const addProjectSelector = () => {
@@ -849,7 +850,8 @@ function LidarScraperMap() {
             Object.keys(intersectingProjects).forEach(projectId => {
                 const project = intersectingProjects[projectId].project;
                 const projectEl = templateEl.cloneNode(true);
-                projectEl.querySelector('span').innerText = `${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')}, ${intersectingProjects[projectId].tileSize} (${projectId.replaceAll('_', ' ')})`
+                const tileCountMissingLazHtml = intersectingProjects[projectId].tileCountMissingLaz ? `<span style="color: red">missing LAZ: ${intersectingProjects[projectId].tileCountMissingLaz}</span>` : '';
+                projectEl.querySelector('span').innerHTML = `${projectId.replaceAll('_', ' ')} <br/> ${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} <br/> ${intersectingProjects[projectId].tileCount} (${makeLazSizeReadable(intersectingProjects[projectId].tileSize)}) ${tileCountMissingLazHtml}`
                 const inputAll = projectEl.querySelector('input[data-all]');
                 const inputLeavesOn = projectEl.querySelector('input[data-leaves-on]');
                 const inputLeavesOff = projectEl.querySelector('input[data-leaves-off]');
