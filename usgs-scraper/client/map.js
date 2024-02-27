@@ -690,7 +690,11 @@ function LidarScraperMap() {
         el.detailsEl.style.overflow = 'overflow';
         const detailsElHeightTransitionSpeedMs = 250;
         el.detailsEl.style.transition = `height ${detailsElHeightTransitionSpeedMs}ms ease-in`;
-        const toggleDetailsEl = (el, state) => {
+        const toggleDetailsEl = (el, state, noAnimation) => {
+            if (noAnimation) {
+                el.style.height = state ? '200px' : '0';
+                return;
+            }
             if (state) {
                 el.style.height = 0;
                 setTimeout(() => {
@@ -953,7 +957,8 @@ function LidarScraperMap() {
                 if (el === el_) {
                     return;
                 }
-                el_.detailsEl.style.display = 'none';
+                toggleDetailsEl(el_.detailsEl, false, 'withoutAnimation');
+                el_.detailsToggleEl.innerText = '+ show details';
                 el_.isActive = false;
             });
         });
