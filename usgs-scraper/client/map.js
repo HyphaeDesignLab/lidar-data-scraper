@@ -736,6 +736,7 @@ function LidarScraperMap() {
                         project: feature.properties,
                         tileCountMissingLaz: 0,
                         tileSize: 0,
+                        tileCount: 0,
                         selected: {on: true, off: true, mixed: true}, // or false
                         tiles: []
                     };
@@ -874,8 +875,26 @@ function LidarScraperMap() {
             Object.keys(intersectingProjects).forEach(projectId => {
                 const project = intersectingProjects[projectId].project;
                 const projectEl = templateEl.cloneNode(true);
-                const tileCountMissingLazHtml = intersectingProjects[projectId].tileCountMissingLaz ? `<span style="color: red">missing LAZ: ${intersectingProjects[projectId].tileCountMissingLaz}</span>` : '';
-                projectEl.querySelector('span').innerHTML = `${projectId.replaceAll('_', ' ')} <br/> ${project.date_start.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} - ${project.date_end.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')} <br/> ${intersectingProjects[projectId].tileCount} (${makeLazSizeReadable(intersectingProjects[projectId].tileSize)}) ${tileCountMissingLazHtml}`
+                const nameEl = projectEl.querySelector('[data-project-name]');
+                const datesEl = projectEl.querySelector('[data-project-dates]');
+                const sizeEl = projectEl.querySelector('[data-project-size]');
+                const tileCountEl = projectEl.querySelector('[data-project-tile-count]');
+
+                nameEl.innerText = projectId.replaceAll('_', ' ');
+                datesEl.innerText = [project.date_start, project.date_end]
+                    .map(d => d.replace(/(\d{4})(\d\d)(\d\d)/, '$1/$2/$3')).join(' - ');
+
+                sizeEl.innerText = makeLazSizeReadable(intersectingProjects[projectId].tileSize);
+
+                tileCountEl.innerText = intersectingProjects[projectId].tileCount;
+
+                const missingTilesEl = projectEl.querySelector('[data-project-tile-count-missing-laz]');
+                if (!intersectingProjects[projectId].tileCountMissingLaz) {
+                    missingTilesEl.display = 'none';
+                } else {
+                    missingTilesEl.querySelector('span').innerText = intersectingProjects[projectId].tileCountMissingLaz;
+                }
+                
                 const inputAll = projectEl.querySelector('input[data-all]');
                 const inputLeavesOn = projectEl.querySelector('input[data-leaves-on]');
                 const inputLeavesOff = projectEl.querySelector('input[data-leaves-off]');

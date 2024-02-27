@@ -1,12 +1,16 @@
 const FakeMapboxglMap = {
     Map: function() {
         this.queryRenderedFeatures = () => [];
-        this.on = () => {};
+        this.on = (type, handler) => {
+            if (type !== 'click') {
+                handler();
+            }
+        };
         this.once = () => {};
         this.off = () => {};
         this.project = () => {};
         this.unproject = () => {};
-        this.getCanvas = () => {};
+        this.getCanvas = () => { return document.createElement('span')};
         this.getZoom = () => {};
         this.getCenter = () => {};
         this.flyTo = () => {};
