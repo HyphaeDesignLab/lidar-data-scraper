@@ -1022,7 +1022,7 @@ function LidarScraperMap() {
                 makeGlobalCopyPasteTextarea(urls.filter(url => !!url).join("\n"))
             })
         }
-        intersectBtn.addEventListener('click', findIntersection);
+        intersectBtn.addEventListener('click', e => HygeoLoadingSpinnerEl.INSTANCE.start().then(findIntersection));
         el.detailsToggleEl.addEventListener('click', e => {
             el.isActive = !el.isActive;
             toggleDetailsEl(el.detailsEl, el.isActive)

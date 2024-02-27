@@ -4,8 +4,6 @@ function HygeoLoadingSpinnerEl() {
     }
 
     const overlayElId = 'hygeo-loading-overlay', spinnerElId = 'hygeo-loading-spinner';
-    const spinningTime = 10; //seconds
-    const stopFadeoutTime = 2; //seconds
     const size = 40; //seconds
     const border = 5; //seconds
     const stylesheetEl = document.createElement('style');
@@ -16,13 +14,7 @@ function HygeoLoadingSpinnerEl() {
             width: 100vw; height: 100vh; top: 0; left: 0;
             z-index: 888888;
             background: rgb(200,200,200,.8);
-            transition: opacity ${stopFadeoutTime}s ease-in;
             opacity: 1;
-        }
-    `);
-    stylesheetEl.sheet.insertRule(`
-        #${overlayElId}.fading { 
-            opacity: 0;
         }
     `);
     stylesheetEl.sheet.insertRule(`
@@ -33,13 +25,8 @@ function HygeoLoadingSpinnerEl() {
             border-width: ${border}px;
             border-color: blue red yellow green;
             border-radius: ${size}px; 
-            transition: transform ${spinningTime}s ease-out;
         }
     `);
-    stylesheetEl.sheet.insertRule(`
-        #${spinnerElId}.spinning {
-            transform: rotate(${spinningTime/3}turn);
-        }`);
 
     const overlayEl = document.createElement('div');
     overlayEl.id = overlayElId;
@@ -48,31 +35,52 @@ function HygeoLoadingSpinnerEl() {
     overlayEl.appendChild(spinnerEl);
 
     let isFirstTime = true;
+    const spinAnimation = {
+        properties: { transform: ['rotate(0)', 'rotate(360deg)']},
+        options: { duration: 4*1000, iterations: Infinity },
+        instance: null
+    }
+    const fadeAnimation = {
+        properties: { opacity: [0,1]},
+        options: { duration: 1000},
+        instance: null
+    }
+
+    let nextFrame = false;
     const start = () => {
         if (!document.body) {
             setTimeout(start, 100);
             return;
         }
 
-        document.body.appendChild(overlayEl);
-        if (!isFirstTime) {
-            overlayEl.hidden = false;
-            overlayEl.classList.toggle('fading', false);
+        if (isFirstTime) {
+            document.body.appendChild(overlayEl);
         }
 
-        setTimeout(() => {
-            spinnerEl.classList.toggle('spinning', true);
-        }, 100);
+        overlayEl.style.display = '';
+        spinAnimation.instance = spinnerEl.animate(spinAnimation.properties, spinAnimation.options)
+        fadeAnimation.instance = overlayEl.animate(fadeAnimation.properties, fadeAnimation.options);
+
 
         isFirstTime = false;
+        return fadeAnimation.instance.finished;
     };
 
     const stop = () => {
-        overlayEl.classList.toggle('fading', true);
-        setTimeout(() => {
-            overlayEl.hidden = true;
-            spinnerEl.classList.toggle('spinning', false);
-        }, stopFadeoutTime * 1000);
+        nextFrame = false;
+        console.log('stop spinning')
+        const existingAnimations = [];
+        if (fadeAnimation.instance) {
+            existingAnimations.push(fadeAnimation.instance);
+        }
+        if (spinAnimation.instance) {
+            existingAnimations.push(spinAnimation.instance);
+        }
+
+        Promise.all(existingAnimations).then(() => {
+            fadeAnimation.instance = overlayEl.animate(fadeAnimation.properties, {direction: 'reverse', ...fadeAnimation.options});
+            fadeAnimation.instance.finished.then(() => overlayEl.style.display = 'none')
+        })
     };
 
     HygeoLoadingSpinnerEl.INSTANCE = {
