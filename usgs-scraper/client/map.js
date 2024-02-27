@@ -647,21 +647,29 @@ function LidarScraperMap() {
                 data = data.geometries[0]
                 break;
         }
-        let aoiDataTurf;
+        let aoiPolygonTurf;
+        let aoiPolygonType;
+        let aoiPolygonSimpleTurf;
         switch (data.type) {
             case 'Polygon':
-                aoiDataTurf = turf.polygon(data.coordinates);
+                aoiPolygonType = 'polygon';
+                aoiPolygonTurf = turf.polygon(data.coordinates);
+                aoiPolygonSimpleTurf = turf.polygon([data.coordinates[0]]); // outer ring
                 break;
             case 'MultiPolygon':
-                aoiDataTurf = turf.multiPolygon(data.coordinates);
+                aoiPolygonType = 'multipolygon';
+                aoiPolygonTurf = turf.multiPolygon(data.coordinates);
+                aoiPolygonSimpleTurf = turf.polygon([data.coordinates[0][0]]); // first polygon outerring
                 break;
             default:
                 // assume outer polygon ring coordinates [ [x,y], [x2,y2], ... ]
-                aoiDataTurf = turf.polygon([data]);
+                aoiPolygonType = 'polygon';
+                aoiPolygonTurf = turf.polygon([data]);
+                aoiPolygonSimpleTurf = turf.polygon([data]);
         }
         // simplify polygon/multi-polygon selections: they can be extraordinarily complex without a real need. and make intesections client-side
-        if (aoiDataTurf) {
-            aoiDataTurf = turf.simplify(aoiDataTurf, {tolerance: 0.0001, highQuality: false});
+        if (aoiPolygonTurf) {
+            aoiPolygonTurf = turf.simplify(aoiPolygonTurf, {tolerance: 0.0001, highQuality: false});
         }
 
         const el = aoiControlTemplateEl.cloneNode(true);
@@ -714,8 +722,8 @@ function LidarScraperMap() {
         el.detailsToggleEl.style.display = 'none';
         const intersectBtn = el.querySelector('button[data-button="intersect"]')
         const selectedProjectsStatsEl = el.querySelector('[data-selected-projects-stats]')
-        const bbox = turf.bbox(aoiDataTurf);
-        const center = turf.center(aoiDataTurf);
+        const bbox = turf.bbox(aoiPolygonTurf);
+        const center = turf.center(aoiPolygonTurf);
         const canvasStyle = getComputedStyle(map.getCanvas());
 
         const intersectingProjectsTotals = {tileCount: 0, tileCountMissingLaz: 0, tileSize: 0}
@@ -731,7 +739,7 @@ function LidarScraperMap() {
             const loadDataPromises = [];
             mapData.all.features.forEach(feature => {
                 const turfProjectPoly = turf[typeof (feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon' : 'multiPolygon'](feature.geometry.coordinates, feature.properties)
-                if (turf.booleanIntersects(aoiDataTurf, turfProjectPoly)) {
+                if (turf.booleanIntersects(aoiPolygonTurf, turfProjectPoly)) {
                     intersectingProjects[feature.properties.project] = {
                         project: feature.properties,
                         tileCountMissingLaz: 0,
@@ -752,7 +760,7 @@ function LidarScraperMap() {
                     }
                     mapData[projectId].features.forEach(feature => {
                         const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
-                        if (turf.booleanIntersects(aoiDataTurf, turfProjectTilePoly)) {
+                        if (turf.booleanIntersects(aoiPolygonTurf, turfProjectTilePoly)) {
                             intersectingProjects[projectId].tiles.push(feature);
 
                             // Set the original totals of ALL projects tiles
@@ -773,6 +781,7 @@ function LidarScraperMap() {
                 });
 
                 addAoiProjectsControls();
+                addAoiGeojsonControls();
                 addAoiButtonHandlers();
                 hightlightIntersectionTiles();
                 updateSelectedStats();
@@ -842,7 +851,7 @@ function LidarScraperMap() {
             let features = [];
             forEachSelectedProjectTile(feature => features.push(feature));
             mapSources.project.setData({type: 'FeatureCollection', features});
-            mapSources.highlight.setData(aoiDataTurf);
+            mapSources.highlight.setData(aoiPolygonTurf);
         }
         const updateSelectedStats = () => {
             let selectedTileSize = 0;
@@ -868,6 +877,50 @@ function LidarScraperMap() {
                 ${missingTilesHtml}
             `;
         }
+        const addAoiGeojsonControls = () => {
+            const orignalPolygonInfoEl = el.querySelector('[data-aoi-polygon-info]');
+            const orignalPolygonBtnEl = el.querySelector('[data-aoi-polygon-geojson]');
+            const simplePolygonInfoEl = el.querySelector('[data-aoi-simple-polygon-info]');
+            const simplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon-geojson]');
+            const simplifySimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon-simplify]');
+            const revertSimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon-revert]');
+
+            orignalPolygonInfoEl.innerHTML = orignalPolygonInfoEl.innerText
+                .replace('{type}', aoiPolygonType)
+                .replace('{polygonCount}', aoiPolygonType === 'multipolygon' ? data.coordinates.length: 1)
+                .replace('{holeCount}', aoiPolygonType === 'multipolygon' ? data.coordinates.reduce((a, p) => a + p.length > 1 ? p.length - 1 : 0, 0) : (data.coordinates.length > 1 ? data.coordinates.length - 1 : 0))
+                .replace('{vertexCount}', aoiPolygonType === 'multipolygon' ? data.coordinates.reduce((a, poly) => a+ poly.reduce((a,ring) => a + ring.length, 0), 0) : (data.coordinates.reduce((a, ring) => a + ring.length, 0)));
+
+            const dataSimple = aoiPolygonSimpleTurf.geometry;
+            simplePolygonInfoEl.originalInnerHTML = simplePolygonInfoEl.innerHTML
+            simplePolygonInfoEl.innerHTML = simplePolygonInfoEl.originalInnerHTML
+                .replace('{vertexCount}', dataSimple.coordinates[0].length);
+
+            orignalPolygonBtnEl.addEventListener('click', e => {
+                makeGlobalCopyPasteTextarea(JSON.stringify(data))
+            })
+            simplePolygonBtnEl.addEventListener('click', e => {
+                makeGlobalCopyPasteTextarea(JSON.stringify(dataSimple))
+            })
+
+            let simplifiedPolygonTurf = null
+            let simplifyLevel = 0.0001;
+            simplifySimplePolygonBtnEl.addEventListener('click', e => {
+                simplifiedPolygonTurf = turf.simplify(aoiPolygonSimpleTurf, {tolerance: simplifyLevel, highQuality: false});
+                simplifyLevel = simplifyLevel * 2;
+                simplePolygonInfoEl.innerHTML = simplePolygonInfoEl.originalInnerHTML
+                    .replace('{vertexCount}', simplifiedPolygonTurf.geometry.coordinates[0].length);
+                mapSources.highlight.setData(simplifiedPolygonTurf);
+            })
+            revertSimplePolygonBtnEl.addEventListener('click', e => {
+                simplifiedPolygonTurf = turf.polygon(dataSimple.coordinates);
+                simplifyLevel = 0.0001;
+                simplePolygonInfoEl.innerHTML = simplePolygonInfoEl.originalInnerHTML
+                    .replace('{vertexCount}', simplifiedPolygonTurf.geometry.coordinates[0].length);
+                mapSources.highlight.setData(simplifiedPolygonTurf);
+            })
+
+        };
         const addAoiProjectsControls = () => {
             const containerEl = el.querySelector('[data-intersecting-projects]');
             const templateEl = el.querySelector('[data-intersecting-project]');

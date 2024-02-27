@@ -164,7 +164,20 @@
                         </div>
                     </div>
                 </div>
-                <button data-tiles-geojson>GeoJSON</button>
+                <div style="margin: 20px;">
+                    <div>
+                        <span data-aoi-polygon-info><strong>Original Area {type}</strong>: {polygonCount} polygon(s), {holeCount} hole rings, {vertexCount} vertices</span>
+                        <br/>
+                        <button data-aoi-polygon-geojson>original GeoJSON</button>
+                    </div>
+                    <div><span data-aoi-simple-polygon-info><strong>Simplified First Polygon (no holes)</strong>: {vertexCount} vertices)</span>
+                        <br/>
+                        <button data-aoi-simple-polygon-simplify>simplify</button>
+                        <button data-aoi-simple-polygon-revert>revert</button>
+                        <button data-aoi-simple-polygon-geojson>simplified GeoJSON</button>
+                    </div>
+                </div>
+                <button data-tiles-geojson>Tiles GeoJSON</button>
                 <button data-laz-list>LAZ URLs</button>
             </div>
         </div>
