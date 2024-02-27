@@ -166,15 +166,17 @@
                 </div>
                 <div style="margin: 20px;">
                     <div>
-                        <span data-aoi-polygon-info><strong>Original Area {type}</strong>: {polygonCount} polygon(s), {holeCount} hole rings, {vertexCount} vertices</span>
+                        <span data-aoi-polygon='info'><strong>Original Area {type}</strong>: {polygonCount} polygon(s), {holeCount} hole rings, {vertexCount} vertices</span>
                         <br/>
-                        <button data-aoi-polygon-geojson>original GeoJSON</button>
+                        <button data-aoi-polygon='geojson'>original GeoJSON</button>
                     </div>
-                    <div><span data-aoi-simple-polygon-info><strong>Simplified First Polygon (no holes)</strong>: {vertexCount} vertices)</span>
+                    <div><span data-aoi-simple-polygon='info'><strong>Simplified First Polygon (no holes)</strong>: {vertexCount} vertices)</span>
                         <br/>
-                        <button data-aoi-simple-polygon-simplify>simplify</button>
-                        <button data-aoi-simple-polygon-revert>revert</button>
-                        <button data-aoi-simple-polygon-geojson>simplified GeoJSON</button>
+                        <button data-aoi-simple-polygon='simplify'>simplify</button>
+                        <button data-aoi-simple-polygon='revert'>revert</button>
+                        <button data-aoi-simple-polygon="geojson">simplified GeoJSON</button>
+                        <label><input type="checkbox" data-aoi-simple-polygon="file-download"/> as
+                            file</label>
                     </div>
                 </div>
                 <button data-tiles-geojson>Tiles GeoJSON</button>

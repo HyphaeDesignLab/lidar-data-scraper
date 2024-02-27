@@ -623,7 +623,7 @@ function LidarScraperMap() {
 
     const aoiControlTemplateEl = document.querySelector('[data-controls=area-of-interest]');
     aoiControlTemplateEl.parentElement.removeChild(aoiControlTemplateEl);
-    const initAoiControl = (data, name=null, id=null) => {
+    const initAoiControl = (data, name='', id=null) => {
         let aoiName = name || `New area of interest ${String(new Date()).substring(0, 21)}`;
         let aoiId = id;
         if (!aoiId) {
@@ -878,12 +878,13 @@ function LidarScraperMap() {
             `;
         }
         const addAoiGeojsonControls = () => {
-            const orignalPolygonInfoEl = el.querySelector('[data-aoi-polygon-info]');
-            const orignalPolygonBtnEl = el.querySelector('[data-aoi-polygon-geojson]');
-            const simplePolygonInfoEl = el.querySelector('[data-aoi-simple-polygon-info]');
-            const simplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon-geojson]');
-            const simplifySimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon-simplify]');
-            const revertSimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon-revert]');
+            const orignalPolygonInfoEl = el.querySelector('[data-aoi-polygon="info"]');
+            const orignalPolygonBtnEl = el.querySelector('[data-aoi-polygon="geojson"]');
+            const simplePolygonInfoEl = el.querySelector('[data-aoi-simple-polygon="info"]');
+            const simplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon="geojson"]');
+            const simplePolygonFileDownloadChk = el.querySelector('[data-aoi-simple-polygon="file-download"]');
+            const simplifySimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon="simplify"]');
+            const revertSimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon="revert"]');
 
             orignalPolygonInfoEl.innerHTML = orignalPolygonInfoEl.innerText
                 .replace('{type}', aoiPolygonType)
@@ -899,12 +900,18 @@ function LidarScraperMap() {
             orignalPolygonBtnEl.addEventListener('click', e => {
                 makeGlobalCopyPasteTextarea(JSON.stringify(data))
             })
+
+            let simplifiedPolygonTurf = null;
+            let simplifyLevel = 0.0001;
             simplePolygonBtnEl.addEventListener('click', e => {
-                makeGlobalCopyPasteTextarea(JSON.stringify(dataSimple))
+                const simpleTurf = simplifiedPolygonTurf || aoiPolygonSimpleTurf;
+                if (simplePolygonFileDownloadChk.checked) {
+                    downloadJsonAsFile(simpleTurf, name.toLowerCase().replace(/\W/g, '-')+'.json');
+                } else {
+                    makeGlobalCopyPasteTextarea(JSON.stringify(simpleTurf));
+                }
             })
 
-            let simplifiedPolygonTurf = null
-            let simplifyLevel = 0.0001;
             simplifySimplePolygonBtnEl.addEventListener('click', e => {
                 simplifiedPolygonTurf = turf.simplify(aoiPolygonSimpleTurf, {tolerance: simplifyLevel, highQuality: false});
                 simplifyLevel = simplifyLevel * 2;
@@ -1088,6 +1095,14 @@ function LidarScraperMap() {
         document.querySelector('body').appendChild(containerEl);
     }
 
+    const downloadJsonAsFile = (json, fileName) => {
+        let link = document.createElement("a");
+        link.target = "_blank";
+        link.download = fileName;
+        link.href = window.URL.createObjectURL(new Blob([(json instanceof Object) ? JSON.stringify(json):json]), {type: "application/json"});
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+    }
     const makeGlobalCopyPasteTextarea = text => {
         const containerEl = document.createElement('div');
         containerEl.classList.add('closeable-overlay');
