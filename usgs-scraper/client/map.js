@@ -772,8 +772,8 @@ function LidarScraperMap() {
                     });
                 });
 
-                addProjectSelector();
-                addTextboxes();
+                addAoiProjectsControls();
+                addAoiButtonHandlers();
                 hightlightIntersectionTiles();
                 updateSelectedStats();
 
@@ -868,7 +868,7 @@ function LidarScraperMap() {
                 ${missingTilesHtml}
             `;
         }
-        const addProjectSelector = () => {
+        const addAoiProjectsControls = () => {
             const containerEl = el.querySelector('[data-intersecting-projects]');
             const templateEl = el.querySelector('[data-intersecting-project]');
             templateEl.parentElement.removeChild(templateEl);
@@ -950,7 +950,7 @@ function LidarScraperMap() {
                 containerEl.appendChild(projectEl);
             })
         }
-        const addTextboxes = () => {
+        const addAoiButtonHandlers = () => {
             el.querySelector('[data-tiles-geojson]').addEventListener('click', e => {
                 const features = [];
                 forEachSelectedProjectTile(feature => features.push(feature));
