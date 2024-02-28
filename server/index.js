@@ -55,12 +55,12 @@ const checkProjectId = id => {
     }
     return sanitizedId;
 }
-app.get('/sources', function (req, res) {
+app.get('/sources', function sources(req, res) {
     const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
     res.setHeader("Content-Type", "application/json");
     res.status(200).send(text);
 });
-app.get('/source/:id/:cmd', function (req, res) {
+app.get('/source/:id/:cmd', function sourceCmd(req, res) {
     res.setHeader("Content-Type", "application/json");
 
     let sourceId, sourceDir, cmd;
@@ -80,7 +80,7 @@ app.get('/source/:id/:cmd', function (req, res) {
 
     res.status(200).send(output);
 });
-app.get('/source/:id/:project_id/:cmd', function (req, res) {
+app.get('/source/:id/:project_id/:cmd', function sourceProjectCmd(req, res) {
     res.setHeader("Content-Type", "application/json");
 
     let sourceId, sourceDir, projectId, cmd;
@@ -101,7 +101,7 @@ app.get('/source/:id/:project_id/:cmd', function (req, res) {
 
     res.status(200).send(output);
 });
-app.get('/source/:id/:project_id/:subproject_id/:cmd', function (req, res) {
+app.get('/source/:id/:project_id/:subproject_id/:cmd', function sourceProjectSubprojectCmd(req, res) {
     res.setHeader("Content-Type", "application/json");
 
     let sourceId, sourceDir, projectId, subprojectId, cmd;
@@ -154,7 +154,7 @@ app.get('/source/:id/:project_id/:subproject_id/:cmd', function (req, res) {
     res.status(200).send(output);
 });
 
-app.get('/scrape/check', function (req, res) {
+app.get('/scrape/check', function scrapeCheck (req, res) {
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'run_in_bg.txt');
         const out = childProcess.execSync('ps aux | grep -i test.py | grep -v grep | cat');
@@ -167,7 +167,7 @@ app.get('/scrape/check', function (req, res) {
     }
 });
 
-app.get('/test/run-in-bg', function (req, res) {
+app.get('/test/run-in-bg', function testRunInBg(req, res) {
 
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'tests');
@@ -193,7 +193,7 @@ app.get('/test/run-in-bg', function (req, res) {
         res.status(500).send(output);
     }
 });
-app.get('/test/check', function (req, res) {
+app.get('/test/check', function testCheck(req, res) {
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'tests', 'run-in-bg.txt');
         const out = childProcess.execSync('ps aux | grep -i run-in-bg.py | grep -v grep | cat');
@@ -206,12 +206,12 @@ app.get('/test/check', function (req, res) {
     }
 });
 
-app.get('/test-map-tile-edit', function(req, res) {
+app.get('/test-map-tile-edit', function testMapTileEdit(req, res) {
     const html = `<form method="post" action="/map-tile-edit"><input name=secret value="${env.secret}"/><input name=project value="_test"/><textarea name=json>[1,2,3]</textarea><input type="submit" /></form>`;
     res.status(200).send(html);
 });
 
-app.post('/map-tile-edit', function(req, res) {
+app.post('/map-tile-edit', function mapTileEdit(req, res) {
     const usgsProjectsPath = path.join(__dirname, '..', 'usgs-scraper', 'projects');
 
     if (!req.body.secret || req.body.secret !== env.secret) {
@@ -304,7 +304,7 @@ app.use('/usgs/map', express.static(path.join(__dirname, '..', 'usgs-scraper', '
 app.use('/usgs/map/projects', express.static(path.join(__dirname, '..', 'usgs-scraper', 'projects')));
 
 
-app.get('/', function (req, res) {
+app.get('/', function defaultOk(req, res) {
     res.send('ok');
 });
 
