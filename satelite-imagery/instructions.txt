@@ -1,0 +1,13 @@
+Decided to use UP42 and Apollo Mapping.
+The satellite accuracy: under 50 cm (30 cm seems ideal)
+Don’t use PAN imagery
+Use at least 4 bands of spectral reading
+Use under 10% cloud cover esp if the area of interest overlaps close to fully with the satellite image area
+Use less than 30 degrees of pitch/incline of the photo angle from vertical: NADIR
+
+Stereo NOT needed; so if it makes it more expensive and there are alternatives, use those
+
+Prefer to use same season on SAME YEAR, if same year not available; if not, try same season in a different year;
+Seasons are: “leaves ON” (05/01 to end of 09/30) and “leaves OFF” (11/01 to end of 3/31)
+
+["BJ3A","HEX","HEXD","GE1","K3A","PNEO","P1","SKYC","SKYV","SV1","SV2","SVN","WV1","WV2","WV3","WV4"]
