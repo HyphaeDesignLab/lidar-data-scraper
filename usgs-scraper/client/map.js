@@ -904,7 +904,8 @@ function LidarScraperMap() {
             let simplifiedPolygonTurf = null;
             let simplifyLevel = 0.0001;
             simplePolygonBtnEl.addEventListener('click', e => {
-                const simpleTurf = turf.featureCollection(simplifiedPolygonTurf || aoiPolygonSimpleTurf);
+                //  turfjs featureCollection needs to be given an *ARRAY* of features
+                const simpleTurf = turf.featureCollection([simplifiedPolygonTurf || aoiPolygonSimpleTurf]);
                 if (simplePolygonFileDownloadChk.checked) {
                     downloadJsonAsFile(simpleTurf, name.toLowerCase().replace(/\W/g, '-')+'.json');
                 } else {
