@@ -55,12 +55,12 @@ const checkProjectId = id => {
     }
     return sanitizedId;
 }
-app.get('/sources', function sources(req, res) {
+app.get('/sources', function app_sources(req, res) {
     const text = fs.readFileSync(path.join(__dirname, '..', 'sources.json'));
     res.setHeader("Content-Type", "application/json");
     res.status(200).send(text);
 });
-app.get('/source/:id/:cmd', function sourceCmd(req, res) {
+app.get('/source/:id/:cmd', function app_sourceCmd(req, res) {
     res.setHeader("Content-Type", "application/json");
 
     let sourceId, sourceDir, cmd;
@@ -80,7 +80,7 @@ app.get('/source/:id/:cmd', function sourceCmd(req, res) {
 
     res.status(200).send(output);
 });
-app.get('/source/:id/:project_id/:cmd', function sourceProjectCmd(req, res) {
+app.get('/source/:id/:project_id/:cmd', function app_sourceProjectCmd(req, res) {
     res.setHeader("Content-Type", "application/json");
 
     let sourceId, sourceDir, projectId, cmd;
@@ -101,7 +101,7 @@ app.get('/source/:id/:project_id/:cmd', function sourceProjectCmd(req, res) {
 
     res.status(200).send(output);
 });
-app.get('/source/:id/:project_id/:subproject_id/:cmd', function sourceProjectSubprojectCmd(req, res) {
+app.get('/source/:id/:project_id/:subproject_id/:cmd', function app_sourceProjectSubprojectCmd(req, res) {
     res.setHeader("Content-Type", "application/json");
 
     let sourceId, sourceDir, projectId, subprojectId, cmd;
@@ -154,7 +154,7 @@ app.get('/source/:id/:project_id/:subproject_id/:cmd', function sourceProjectSub
     res.status(200).send(output);
 });
 
-app.get('/scrape/check', function scrapeCheck (req, res) {
+app.get('/scrape/check', function app_scrapeCheck (req, res) {
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'run_in_bg.txt');
         const out = childProcess.execSync('ps aux | grep -i test.py | grep -v grep | cat');
@@ -167,7 +167,7 @@ app.get('/scrape/check', function scrapeCheck (req, res) {
     }
 });
 
-app.get('/test/run-in-bg', function testRunInBg(req, res) {
+app.get('/test/run-in-bg', function app_testRunInBg(req, res) {
 
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'tests');
@@ -193,7 +193,7 @@ app.get('/test/run-in-bg', function testRunInBg(req, res) {
         res.status(500).send(output);
     }
 });
-app.get('/test/check', function testCheck(req, res) {
+app.get('/test/check', function app_testCheck(req, res) {
     try {
         const testPath = path.join(__dirname, '..', 'usgs-scraper', 'tests', 'run-in-bg.txt');
         const out = childProcess.execSync('ps aux | grep -i run-in-bg.py | grep -v grep | cat');
@@ -206,12 +206,18 @@ app.get('/test/check', function testCheck(req, res) {
     }
 });
 
-app.get('/test-map-tile-edit', function testMapTileEdit(req, res) {
+app.get('/test-map-tile-edit', function app_testMapTileEdit(req, res) {
     const html = `<form method="post" action="/map-tile-edit"><input name=secret value="${env.secret}"/><input name=project value="_test"/><textarea name=json>[1,2,3]</textarea><input type="submit" /></form>`;
     res.status(200).send(html);
 });
 
-app.post('/map-tile-edit', function mapTileEdit(req, res) {
+/* LAZ dates save to map_tile
+  this endpoint is called by a python script ran to extract tile dates from LAZ file directly
+  - save the new map_tiles.json
+  - save new dates to LAZ.TXT file if XML and LAZ dates differ
+  - keep old dates XML.TXT intact, because other scripts will overwrite
+*/
+app.post('/map-tile-edit', function app_mapTileEdit(req, res) {
     const usgsProjectsPath = path.join(__dirname, '..', 'usgs-scraper', 'projects');
 
     if (!req.body.secret || req.body.secret !== env.secret) {
@@ -304,7 +310,7 @@ app.use('/usgs/map', express.static(path.join(__dirname, '..', 'usgs-scraper', '
 app.use('/usgs/map/projects', express.static(path.join(__dirname, '..', 'usgs-scraper', 'projects')));
 
 
-app.get('/', function defaultOk(req, res) {
+app.get('/', function app_defaultOk(req, res) {
     res.send('ok');
 });
 
