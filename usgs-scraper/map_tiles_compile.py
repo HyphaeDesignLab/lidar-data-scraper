@@ -234,14 +234,14 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
 
 def are_leaves_on_or_off(date_start, date_end):
     if int(date_start[0:4]) == int(date_end[0:4]):
-        if int(date_start[4:]) > 430 and int(date_end[4:]) < 1001:
+        if int(date_start[4:]) >= 501 and int(date_end[4:]) <= 930:
             return 'on'
-        elif int(date_end[4:]) <= 430 or int(date_start[4:]) >= 1001:
+        elif int(date_end[4:]) <= 331 or int(date_start[4:]) >= 1101:
             return 'off'
         else:
             return 'mixed'
     elif  int(date_end[0:4]) - int(date_start[0:4]) == 1:
-        if int(date_start[4:]) >= 1001 and int(date_end[4:]) <= 430:
+        if int(date_start[4:]) >= 1101 and int(date_end[4:]) <= 331:
             return 'off'
         else:
             return 'mixed'
