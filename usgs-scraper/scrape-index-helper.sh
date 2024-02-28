@@ -142,12 +142,12 @@ scrape_index_helper__diff() {
   local data_type=$(cat $backup_dir/contents-type.txt)
   ### MAKE STATS / DIFF with previous (currents)
   if [ -d $current_dir ]; then
-    if [ "$data_type" = 'projects' ]; then
+    if [ "$data_type" = 'projects' ] && [ -d $current_dir ]; then
       python3 diff_file_list.py $current_dir/index_details.txt $backup_dir/index_details.txt $backup_dir/
     fi
 
    # diff on meta/laz dir details
-    if [ "$data_type" = 'data' ]; then
+    if [ "$data_type" = 'data' ] && [ -d $current_dir ]; then
       python3 diff_file_list.py $current_dir/data_details.txt $backup_dir/data_details.txt $backup_dir/
     fi
   else
