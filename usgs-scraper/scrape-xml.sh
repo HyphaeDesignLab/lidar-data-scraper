@@ -175,7 +175,12 @@ extract_xml_data() {
 
   local meta_dir=$project_path/meta
   local fff=''
+  local _count=0;
+  local _total=$(find $meta_dir -name '*.xml' -type f | wc -l)
   for fff in $meta_dir/*.xml; do
+    printf "\r%*s\r" "$(tput cols)" " "
+    echo -n "$_count / $_total processing"
+    ((_count++))
     extract_xml_data_of_single_file $meta_dir $(echo $fff | sed -E -e 's@^.+/@@;s/\.xml$//')
   done
 }
