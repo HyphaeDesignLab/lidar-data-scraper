@@ -1,5 +1,6 @@
 function LidarScraperMap() {
     const USGS_URL_BASE = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
+    const USGS_FILE_PREFIX = 'USGS_LPC_'
     if (LidarScraperMap.__IS_INIT) {
         return;
     }
@@ -60,8 +61,8 @@ function LidarScraperMap() {
     }
 
 
-    let layersToQuery = ['all', 'project'];
-    const mapSources = {'highlight': null, 'all': null, 'project': null}
+    let layersToQuery = ['projects', 'tiles'];
+    const mapSources = {highlight: null, projects: null, tiles: null}
     const mapData = {};
 
     function initData() {
@@ -75,7 +76,7 @@ function LidarScraperMap() {
         const dataFile = customDataFile ? customDataFile : 'projects/map_tiles.json'
         fetch(dataFile)
             .then(response => response.json())
-            .then(data => loadAllProjectsData(data));
+            .then(data => loadProjectsData(data));
 
         renderSavedAoiControls(); // after all is done and loaded
 
@@ -85,25 +86,25 @@ function LidarScraperMap() {
     }
 
     const allProjectsFillColorForMode = {
-        'all': ["case",
+        'projects': ["case",
             ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
             ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .5], // "#fcae51"
             ["rgba", 252, 81, 121, .5] // "#fc5179"
         ],
-        'project': ["case",
+        'tiles': ["case",
             ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .2], // "#5aff70",
             ['==', ['get', 'leaves'], 'off'], ["rgba", 252, 174, 81, .2], // "#fcae51"
             ["rgba", 252, 81, 121, .2] // "#fc5179"
         ]
     }
 
-    function loadAllProjectsData(data) {
-        mapData.all = data;
+    function loadProjectsData(data) {
+        mapData.projects = data;
         log(data)
 
         data.features.forEach((feature, i) => {
-            feature.properties.type = 'all'
             addProjectControlEl(feature.properties.project)
+            feature.properties.is_project = true;
             if (!feature.id) {
                 feature.id = (i + 1);
             }
@@ -124,15 +125,15 @@ function LidarScraperMap() {
         });
         mapSources.highlight = map.getSource('highlight')
 
-        map.addSource('all', {type: 'geojson', data});
+        map.addSource('projects', {type: 'geojson', data});
 
-        mapSources.all = map.getSource('all')
+        mapSources.projects = map.getSource('projects')
         map.addLayer({
-            'id': 'all',
+            'id': 'projects',
             'type': 'fill',
-            'source': 'all',
+            'source': 'projects',
             "paint": {
-                "fill-color": allProjectsFillColorForMode.all,
+                "fill-color": allProjectsFillColorForMode.projects,
                 "fill-opacity": .8, // default
                 "fill-outline-color": ['case',
                     ['==', ['feature-state', 'focused'], true], "#222222",
@@ -142,15 +143,15 @@ function LidarScraperMap() {
             }
         });
 
-        map.addSource('project', {
+        map.addSource('tiles', {
             type: 'geojson',
             data: {type: 'FeatureCollection', features: []}
         });
-        mapSources.project = map.getSource('project')
+        mapSources.tiles = map.getSource('tiles')
         map.addLayer({
-            'id': 'project',
+            'id': 'tiles',
             'type': 'fill',
-            'source': 'project',
+            'source': 'tiles',
             "paint": {
                 "fill-color": ["case",
                     ['==', ['get', 'leaves'], 'on'], ["rgba", 90, 255, 112, .5], // "#5aff70",
@@ -166,9 +167,9 @@ function LidarScraperMap() {
             }
         });
         // map.addLayer({
-        //     'id': 'project',
+        //     'id': 'tiles',
         //     'type': 'fill',
-        //     'source': 'project',
+        //     'source': 'tiles',
         //     "paint": {
         //         "fill-color": "#aaaaff",
         //         "fill-opacity": .9,
@@ -179,14 +180,14 @@ function LidarScraperMap() {
         toggleMapClick(true);
     }
 
-    function loadProjectData(projectFeature, immediatelyDisplayLoadedData = true) {
+    function loadTilesData(projectFeature, immediatelyDisplayLoadedData = true) {
         const project = projectFeature.properties.project;
         const parentFeatureId = parseInt(projectFeature.id);
         const loadData_ = () => {
             if (immediatelyDisplayLoadedData) {
-                mapSources.project.setData(mapData[project]); // update
+                mapSources.tiles.setData(mapData[project]); // update
             }
-            setClickMode('project')
+            setClickMode('tiles')
         }
         if (mapData[project]) {
             // no need to run loading/spinner as data is already loaded
@@ -209,7 +210,6 @@ function LidarScraperMap() {
                     }
                     data.features.forEach(feature => {
                         // fill in missing pieces that do not need to be transferred via WEB
-                        feature.properties.type = 'project'
                         feature.properties.project = project
                         feature.properties.laz_url_dir = projectFeature.properties.laz_url_dir;
                     })
@@ -222,16 +222,16 @@ function LidarScraperMap() {
 
     }
 
-    let clickMode = 'all'
+    let clickMode = 'projects'
 
     function setClickMode(mode) {
         clickMode = mode;
         switch (mode) {
-            case 'all':
-                map.setPaintProperty('all', 'fill-color', allProjectsFillColorForMode.all);
+            case 'projects':
+                map.setPaintProperty('projects', 'fill-color', allProjectsFillColorForMode.projects);
                 break;
-            case 'project':
-                map.setPaintProperty('all', 'fill-color', allProjectsFillColorForMode.project);
+            case 'tiles':
+                map.setPaintProperty('tiles', 'fill-color', allProjectsFillColorForMode.tiles);
                 break;
         }
     }
@@ -254,9 +254,9 @@ function LidarScraperMap() {
             return;
         }
 
-        const tileFeatures = features.filter(f => !f.properties.is_bbox);
+        const tileFeatures = features.filter(f => !f.properties.is_project);
         if (features.length > 1) {
-            if (clickMode === 'project' && !!tileFeatures.length) {
+            if (clickMode === 'tiles' && !!tileFeatures.length) {
                 // if in "PROJECT" mode,
                 // only show the project tile features (skip the project Bbox)
                 features = tileFeatures;
@@ -273,7 +273,7 @@ function LidarScraperMap() {
 
         const feature = features[0];
         // weird behavior of mapbox selecting partial complex polygon returned by queryRenderedFeatures() at various zoom levels
-        // const feature = features[0].properties.type === 'all' ? mapData.all.features.find(f => f.id === features[0].id) : features[0];
+        // const feature = features[0].properties.type === 'projects' ? mapData.projects.features.find(f => f.id === features[0].id) : features[0];
         mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
         log(feature)
         renderPopup(feature, clickEvent.lngLat)
@@ -287,10 +287,10 @@ function LidarScraperMap() {
         listEl.appendChild(headingEl)
         let popup = null
         features.forEach(feature => {
-            const projectId = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
-            const name = !feature.properties.is_bbox ?
-                `tile ${feature.id} (${projectId})`
-                : `project ${projectId} with ${feature.properties.tile_count} tiles`;
+            const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
+            const name = !feature.properties.is_project ?
+                `tile ${feature.id} (${projectName})`
+                : `project ${projectName} with ${feature.properties.tile_count} tiles`;
             const el = document.createElement('li');
             el.style.cursor = 'pointer'
             el.style.textDecoration = 'underline'
@@ -309,8 +309,8 @@ function LidarScraperMap() {
     function onMultiLayerChooserClick(feature, mapClickEventLngLat) {
         // if feature selected is a project tile (i.e. NOT a project bbox)
         //   then switch to 'project' mode
-        if (!feature.properties.is_bbox) {
-            setClickMode('project')
+        if (!feature.properties.is_project) {
+            setClickMode('tiles')
         }
         mapSources.highlight.setData({type: 'FeatureCollection', features: [feature]});
         renderPopup(feature, mapClickEventLngLat)
@@ -325,12 +325,14 @@ function LidarScraperMap() {
         const projectName = feature.properties.project.replace('/', ': ').replaceAll('_', ' ');
         const tileCount = feature.properties.tile_count;
 
-        // if the feature clicked on to show popup for is the "bounding box" tile of a project (not the individual tile within a project)
-        const isBbox = feature.properties.is_bbox;
-        setClickMode(isBbox ? 'all' : 'project');
+        // if the feature clicked on to show popup for is the "project" feature/polygon (not the individual tile within a project)
+        const isProjectFeature = feature.properties.is_project;
+        setClickMode(isProjectFeature ? 'projects': 'tiles');
         let clickHandlers = null;
         let html = '';
-        if (isBbox) {
+
+        // PROJECT FEATURE
+        if (isProjectFeature) {
             html = `
 <div><strong>PROJECT: <br/></strong> ${projectName}</div>
 <div>
@@ -348,7 +350,9 @@ function LidarScraperMap() {
             clickHandlers = () => {
                 addProjectPopupClickHandlers(feature)
             };
-        } else {
+        }
+        // TILE FEATURE
+        else {
             const tileId = getLazTileId(feature) || 'n/a';
             let lazTileLink = '';
             if (feature.properties.laz_tile) {
@@ -391,7 +395,7 @@ function LidarScraperMap() {
             loadTilesErrorEl.style.display = 'none';
 
             setTimeout(() => {
-                loadProjectData(projectFeature)
+                loadTilesData(projectFeature)
                     .then(() => {
                         loadTilesEl.isClicked = false;
                         loadTilesEl.style.display = 'none';
@@ -737,7 +741,7 @@ function LidarScraperMap() {
 
 
             const loadDataPromises = [];
-            mapData.all.features.forEach(feature => {
+            mapData.projects.features.forEach(feature => {
                 const turfProjectPoly = turf[typeof (feature.geometry.coordinates[0][0][0]) === 'number' ? 'polygon' : 'multiPolygon'](feature.geometry.coordinates, feature.properties)
                 if (turf.booleanIntersects(aoiPolygonTurf, turfProjectPoly)) {
                     intersectingProjects[feature.properties.project] = {
@@ -748,7 +752,7 @@ function LidarScraperMap() {
                         selected: {on: true, off: true, mixed: true}, // or false
                         tiles: []
                     };
-                    const loadPromise = loadProjectData(feature, false);
+                    const loadPromise = loadTilesData(feature, false);
                     loadDataPromises.push(loadPromise);
                 }
             })
@@ -763,7 +767,7 @@ function LidarScraperMap() {
                         if (turf.booleanIntersects(aoiPolygonTurf, turfProjectTilePoly)) {
                             intersectingProjects[projectId].tiles.push(feature);
 
-                            // Set the original totals of ALL projects tiles
+                            // Set the original totals of the project tiles
                             intersectingProjectsTotals.tileCount++;
                             intersectingProjects[projectId].tileCount++;
                             if (!feature.properties.laz_tile) {
@@ -837,7 +841,7 @@ function LidarScraperMap() {
             Object.keys(intersectingProjects).filter(projectId => !!intersectingProjects[projectId].selected).forEach(projectId => {
                 // if selected an array of 3 elements (on, off, mixed),
                 if (Object.values(intersectingProjects[projectId].selected).filter(v => v).length >= 3) {
-                    //  => ALL
+                    //  => no filter, all tiles
                     intersectingProjects[projectId].tiles.forEach(feature => callback(feature))
                 } else if (intersectingProjects[projectId].selected instanceof Object) {
                     // Specific Leave state selected;  check if the feature leaves status is in selected hash
@@ -858,7 +862,7 @@ function LidarScraperMap() {
             let selectedTileCount = 0;
             let selectedTileCountMissingLaz = 0;
             const addSelectedFeature = feature => {
-                // Set the original totals of ALL projects tiles
+                // Set the original totals of ALL project tiles
                 selectedTileCount++;
                 if (!feature.properties.laz_tile) {
                     selectedTileCountMissingLaz++;
