@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import json
 from datetime import datetime
 from pathlib import Path
@@ -8,29 +9,59 @@ from shapely.ops import unary_union
 import geopandas
 import time
 
+# make sure we are in the right directory
+os.chdir(os.path.dirname(__file__))
+
+def get_arg(expected_index, exit_if_unset=False, error_message='Error'):
+    if len(sys.argv) >= expected_index + 1 and sys.argv[expected_index]:
+        return sys.argv[expected_index]
+
+    if not exit_if_unset:
+        return False
+
+    print (error_message)
+    sys.exit(0)
+
+
+# arg 1 is always the python script itself
+def get_input_file_arg(error_message):
+    return get_arg(1, True, error_message)
+
+def get_simplify_flag_arg():
+    return get_arg(2)
+
+def get_simplify_level_arg():
+    return get_arg(3)
+
 def run():
-    leaves_report_file=open('projects/leaves-status.txt', 'r')
+    input_file = get_input_file_arg(error_message=f'must provide one argument containing the list of project folders to compile map tiles from')
+
+    if not os.path.isfile(input_file):
+        print (f'the list of project folders to compile map tiles from DOES NOT EXIST')
+        sys.exit(0)
+        return
+
+    project_dirs_file=open(input_file, 'r')
 
     all_tiles_file = open('projects/map_tiles.json', 'w')
     all_tiles_file.write('{"type": "FeatureCollection", "features": [\n')
     all_tiles_file.close()
     is_first_line = True
-    for line in leaves_report_file:
+    for line in project_dirs_file:
         project=line.replace('\n', '').strip()
         if project == '' or project == None:
             continue
-        project_bits=project.split(' ')
-        has_leaves = project_bits.pop()
-        project_name = project_bits.pop()
-        get_geojson_feature_collection_for_project(project_name, has_leaves, all_tiles_file, is_first_line)
+        get_geojson_feature_collection_for_project(project, all_tiles_file, is_first_line)
         is_first_line = False
-    leaves_report_file.close()
+    project_dirs_file.close()
 
     all_tiles_file = open(all_tiles_file.name, 'a')
     all_tiles_file.write(']}')
     all_tiles_file.close()
 
-def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles_file, is_first_feature=False):
+def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first_feature=False):
+    r = re.compile('^(projects/+|.*/projects/+)') # remove *projects/ prefix
+    project = re.sub(r, '', project)
     if not os.path.isdir(f'projects/{project}'):
         print(f'projects/{project}')
         return
@@ -40,6 +71,7 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
     meta_dir = 'projects/'+project+'/meta'
     laz_dir = 'projects/'+project+'/laz'
 
+    # LAZ URL
     laz_url_dir_name=None
     laz_dir_name_file_name = 'projects/'+project+'/_index/current/laz_dir.txt'
     if os.path.isfile(laz_dir_name_file_name):
@@ -48,23 +80,27 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
         laz_dir_name_file.close()
 
     # Print the file names
-    date_start=None
-    date_end=None
-
-    #bbox = { "west": None, "east": None, "north": None, "south":  None}
+    project_date_start=None
+    project_date_end=None
+    
     project_tiles_union = None
     project_tiles_arr = []
     project_tiles_file = open ('projects/'+project+'/map_tiles.json', 'w')
     project_tiles_file.write('{"type": "FeatureCollection", "features": [')
 
     is_first_tile=True
-    file_count=0
-    # Get the list of XML files
+    xml_file_count=0
+    xml_file_count_actual = 0 # when we try to open/read files, count if files exist
+
+    # Get the list of XML files and count
+    #   NOTE: the XML list contains file names abbreviated and without .xml extension
+    #         abbreciations are '{u}' the common file prefix "USGS_LPC", {prj} the project name and {sprj} the subproject name
     xml_files_list_filename = meta_dir+'/_index/current/xml_files.txt'
     xml_files_list_file = open(xml_files_list_filename)
     for file_name in xml_files_list_file:
-        file_count=file_count+1
+        xml_file_count=xml_file_count+1
 
+    # respective LAZ files details (size and date modified) from web scrape
     laz_details = {'size':'', 'date_modified':''}
     laz_files_list_filename = laz_dir+'/_index/current/files_details.txt'
     if os.path.isfile(laz_files_list_filename):
@@ -75,28 +111,35 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
             laz_details[laz_details_i[0]] = { 'size':  laz_details_i[2], 'date_modified':  laz_details_i[1] }
 
 
+    # Debug info
+    print ('%s project has %d tiles\n' % (project, xml_file_count))
 
-    print ('%s project has %d tiles\n' % (project, file_count))
-
-    deltas_sum = 0
+    # Sum-aggregate the deltas of each tile x or y: that is the difference between x1 and x0 or y1 and y0
+    #   so that we can find the average delta at the end and offer a simplication factor for the resulting all-tile union polygon
+    tile_xy_delta_sum = 0
     xml_files_list_file.seek(0)
+
+    # START: foreach TILE
     for file_name_no_extension_abbreviated in xml_files_list_file:
         file_name_no_extension_abbreviated = file_name_no_extension_abbreviated.replace('\n', '')
         file_name_no_extension = file_name_no_extension_abbreviated.replace('{u}', 'USGS_LPC_').replace('{prj}', project_pieces[0])
         if len(project_pieces) > 1 and '{sprj}' in file_name_no_extension:
             file_name_no_extension = file_name_no_extension.replace('{sprj}', project_pieces[1])
 
-        file_name = file_name_no_extension + '.xml.txt'
         bounds = {}
-        if not os.path.isfile(meta_dir+'/'+file_name):
-            continue
 
-        file=open(meta_dir+'/'+file_name, 'r')
+        #  get the xml.txt file (which the text summary of the full XML file)
+        xml_txt_file_path = meta_dir+'/'+file_name_no_extension + '.xml.txt'
+        if not os.path.isfile(xml_txt_file_path):
+            continue
+        xml_file_count_actual = xml_file_count_actual + 1
+
+        xml_file=open(xml_txt_file_path)
 
         tile_date_start =None
         tile_date_end = None
         is_xml_file_empty=True
-        for line in file:
+        for line in xml_file:
             line=line.replace('\n', '').strip()
 
             if not line:
@@ -112,23 +155,46 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
                 try:
                     bounds[line_pieces[0]]=float(line_pieces[1])
                 except Exception as e:
-                    print ('%s has error: %s' % (file_name, e))
+                    print ('%s XML TXT has error: %s' % (file_name_no_extension, e))
         if is_xml_file_empty:
             continue
+        xml_file.close()
 
-        if date_start == None:
-            date_start = tile_date_start[0:4+2+2]
-        elif int(tile_date_start[0:4+2+2]) <= int(date_start):
-            date_start = tile_date_start[0:4+2+2]
+        #  get the laz.txt file (which the text summary of the full LAZ file)
+        #   those LAZ TXT files might have been run elsewhere and want to protect them
+        #     and not merge them with the XML TXT ones
+        #     but merge them here:  MOSTLY MERGING DATES (LAZ TXT dates override XML TXT dates as more accurate)
+        laz_txt_file_path = laz_dir+'/'+file_name_no_extension + '.laz.txt'
+        if os.path.isfile(laz_txt_file_path):
+            laz_file=open(laz_txt_file_path)
+            for line in laz_file:
+                line=line.replace('\n', '').strip()
 
-        if date_end == None:
-            date_end = tile_date_end[0:4+2+2]
-        elif int(tile_date_end[0:4+2+2]) >= int(date_end):
-            date_end = tile_date_end[0:4+2+2]
+                if not line:
+                    continue
+
+                line_pieces=line.split(':')
+                if line_pieces[0] == 'date_start':
+                    tile_date_start=line_pieces[1]
+                elif line_pieces[0] == 'date_end':
+                    tile_date_end=line_pieces[1]
+
+        if project_date_start == None:
+            project_date_start = tile_date_start[0:4+2+2]
+        elif int(tile_date_start[0:4+2+2]) <= int(project_date_start):
+            project_date_start = tile_date_start[0:4+2+2]
+
+        if project_date_end == None:
+            project_date_end = tile_date_end[0:4+2+2]
+        elif int(tile_date_end[0:4+2+2]) >= int(project_date_end):
+            project_date_end = tile_date_end[0:4+2+2]
 
         if 'east' not in bounds or 'west' not in bounds or 'south' not in bounds or 'north' not in bounds:
+            print ('missng east/west/south/north bounds: %s' % (file_name_no_extension))
             continue
 
+        # Correct for raw data errors
+        # sometimes west-east are swapped with south-north (?!?!)
         if bounds['west'] > 0 and bounds['south'] < 0:
             tmp = bounds['south']
             bounds['south'] = bounds['west']
@@ -146,24 +212,21 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
           [bounds['west'], bounds['north']]
         ]
 
-        # do tiles union later
-        delta = abs(polygon[0][0]-polygon[1][0])
-        if delta == 0:
-            delta = abs(polygon[1][1]-polygon[2][1])
-        project_tiles_arr.append(Polygon(polygon).buffer(delta/3))
-        deltas_sum = deltas_sum + delta
+        # Assumption: each tile is roughly a square oriented perfectly with North/South West/East
+        # find the larger of the tile x or y delta
+        tile_xy_delta = max(abs(polygon[0][0]-polygon[1][0]), abs(polygon[1][1]-polygon[2][1]))
+        tile_xy_delta_sum = (tile_xy_delta_sum if tile_xy_delta_sum else 0) + tile_xy_delta
 
+        # save tiles in array;  save each tile with a BUFFER of 1/3 of its delta
+        project_tiles_arr.append(Polygon(polygon).buffer(tile_xy_delta/3))
+
+        # DEPRECATED, but an ALTERNATE: running Polygon.union() function on every polygon
+        #   HOWEVER: IT CAN GET SLOW with too many polygons
         # do tiles union
         # if project_tiles_union is None:
         #     project_tiles_union = Polygon(polygon)
         # else:
         #     project_tiles_union = project_tiles_union.union(Polygon(polygon))
-
-        # keep building the tiles bounding box (commented out for tile union above)
-        # bbox['west'] = bounds['west'] if bbox['west'] == None else min(bounds['west'], bbox['west'])
-        # bbox['east'] = bounds['east'] if bbox['east'] == None else max(bounds['east'], bbox['east'])
-        # bbox['north'] = bounds['north'] if bbox['north'] == None else max(bounds['north'], bbox['north'])
-        # bbox['south'] = bounds['south'] if bbox['south'] == None else min(bounds['south'], bbox['south'])
 
         project_tiles_file.write( ('' if is_first_tile else ',' ) + json.dumps({
            "type": "Feature",
@@ -172,7 +235,6 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
              "coordinates": [polygon]
            },
            "properties": {
-             "is_bbox": False,
              "date_start": tile_date_start,
              "date_end": tile_date_end,
              "leaves": are_leaves_on_or_off(tile_date_start[0:4+2+2], tile_date_end[0:4+2+2]),
@@ -182,48 +244,55 @@ def get_geojson_feature_collection_for_project(project, leaves_on_off, all_tiles
          }))
 
         is_first_tile=False
-        # /end-for-loop
+    # END: foreach TILE
 
     project_tiles_file.write(']}')
     project_tiles_file.close()
 
-    average_delta = deltas_sum / file_count
-    print(f'average delta {average_delta}')
+    xml_files_list_file.close()
+
+    # if no actual xml file/tiles were found and processed just return
+    if not xml_file_count_actual:
+        return
+    
+    # Get averages
+    tile_xy_average_delta = tile_xy_delta_sum / xml_file_count_actual
+    print(f'average tile max(x, y) delta {tile_xy_average_delta}')
+
+    # Do ALL tile union
     project_tiles_union = unary_union(project_tiles_arr)
-    # turn simply ON or OFF with first arg on CLI
-    if len(sys.argv) > 1 and sys.argv[1] == 'simplify':
-        #  specify simplify tolerance in sencond arg (optional)
-        simplify_tolerance = float(sys.argv[2]) if len(sys.argv) > 2 else average_delta/2
+
+    # if Simply flag is on
+    if get_simplify_flag_arg() == 'simplify':
+        #  specify simplify tolerance in arg (optional)
+        simplify_tolerance = float(get_simplify_level_arg())
+        # else level is HALF * tile_xy_average_delta
+        if not simplify_tolerance:
+            simplify_tolerance = 0.5 * tile_xy_average_delta
+
+        # simplify
         # https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoSeries.simplify.html
         project_tiles_union = geopandas.GeoSeries(project_tiles_union).simplify(simplify_tolerance)
+
+        # turn into a string-able JSON
         project_tiles_union = json.loads(geopandas.GeoDataFrame(geometry=project_tiles_union).to_json())['features'][0]['geometry']
     else:
+        # turn into a string-able JSON
         project_tiles_union = mapping(project_tiles_union)
 
-    # adds the overall-bounding box of the ALL XML files in project
-    # project_tiles_bbox_geojson = {
-    #     "type": "Polygon",
-    #     "coordinates": [[
-    #       [bbox['west'], bbox['north']],
-    #       [bbox['east'], bbox['north']],
-    #       [bbox['east'], bbox['south']],
-    #       [bbox['west'], bbox['south']],
-    #       [bbox['west'], bbox['north']]
-    #     ]]
-    # }
+
 
     all_tiles_file = open(all_tiles_file.name, 'a')
     all_tiles_file.write( ('\n' if is_first_feature else ',\n' ) + json.dumps({
                "type": "Feature",
-               "geometry": project_tiles_union, # was project_tiles_bbox_geojson
+               "geometry": project_tiles_union,
                "properties": {
-                 "tile_count": file_count,
-                 "is_bbox": True,
+                 "tile_count": xml_file_count_actual,
                  "project": project,
                  "laz_url_dir": laz_url_dir_name,
-                 "date_start": date_start,
-                 "date_end": date_end,
-                 "leaves": are_leaves_on_or_off(date_start, date_end)
+                 "date_start": project_date_start,
+                 "date_end": project_date_end,
+                 "leaves": are_leaves_on_or_off(project_date_start, project_date_end)
                }
              }))
     all_tiles_file.close()
