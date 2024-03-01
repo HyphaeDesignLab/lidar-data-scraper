@@ -12,7 +12,7 @@ compare_xml_to_laz_date() {
 }
 
 extract_xml_dates_on_one_line() {
-  sed -nE  -e '/(date_start|begdate):/ {s/(date_start|begdate)://;N;s/\x0a/-/g;s/\n/-/g;s/(date_end|enddate)://;p;}' $@
+  sed -nE  -e '/(date_start|begdate):/ {s/(date_start|begdate)://;N;s/\x0a/-/g;s/\n/-/g;s/(date_end|enddate)://;p;}' $1
 }
 
 get_days_of_date_range() {
@@ -79,26 +79,51 @@ make_xml_date_report() {
 
 }
 get_leaves_on_off() {
-  # reset status file
-  echo > projects/leaves-status.txt
   path_search='';
   if [ "$1" ]; then path_search="-path *$1*"; fi
   for ddd in $(find projects/ -mindepth 2 -maxdepth 3 -type d -name 'meta' $path_search ); do
-    for fff in $(ls -1 $ddd/*.xml.txt); do
-      curr_dates=$(extract_xml_dates_on_one_line $fff);
-      if [ "${#curr_dates}" -gt '8' ]; then
-        local leaves_status='none';
-        rm $ddd/leaves-*.txt 2>dev/null
-        if [ "$(is_date_leaves_on $curr_dates)" = '1' ]; then leaves_status=on;
-        elif [ "$(is_date_leaves_off $curr_dates)" = '1' ]; then leaves_status=off;
-        else leaves_status='mixed'; fi
-        echo $(sed -E -e 's@projects/+@@;s@/meta/?@@;' <<<$ddd) $leaves_status >> projects/leaves-status.txt
-        #  ONLY first file in project/subproject directory (all XML files have SAME DATE)
-        #    hence break out of loop immediately (upon first file with more than 8-digit date (yyyymmdd-yyyymmdd)
-        break
-      fi
-    done 2>/dev/null
+    get_leaves_on_off__single $ddd;
   done
+}
+
+get_leaves_on_off__single() {
+  local ddd="$1"
+  local all_leaves_status=''
+  for fff in $(ls -1 $ddd/*.xml.txt); do
+    curr_dates=$(extract_xml_dates_on_one_line $fff);
+    if [ "${#curr_dates}" -gt '8' ]; then # >8 means something like 8 + 8 + 1 = YYYYMMDD-YYYYMMDD
+      local leaves_status='';
+      rm $ddd/leaves-*.txt 2>dev/null
+      if [ "$(is_date_leaves_on $curr_dates)" = '1' ]; then leaves_status=on;
+      elif [ "$(is_date_leaves_off $curr_dates)" = '1' ]; then leaves_status=off;
+      else leaves_status='mixed'; fi
+      
+      # skip if not set
+      if [ ! "$leaves_status" ]; then
+        continue;
+      fi
+
+      # compare last to current (if last is set)
+      if [ "$all_leaves_status" ]; then
+        if [ "$leaves_status" = 'mixed' ]; then
+          all_leaves_status='mixed' # if current mixed, then call the entire set MIXED, and stop iterating (no need to check the rest)
+          break;
+        fi
+
+        if [ "$all_leaves_status" != "$leaves_status" ]; then
+          all_leaves_status='mixed' # if last and current NOT SAME, then call entire set MIXED, stop iterating
+          break;
+        fi
+      fi
+
+      # save to last if set
+      if [ "$leaves_status" ]; then
+        all_leaves_status=$leaves_status
+      fi
+    fi
+  done 2>/dev/null
+  echo $(sed -E -e 's@projects/+@@;s@/meta/?@@;' <<<$ddd) $all_leaves_status
+  echo $all_leaves_status > $(dirname $ddd)/leaves_status.txt
 }
 
 get_laz_areas() {
