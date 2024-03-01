@@ -63,7 +63,7 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
     r = re.compile('^(projects/+|.*/projects/+)') # remove *projects/ prefix
     project = re.sub(r, '', project)
     if not os.path.isdir(f'projects/{project}'):
-        print(f'projects/{project}')
+        print(f'projects/{project} is not a directory')
         return
     project_pieces = project.split('/')
 
@@ -257,7 +257,6 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
     
     # Get averages
     tile_xy_average_delta = tile_xy_delta_sum / xml_file_count_actual
-    print(f'average tile max(x, y) delta {tile_xy_average_delta}')
 
     # Do ALL tile union
     project_tiles_union = unary_union(project_tiles_arr)
