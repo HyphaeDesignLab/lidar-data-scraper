@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path')
-const date = require('date-and-time');
 
 // start running server by passing the ENV file (usually .env in same folder) that contains all environment variables
 let env = {};
@@ -206,8 +205,9 @@ app.get('/test/check', function app_testCheck(req, res) {
     }
 });
 
-app.get('/test-map-tile-edit', function app_testMapTileEdit(req, res) {
-    const html = `<form method="post" action="/map-tile-edit"><input name=secret value="${env.secret}"/><input name=project value="_test"/><textarea name=json>[1,2,3]</textarea><input type="submit" /></form>`;
+app.get('/usgs/map/test-add-laz-dates-form', function app_testMapTileEdit(req, res) {
+    const sampleNewLazDates = {"project/subproject": {"{u}_{prj}_tileId":{"date_start":123123123, "date_end": 123123123}}};
+    const html = `<form method="post" action="/usgs/map/add-laz-dates"><input name=secret value="${env.secret}"/><textarea name=json>${JSON.stringify(sampleNewLazDates)}</textarea><input type="submit" /></form>`;
     res.status(200).send(html);
 });
 
@@ -217,30 +217,24 @@ app.get('/test-map-tile-edit', function app_testMapTileEdit(req, res) {
   - save new dates to LAZ.TXT file if XML and LAZ dates differ
   - keep old dates XML.TXT intact, because other scripts will overwrite
 */
-app.post('/map-tile-edit', function app_mapTileEdit(req, res) {
+app.post('/usgs/map/add-laz-dates', function app_mapTileEdit(req, res) {
     const usgsProjectsPath = path.join(__dirname, '..', 'usgs-scraper', 'projects');
 
     if (!req.body.secret || req.body.secret !== env.secret) {
         res.status(500).send('n/s');
         return;
     }
-    if (!req.body.json || !req.body.project) {
+    if (!req.body.json) {
         res.status(500).send('project or tile json missing');
         return;
     }
 
-
+    let newLazDates;
     try {
-        const tilesFeatureCollection = JSON.parse(req.body.json);
+        newLazDates = JSON.parse(req.body.json);
         let errorMessage;
-        if (!tilesFeatureCollection.features) {
-            errorMessage = 'tiles features are missing from GeoJSON';
-        } else if (!tilesFeatureCollection.features.length) {
-            errorMessage = 'there are 0 tiles features in GeoJSON';
-        } else if (!tilesFeatureCollection.features[0].geometry) {
-            errorMessage = 'GeoJSON features are malformed: missing/malformed geometry';
-        } else if (!tilesFeatureCollection.features[0].properties || typeof tilesFeatureCollection.features[0].properties !== 'object') {
-            errorMessage = 'GeoJSON features are malformed: missing properties';
+        if (!(newLazDates instanceof Object)) {
+            errorMessage = 'new laz dates must be a hash of project IDs to new dates';
         }
         if (errorMessage) {
             res.status(500).send(errorMessage);
@@ -251,55 +245,38 @@ app.post('/map-tile-edit', function app_mapTileEdit(req, res) {
         return;
     }
 
-    const project = req.body.project;
-    const mapTilesFilePath = `${usgsProjectsPath}/${project}/map_tiles.json`;
-    // backup, if it exists
-    try {
-        const mapTilesFileStats = fs.statSync(mapTilesFilePath);
-        const mapTilesFileMtime = date.format(new Date(mapTilesFileStats.mtimeMs), 'YYYYMMDD_HHmmss');
-        // make a backup of the OLD tiles file with the "last-modified" date-stamp
-        fs.copyFileSync(mapTilesFilePath, mapTilesFilePath.replace('map_tiles.json', `map_tiles_${mapTilesFileMtime}.json`))
-    } catch(e) {
+    let hasErrors = false;
+    Object.keys(newLazDates).forEach(project => {
+        // write tile-specific dates to *.laz.txt files (from which the map_tiles.json file is compiled)
+        //   IF they are different from the .xml.txt file
+        // keep *.xml.txt intact as other scripts will overwrite
+        const projectPieces = project.split('/');
+        Object.keys(newLazDates[project]).forEach((tileId,i) => {
+            if (!newLazDates[project][tileId].date_start || !newLazDates[project][tileId].date_end) {
+                newLazDates[project][tileId].errors = ` date start (${newLazDates[project][tileId].date_start} or end (${newLazDates[project][tileId].date_end} missing`;
+                hasErrors = true;
+                return;
+            }
 
+            let lazTxtFilePath = `${usgsProjectsPath}/${project}/laz/${tileId}.laz.txt`;
+            lazTxtFilePath = lazTxtFilePath.replace('{u}', 'USGS_LPC_').replace('{prj}', projectPieces[0]);
+            if (projectPieces[1]) {
+                lazTxtFilePath = lazTxtFilePath.replace('{sprj}', projectPieces[1]);
+            }
+
+            try {
+                let lazTxtContents = `date_start:${newLazDates[project][tileId].date_start}\ndate_end:${newLazDates[project][tileId].date_end}`;
+                fs.writeFileSync(lazTxtFilePath, lazTxtContents);
+            } catch (e) {
+                hasErrors = true;
+                newLazDates[project][tileId].errors = ` error saving dates to file: ${e.message}`;
+            }
+        });
+    })
+
+    if (hasErrors) {
+        res.status(500).send({error: true, body: newLazDates});
     }
-
-
-    fs.writeFileSync(mapTilesFilePath, req.body.json);
-
-    const nowString = date.format(new Date(), 'YYYYMMDD_HHmmss');
-    // make a copy of the NEW tile JSON with a 'now' date-stamp
-    //  why?   if the regular scraping process overwrites map_tiles.jon, then we want to keep a copy of that NEW file too
-    fs.copyFileSync(mapTilesFilePath, mapTilesFilePath.replace('map_tiles.json', `map_tiles_${nowString}_.json`));
-
-
-    // write tile-specific dates to *.xml.txt files as well (from which the map_tiles.json file is compiled)
-    const projectPieces = project.split('/');
-    const tileErrors = {};
-    JSON.parse(req.body.json).features.forEach((feature,i) => {
-        if (!feature.properties.laz_tile) {
-            return; // skip this one, move onto next
-        }
-        let tileId = feature.properties.laz_tile;
-        tileId = tileId.replace('{u}', 'USGS_LPC_').replace('{prj}', projectPieces[0]);
-        if (projectPieces[1]) {
-            tileId = tileId.replace('{sprj}', projectPieces[1]);
-        }
-        const xmlTxtFilePath = `${usgsProjectsPath}/${project}/meta/${tileId}.xml.txt`;
-        try {
-            const xmlTxtContents = fs.readFileSync(xmlTxtFilePath).toString();
-            let xmlTxtContentsNew = '';
-            xmlTxtContents.split('\n').forEach(line => {
-                if (line.indexOf('date_start') >= 0) {
-                    line = `date_start:${feature.properties.date_start}`
-                }
-                if (line.indexOf('date_end') >= 0) {
-                    line = `date_end:${feature.properties.date_end}`
-                }
-                xmlTxtContentsNew = (xmlTxtContentsNew ? xmlTxtContentsNew + '\n' : '') + line;
-            });
-            fs.writeFileSync(xmlTxtFilePath, xmlTxtContentsNew);
-        } catch (e) {}
-    });
 
     res.status(200).send('ok');
 });

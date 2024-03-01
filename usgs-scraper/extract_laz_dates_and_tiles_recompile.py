@@ -14,6 +14,9 @@ import subprocess
 
 import requests
 
+# make sure we are in the right directory
+os.chdir(os.path.dirname(__file__))
+
 def get_env(env_file_path=None):
     env = {}
     if env_file_path == None:
@@ -62,7 +65,7 @@ def run(list_file_name='list.txt'):
 
     # build a list curl commands to download map_tile downloads for each project ID from Lidar server
     tile_json_download_cmds = []
-    tile_json_url_base = env['server_url'] + env['projects_url_path']
+    tile_json_url_base = env['server_url'] + '/usgs/map/projects'
     for project_id in project_lazs_by_id:
         # since multiple project/subproject files get downloaded in same dir (for current download job)
         #   make sure to preserve project---subproject IDs in map-tile file name
@@ -74,6 +77,7 @@ def run(list_file_name='list.txt'):
     subprocess.check_output(' && '.join(tile_json_download_cmds), shell=True)
 
     # loop on all LAZ files in each project/subproject and extract dates
+    new_laz_dates = {}
     for project_id in project_lazs_by_id:
         project_id_without_slashes = project_id.replace('/', '---')
         map_tile_geojson_file = open(project_id_without_slashes+'.json')
@@ -89,22 +93,23 @@ def run(list_file_name='list.txt'):
                 laz_file_name_abbreviated_no_ext = laz_file_name_abbreviated_no_ext.replace(project_id_parts[1], '{sprj}')
 
             for feature in map_tile_geojson_obj['features']:
-                # ignore JSON tiles that do not match the current LAZ tile
-                if feature['properties']['laz_tile'] != laz_file_name_abbreviated_no_ext:
+                # ignore JSON tiles that do not match the current tile ID and where start/end dates differ
+                if feature['properties']['laz_tile'] != laz_file_name_abbreviated_no_ext or ( feature['properties']['date_start'] == laz_scan_dates_obj['date_start'] and feature['properties']['date_end'] == laz_scan_dates_obj['date_end'] ):
                     continue
-                print(feature['properties']['laz_tile'], laz_scan_dates_obj, feature['properties']['date_start'], feature['properties']['date_end'])
-                feature['properties']['date_project_start'] = feature['properties']['date_start']
-                feature['properties']['date_start'] = laz_scan_dates_obj['date_start']
-                feature['properties']['date_project_end'] = feature['properties']['date_end']
-                feature['properties']['date_end'] = laz_scan_dates_obj['date_end']
-                feature['properties']['leaves'] = are_leaves_on_or_off(laz_scan_dates_obj['date_start'][0:4+2+2], laz_scan_dates_obj['date_start'][0:4+2+2])
-
-
-        map_tile_geojson_file = open(project_id_without_slashes+'.new.json', 'w')
-        json.dump(map_tile_geojson_obj, map_tile_geojson_file)
-        map_tile_geojson_file.close()
-        requests.post(env['server_url'] + env['tiles_edit_url_path'], data={'secret': env['secret'], 'json': json.dumps(map_tile_geojson_obj), 'project': project_id })
+                
+                if not project_id in new_laz_dates:
+                    new_laz_dates[project_id] = {}
+                
+                new_laz_dates[project_id][laz_file_name_abbreviated_no_ext] = laz_scan_dates_obj
     # /end-for-loop
+                
+    new_datetime_string = datetime.now().strftime('%Y%m%d-%H%M%S'),
+    new_laz_dates_file = open(f'new_laz_dates-{new_datetime_string}.json', 'w')
+    json.dump(new_laz_dates, new_laz_dates_file)
+    new_laz_dates_file.close()
+    response = requests.post(env['server_url'] + '/usgs/map/add-laz-dates', data={'secret': env['secret'], 'json': json.dumps(new_laz_dates)})
+
+    print(response.text)
 
 def are_leaves_on_or_off(date_start, date_end):
     if int(date_start[0:4]) == int(date_end[0:4]):
@@ -154,4 +159,8 @@ def laz_extract_data(file_path, point_limit=0):
         'date_end': datetime.fromtimestamp(date_end).strftime('%Y%m%d%H%M%S')
     }
 if (__name__ == '__main__'):
-    run()
+    if len(sys.argv) > 2:
+        run(sys.argv[2]) # a custom 3rd arg contains the list of URLs
+    else:
+        run()
+    
