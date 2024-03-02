@@ -8,7 +8,7 @@ filter_project_list() {
   local input_file=$2
 
   if [ ! "$state_abbr" ]; then
-    find projects/ -maxdepth 4 -mindepth 3 -type d -name 'meta' | sed -E -e 's@(^|.+/)projects/+@@;s@/meta$@@;'
+    find projects/ -maxdepth 4 -mindepth 2 -type d -name 'meta' | sed -E -e 's@(^|.+/)projects/+@@;s@/meta$@@;'
     return 0
   fi
 
@@ -23,7 +23,7 @@ filter_project_list() {
   if [ "$input_file" ] && [ -f "$input_file" ]; then
     cat $input_file | sed -E -e 's@(^|.+/)projects/+@@;s@/meta$@@;' | grep -iE "$grep_pattern"
   else
-    find projects/ -maxdepth 4 -mindepth 3 -type d -name 'meta' | sed -E -e 's@(^|.+/)projects/+@@;s@/meta$@@;' | grep -iE "$grep_pattern"
+    find projects/ -maxdepth 4 -mindepth 2 -type d -name 'meta' | sed -E -e 's@(^|.+/)projects/+@@;s@/meta$@@;' | grep -iE "$grep_pattern"
   fi
 }
 
