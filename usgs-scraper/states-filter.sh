@@ -24,4 +24,4 @@ filter_project_list() {
   fi
 }
 
-filter_project_list $1
+filter_project_list $1 $2
