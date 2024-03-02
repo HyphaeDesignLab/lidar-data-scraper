@@ -79,7 +79,6 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
         laz_url_dir_name = laz_dir_name_file.read().replace('\n', '')
         laz_dir_name_file.close()
 
-    # Print the file names
     project_date_start=None
     project_date_end=None
     
@@ -110,10 +109,6 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
             laz_details_i = line_details.split('~')
             laz_details[laz_details_i[0]] = { 'size':  laz_details_i[2], 'date_modified':  laz_details_i[1] }
 
-
-    # Debug info
-    print ('%s project has %d tiles\n' % (project, xml_file_count))
-
     # Sum-aggregate the deltas of each tile x or y: that is the difference between x1 and x0 or y1 and y0
     #   so that we can find the average delta at the end and offer a simplication factor for the resulting all-tile union polygon
     tile_xy_delta_sum = 0
@@ -132,8 +127,7 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
         xml_txt_file_path = meta_dir+'/'+file_name_no_extension + '.xml.txt'
         if not os.path.isfile(xml_txt_file_path):
             continue
-        xml_file_count_actual = xml_file_count_actual + 1
-
+        
         xml_file=open(xml_txt_file_path)
 
         tile_date_start =None
@@ -217,6 +211,7 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
         tile_xy_delta = max(abs(polygon[0][0]-polygon[1][0]), abs(polygon[1][1]-polygon[2][1]))
         tile_xy_delta_sum = (tile_xy_delta_sum if tile_xy_delta_sum else 0) + tile_xy_delta
 
+        xml_file_count_actual = xml_file_count_actual + 1
         # save tiles in array;  save each tile with a BUFFER of 1/3 of its delta
         project_tiles_arr.append(Polygon(polygon).buffer(tile_xy_delta/3))
 
@@ -251,8 +246,12 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
 
     xml_files_list_file.close()
 
+    # Debug info
+    print ('\n%s project has %d tiles (of %d listed)' % (project, xml_file_count_actual, xml_file_count))
+
     # if no actual xml file/tiles were found and processed just return
     if not xml_file_count_actual:
+        print ('no actual downloaded tiles... skipping')
         return
     
     # Get averages
@@ -264,10 +263,13 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
     # if Simply flag is on
     if get_simplify_flag_arg() == 'simplify':
         #  specify simplify tolerance in arg (optional)
-        simplify_tolerance = float(get_simplify_level_arg())
+        simplify_tolerance_multiplier = float(get_simplify_level_arg())
+        if not simplify_tolerance_multiplier:
+            simplify_tolerance_multiplier = 0.5
         # else level is HALF * tile_xy_average_delta
-        if not simplify_tolerance:
-            simplify_tolerance = 0.5 * tile_xy_average_delta
+        simplify_tolerance = simplify_tolerance_multiplier * tile_xy_average_delta
+
+
 
         # simplify
         # https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoSeries.simplify.html
@@ -279,7 +281,7 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
         # turn into a string-able JSON
         project_tiles_union = mapping(project_tiles_union)
 
-
+    print (f'type: {project_tiles_union["type"]}, verteces: {len(project_tiles_union["coordinates"][0] if project_tiles_union["type"] == "Polygon" else project_tiles_union["coordinates"][0][0] )}')
 
     all_tiles_file = open(all_tiles_file.name, 'a')
     all_tiles_file.write( ('\n' if is_first_feature else ',\n' ) + json.dumps({
