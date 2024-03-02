@@ -21,10 +21,8 @@ filter_project_list() {
   grep_pattern="(_${state_abbr}_|\b${state_abbr}_|_${state_abbr}\b|\b${state_abbr}\b|$state_name)"
 
   if [ "$input_file" ] && [ -f "$input_file" ]; then
-    echo input file
     cat $input_file | sed -E -e 's@(^|.+/)projects/+@@;s@/meta$@@;' | grep -iE "$grep_pattern"
   else
-    echo find
     find projects/ -maxdepth 4 -mindepth 3 -type d -name 'meta' | sed -E -e 's@(^|.+/)projects/+@@;s@/meta$@@;' | grep -iE "$grep_pattern"
   fi
 }
