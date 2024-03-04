@@ -1,3 +1,5 @@
+#!/bin/bash
+
 compare_xml_to_laz_date() {
   last_proj=''
   for dd in $(ls projects/*/*/meta/*laz.txt | head -100); do
@@ -97,7 +99,7 @@ get_leaves_on_off__single() {
       if [ "$(is_date_leaves_on $curr_dates)" = '1' ]; then leaves_status=on;
       elif [ "$(is_date_leaves_off $curr_dates)" = '1' ]; then leaves_status=off;
       else leaves_status='mixed'; fi
-      
+
       # skip if not set
       if [ ! "$leaves_status" ]; then
         continue;
@@ -138,6 +140,28 @@ get_laz_areas() {
   python3 calculate-areas.py tmp123456789.txt
   rm tmp123456789.txt
 }
+
+downloaded_files_report() {
+  local _d
+  local _dindexcount
+  local _dfull
+  local _dempty
+
+
+  # get meta dirs
+  find projects/ -mindepth 3 -maxdepth 4 -name 'meta' -type d > meta
+
+   # get line count in _index/current/xml_files.txt
+   for _d in $(cat projects.txt); do
+     _dindexcount=0;
+     if [ -f "$_d/_index/current/xml_files.txt" ]; then _dindexcount=$(wc -l $_d/_index/current/xml_files.txt | cut -d' ' -f1); fi; echo $_dindexcount; done > xml_full_empty.report2
+
+  # get FULL and EMPTY XML counts
+  for _d in $(cat projects/_meta_dirs.txt); do
+    _dfull=0; _dempty=0; for _f in $(find $_d -type f -name '*xml'); do if [ ! -s $_f ]; then ((_dempty++)); else ((_dfull++)); fi; done; echo $_d $_dfull empty $_dempty; done > xml_full_empty.report
+
+}
+
 
 if [ "$(basename $0)" = "laz-xml-misc.sh" ]; then
   $1 $2 $3
