@@ -80,8 +80,8 @@ throttle_scrape() {
     ((__LIDAR_SCRAPER_scrape_count++))
 
     for every_x_rest_y in "$@"; do
-      local every_x=$(cut -d'/' -f 1 <<< $every_x_rest_y);
-      local rest_y_seconds=$(cut -d'/' -f 2 <<< $every_x_rest_y);
+      local every_x=$(cut -d'/' -f1 <<< $every_x_rest_y);
+      local rest_y_seconds=$(cut -d'/' -f2 <<< $every_x_rest_y);
       if [ "$(expr $__LIDAR_SCRAPER_scrape_count % $every_x)" = "0" ]; then
         echo "every $every_x scrapes rest $rest_y_seconds seconds" >> scrape-rest.txt;
         sleep $rest_y_seconds;
