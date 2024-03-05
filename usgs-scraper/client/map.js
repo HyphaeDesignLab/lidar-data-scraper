@@ -854,7 +854,7 @@ function LidarScraperMap() {
         const hightlightIntersectionTiles = () => {
             let features = [];
             forEachSelectedProjectTile(feature => features.push(feature));
-            mapSources.project.setData({type: 'FeatureCollection', features});
+            mapSources.tiles.setData({type: 'FeatureCollection', features});
             mapSources.highlight.setData(aoiPolygonTurf);
         }
         const updateSelectedStats = () => {
