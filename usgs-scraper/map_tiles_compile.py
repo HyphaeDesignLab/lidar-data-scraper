@@ -8,6 +8,7 @@ from shapely.geometry import Polygon, MultiPolygon, mapping
 from shapely.ops import unary_union
 import geopandas
 import time
+import subprocess
 
 # make sure we are in the right directory
 os.chdir(os.path.dirname(__file__))
@@ -43,23 +44,33 @@ def run():
 
     project_dirs_file=open(input_file, 'r')
 
-    all_tiles_file = open('projects/map_tiles.json', 'w')
+    all_tiles_filepath = 'projects/map_tiles.json'
+    all_tiles_file = open(all_tiles_filepath, 'w')
     all_tiles_file.write('{"type": "FeatureCollection", "features": [\n')
     all_tiles_file.close()
-    is_first_line = True
+
+    subprocess.check_output(f'', shell=True)
+
     for line in project_dirs_file:
         project=line.replace('\n', '').strip()
         if project == '' or project == None:
             continue
-        get_geojson_feature_collection_for_project(project, all_tiles_file, is_first_line)
-        is_first_line = False
+        project_tiles_union_filepath = 'projects/'+project+'/map_tiles_union.json'
+        if not os.path.isfile(project_tiles_union_filepath):
+            get_geojson_feature_collection_for_project(project)
+        else:
+            print ('\n%s project tiles already exist, not re-creating' % (project))
+
+        if os.path.isfile(project_tiles_union_filepath):
+            subprocess.check_output(f'cat {project_tiles_union_filepath} >> {all_tiles_filepath}', shell=True)
+
     project_dirs_file.close()
 
     all_tiles_file = open(all_tiles_file.name, 'a')
     all_tiles_file.write(']}')
     all_tiles_file.close()
 
-def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first_feature=False):
+def get_geojson_feature_collection_for_project(project):
     r = re.compile('^(projects/+|.*/projects/+)') # remove *projects/ prefix
     project = re.sub(r, '', project)
     if not os.path.isdir(f'projects/{project}'):
@@ -98,6 +109,7 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
     xml_files_list_file = open(xml_files_list_filename)
     for file_name in xml_files_list_file:
         xml_file_count=xml_file_count+1
+    print ('\n%s project has %d listed tiles' % (project, xml_file_count))
 
     # respective LAZ files details (size and date modified) from web scrape
     laz_details = {'size':'', 'date_modified':''}
@@ -247,11 +259,11 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
     xml_files_list_file.close()
 
     # Debug info
-    print ('\n%s project has %d tiles (of %d listed)' % (project, xml_file_count_actual, xml_file_count))
+    print ('\n  %d existing tiles (of %d listed)' % (xml_file_count_actual, xml_file_count))
 
     # if no actual xml file/tiles were found and processed just return
     if not xml_file_count_actual:
-        print ('no actual downloaded tiles... skipping')
+        print ('  no actual downloaded tiles... skipping')
         return
     
     # Get averages
@@ -281,10 +293,10 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
         # turn into a string-able JSON
         project_tiles_union = mapping(project_tiles_union)
 
-    print (f'type: {project_tiles_union["type"]}, verteces: {len(project_tiles_union["coordinates"][0] if project_tiles_union["type"] == "Polygon" else project_tiles_union["coordinates"][0][0] )}')
+    print (f'  project tiles union = type: {project_tiles_union["type"]}, verteces: {len(project_tiles_union["coordinates"][0] if project_tiles_union["type"] == "Polygon" else project_tiles_union["coordinates"][0][0] )}')
 
-    all_tiles_file = open(all_tiles_file.name, 'a')
-    all_tiles_file.write( ('\n' if is_first_feature else ',\n' ) + json.dumps({
+    project_tiles_union_file = open ('projects/'+project+'/map_tiles_union.json', 'w')
+    project_tiles_union_file.write(json.dumps({
                "type": "Feature",
                "geometry": project_tiles_union,
                "properties": {
@@ -296,11 +308,11 @@ def get_geojson_feature_collection_for_project(project, all_tiles_file, is_first
                  "leaves": are_leaves_on_or_off(project_date_start, project_date_end)
                }
              }))
-    all_tiles_file.close()
+    project_tiles_union_file.close()
 
     end_time = time.time()
     total_time = round(end_time - start_time, 1)
-    print(f'done... in {total_time} seconds')
+    print(f'  done... in {total_time} seconds')
 
 def are_leaves_on_or_off(date_start, date_end):
     if int(date_start[0:4]) == int(date_end[0:4]):
