@@ -51,6 +51,7 @@ def run():
 
     subprocess.check_output(f'', shell=True)
 
+    is_first_project=True
     for line in project_dirs_file:
         project=line.replace('\n', '').strip()
         if project == '' or project == None:
@@ -62,6 +63,9 @@ def run():
             print ('\n%s project tiles already exist, not re-creating' % (project))
 
         if os.path.isfile(project_tiles_union_filepath):
+            if not is_first_project:
+                subprocess.check_output(f'echo "," >> {all_tiles_filepath}', shell=True)
+            is_first_project=False
             subprocess.check_output(f'cat {project_tiles_union_filepath} >> {all_tiles_filepath}', shell=True)
 
     project_dirs_file.close()
