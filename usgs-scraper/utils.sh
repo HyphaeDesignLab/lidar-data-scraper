@@ -84,8 +84,9 @@ throttle_scrape_reset;
 #  e.g. 250/60, 50/20, ... = for every 250 scrapes rest 60 seconds, for every 50 rest 20
 throttle_scrape() {
     ((__LIDAR_SCRAPER_scrape_count++))
-
+    local every_x_rest_y='';
     for every_x_rest_y in "$@"; do
+      if [ ! "$every_x_rest_y" ]; then continue; fi;
       local every_x=$(cut -d'/' -f1 <<< $every_x_rest_y);
       local rest_y_seconds=$(cut -d'/' -f2 <<< $every_x_rest_y);
       if [ "$(expr $__LIDAR_SCRAPER_scrape_count % $every_x)" = "0" ]; then
