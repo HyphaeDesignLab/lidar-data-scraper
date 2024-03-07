@@ -23,7 +23,7 @@ scrape_index() {
     fi
   fi
 
-  if [ -f projects/STOP_SCRAPE ] && [ -s projects/STOP_SCRAPE ]; then
+  if [ -f projects/STOP_SCRAPE ]; then
     echo Stopping scrape...
     stop_mock_server_debug
     exit;
