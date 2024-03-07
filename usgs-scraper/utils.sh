@@ -53,6 +53,11 @@ stop_mock_server_debug() {
   fi
 }
 
+check_stop_scrape() {
+  if [ -f projects/STOP_SCRAPE ]; then return 0; fi;
+  return 1
+}
+
 
 get_line_count_or_empty() {
   wc -l $1 2>/dev/null | sed -E -e 's/^ *([0-9]+).*$/\1/' -e 's/^0$//' | xargs echo -n;
@@ -106,10 +111,8 @@ LIDAR_SCRAPER_curl_retry=$(grep 'retry=' utils-curl-options.conf 2>/dev/null | s
 if [ ! "$LIDAR_SCRAPER_curl_retry" ]; then LIDAR_SCRAPER_curl_retry=2; fi
 
 curl_scrape() {
-  # args: 1 = url, 2 = HTML body output, 3 = http_response (stdout), 4 = errors (stderr)
-  echo -n > $2
-  echo -n > $3
-  echo -n > $4
+  # args: 1 = url, 2 = body output, 3 = http_response (stdout), 4 = errors (stderr)
+  echo -n > $2.scraping
   #
   # --location: follow 3xx HTTP response redirects
   # -f: return a script error on server errors 400+ (turns http responses 400+ into transient errors AND script errors)
@@ -130,8 +133,9 @@ curl_scrape() {
     $1 \
       1>> $3 \
       2>> $4
-
-  return $?
+  local curl_return="$?"
+  rm $2.scraping
+  return $curl_return;
 }
 
 # generic loop (recursive) on all projects/subprojects indeces
