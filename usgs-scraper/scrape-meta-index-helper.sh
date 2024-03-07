@@ -153,7 +153,7 @@ scrape_meta_index_helper__backup() {
 
 if [ "$(basename $0)" = "scrape-meta-index-helper.sh" ]; then
     if [ "$1" = 'main' ]; then
-      scrape_meta_index_helper $1
+      scrape_meta_index_helper $2
     elif [ "$1" = 'loop' ]; then
       if [ ! "$2" ] || [ ! "$3" ] || [ ! "$4" ]; then
         echo ' call the "loop" tester with 5 arguments'
