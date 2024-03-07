@@ -56,8 +56,9 @@ def run():
         project=line.replace('\n', '').strip()
         if project == '' or project == None:
             continue
+        project_tiles_filepath = 'projects/'+project+'/map_tiles.json'
         project_tiles_union_filepath = 'projects/'+project+'/map_tiles_union.json'
-        if not os.path.isfile(project_tiles_union_filepath):
+        if not os.path.isfile(project_tiles_union_filepath) or not os.path.isfile(project_tiles_filepath):
             get_geojson_feature_collection_for_project(project)
         else:
             print ('\n%s project tiles already exist, not re-creating' % (project))
