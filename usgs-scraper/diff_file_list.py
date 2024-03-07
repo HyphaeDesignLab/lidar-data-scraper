@@ -9,6 +9,13 @@ old_index_filepath=sys.argv[1]
 new_index_filepath=sys.argv[2]
 new_index_dir=sys.argv[3]
 
+if not os.path.isfile(new_index_filepath):
+    print('new index file not found '+new_index_filepath)
+    sys.exit(0)
+if not os.path.isfile(old_index_filepath):
+    print('old index file not found '+ old_index_filepath)
+    sys.exit(0)
+
 new_index_details__file=open(new_index_filepath)
 old_index_details__file=open(old_index_filepath)
 
