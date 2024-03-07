@@ -117,7 +117,7 @@ def get_geojson_feature_collection_for_project(project):
     print ('\n%s project has %d listed tiles' % (project, xml_file_count))
 
     # respective LAZ files details (size and date modified) from web scrape
-    laz_details = {'size':'', 'date_modified':''}
+    laz_details = {}
     laz_files_list_filename = laz_dir+'/_index/current/files_details.txt'
     if os.path.isfile(laz_files_list_filename):
         laz_files_list_file = open(laz_files_list_filename)
