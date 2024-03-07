@@ -100,7 +100,7 @@ throttle_scrape() {
 
 LIDAR_SCRAPER_curl_max_time=$(grep 'max-time=' utils-curl-options.conf 2>/dev/null | sed -e 's/max-time=//' | tr -d '\n')
 if [ ! "$LIDAR_SCRAPER_curl_max_time" ]; then LIDAR_SCRAPER_curl_max_time=10; fi
-LIDAR_SCRAPER_curl_max_time=$(grep 'connect-timeout=' utils-curl-options.conf 2>/dev/null | sed -e 's/connect-timeout=//' | tr -d '\n')
+LIDAR_SCRAPER_curl_connect_timeout=$(grep 'connect-timeout=' utils-curl-options.conf 2>/dev/null | sed -e 's/connect-timeout=//' | tr -d '\n')
 if [ ! "$LIDAR_SCRAPER_curl_connect_timeout" ]; then LIDAR_SCRAPER_curl_connect_timeout=5; fi
 LIDAR_SCRAPER_curl_retry=$(grep 'retry=' utils-curl-options.conf 2>/dev/null | sed -e 's/retry=//' | tr -d '\n')
 if [ ! "$LIDAR_SCRAPER_curl_retry" ]; then LIDAR_SCRAPER_curl_retry=2; fi
