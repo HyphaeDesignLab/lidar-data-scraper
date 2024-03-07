@@ -15,15 +15,15 @@ fi
 
 scrape_index() {
   if [ "$LIDAR_SCRAPER_DEBUG__PROMPT" ]; then
-    echo -n > projects/STOP_SCRAPE.txt # override last STOP if we are going to prompt
+    echo -n > projects/STOP_SCRAPE # override last STOP if we are going to prompt
     local stop_scrape=''
     read -p ' continue ("n" to stop) ' stop_scrape
     if [ "$stop_scrape" = 'n' ]; then
-      echo stop > projects/STOP_SCRAPE.txt
+      echo stop > projects/STOP_SCRAPE
     fi
   fi
 
-  if [ -f projects/STOP_SCRAPE.txt ] && [ -s projects/STOP_SCRAPE.txt ]; then
+  if [ -f projects/STOP_SCRAPE ] && [ -s projects/STOP_SCRAPE ]; then
     echo Stopping scrape...
     stop_mock_server_debug
     exit;

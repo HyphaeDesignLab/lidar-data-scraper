@@ -64,7 +64,7 @@ scrape_xml_all() {
     local project_i=0
     local project=''
     for project in $projects; do
-        if [ -f projects/STOP_SCRAPE.txt ]; then break; fi;
+        if [ -f projects/STOP_SCRAPE ]; then break; fi;
 
         local project_line=$(grep "${project}~" projects/_index/current/index_with_year_and_state.txt)
         local project_state=$(echo $project_line | sed -E -e 's/^[^~]+~([^~]+)~[^~]+~$/\1/')
@@ -78,8 +78,8 @@ scrape_xml_all() {
         echo -n "(prj) $project ($project_i/$projects_count): "
         scrape_xml $project in_loop
     done
-    if [ -f projects/STOP_SCRAPE.txt ]; then
-      rm projects/STOP_SCRAPE.txt
+    if [ -f projects/STOP_SCRAPE ]; then
+      rm projects/STOP_SCRAPE
     fi;
 }
 
@@ -124,10 +124,10 @@ scrape_xml_files() {
       continue;
     fi
     scrape_xml_file $meta_dir $project_path_url $xml_file
-    if [ -f projects/STOP_SCRAPE.txt ]; then break; fi;
+    if [ -f projects/STOP_SCRAPE ]; then break; fi;
   done
-  if [ -f projects/STOP_SCRAPE.txt ]; then
-    rm projects/STOP_SCRAPE.txt
+  if [ -f projects/STOP_SCRAPE ]; then
+    rm projects/STOP_SCRAPE
   fi;
 }
 
