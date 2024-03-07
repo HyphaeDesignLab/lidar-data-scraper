@@ -142,7 +142,7 @@ scrape_xml_file() {
   local project_path_url=$2
   local xml_file=$3
 
-  if [ ! -f $meta_dir/$xml_file.xml ]; then
+  if [ ! -s $meta_dir/$xml_file.xml ]; then
     throttle_scrape 250/60 50/20
     ### DOWNLOAD
     local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
