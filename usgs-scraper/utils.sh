@@ -1,3 +1,4 @@
+#!/bin/bash
 ___utils_sh_included=1
 if [ "$LIDAR_SCRAPER_DEBUG" ]; then
   set -x
