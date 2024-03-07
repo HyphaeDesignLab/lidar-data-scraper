@@ -55,13 +55,13 @@ stop_mock_server_debug() {
 
 
 get_line_count_or_empty() {
-  wc -l $1 | sed -E -e 's/^ *([0-9]+).*$/\1/' -e 's/^0$//' | xargs echo -n;
+  wc -l $1 2>/dev/null | sed -E -e 's/^ *([0-9]+).*$/\1/' -e 's/^0$//' | xargs echo -n;
 }
 format_line_count_or_empty() {
   echo $1 | sed -E -e 's/^ *([0-9]+).*$/\1/' -e 's/^0$//' | xargs echo -n;
 }
 get_line_count() {
-  wc -l $1 | sed -E -e 's/^ *([0-9]+).*$/\1/'  | xargs echo -n;
+  wc -l $1 2>/dev/null | sed -E -e 's/^ *([0-9]+).*$/\1/'  | xargs echo -n;
 }
 format_line_count() {
   echo $1 | sed -E -e 's/^ *([0-9]+).*$/\1/' | xargs echo -n;
