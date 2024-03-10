@@ -6,10 +6,10 @@ started_scrape() {
         projects_path=projects/$1
     fi
     # find returns a list of dirs ending on /
-    find $projects_path -mindepth 1 -maxdepth 1 -type d ! -name '_index' ! -name 'meta' | sed -e "s@$projects_path/@@" | sort;
+    find $projects_path -depth 1 -type d ! -path '*/_server_mock/*' ! -name '_*'  -name '*_*' | sed -e "s@$projects_path/@@" | sort;
 }
 started_scrape_with_subprojects() {
-  find projects/ -mindepth 1 -maxdepth 2 -type d ! -name '_index' ! -name 'meta' ! -name 'backup' ! -name 'current' | sed -E -e "s@^.+/@@" | sort;
+  find projects/ -mindepth 1 -maxdepth 2 -type d  ! -path '*/_server_mock/*' ! -name '_*' -name '*_*' | sed -E -e "s@^.+/@@" | sort;
 }
 
 project_index() {
