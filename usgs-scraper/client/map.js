@@ -746,6 +746,7 @@ function LidarScraperMap() {
                 if (turf.booleanIntersects(aoiPolygonTurf, turfProjectPoly)) {
                     intersectingProjects[feature.properties.project] = {
                         project: feature.properties,
+                        projectIntersection: turf.intersect(aoiPolygonTurf, turfProjectPoly),
                         tileCountMissingLaz: 0,
                         tileSize: 0,
                         tileCount: 0,
@@ -764,7 +765,7 @@ function LidarScraperMap() {
                     }
                     mapData[projectId].features.forEach(feature => {
                         const turfProjectTilePoly = turf.polygon(feature.geometry.coordinates, feature.properties)
-                        if (turf.booleanIntersects(aoiPolygonTurf, turfProjectTilePoly)) {
+                        if (turf.booleanIntersects(intersectingProjects[projectId].projectIntersection, turfProjectTilePoly)) {
                             intersectingProjects[projectId].tiles.push(feature);
 
                             // Set the original totals of the project tiles
@@ -840,7 +841,9 @@ function LidarScraperMap() {
         const forEachSelectedProjectTile = callback => {
             Object.keys(intersectingProjects).filter(projectId => !!intersectingProjects[projectId].selected).forEach(projectId => {
                 // if selected an array of 3 elements (on, off, mixed),
-                if (Object.values(intersectingProjects[projectId].selected).filter(v => v).length >= 3) {
+                if (intersectingProjects[projectId].sample && intersectingProjects[projectId].sample.length) {
+                    intersectingProjects[projectId].sample.forEach(feature => callback(feature));
+                } else if (Object.values(intersectingProjects[projectId].selected).filter(v => v).length >= 3) {
                     //  => no filter, all tiles
                     intersectingProjects[projectId].tiles.forEach(feature => callback(feature))
                 } else if (intersectingProjects[projectId].selected instanceof Object) {
@@ -890,6 +893,12 @@ function LidarScraperMap() {
             const simplifySimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon="simplify"]');
             const revertSimplePolygonBtnEl = el.querySelector('[data-aoi-simple-polygon="revert"]');
 
+            const sampleInfoEl = el.querySelector('[data-aoi-sample="info"]');
+            sampleInfoEl.originalInnerHTML = sampleInfoEl.innerHTML;
+            const sampleCellCountEl = el.querySelector('[data-aoi-sample="cell-count"]');
+            const sampleGetBtn = el.querySelector('[data-aoi-sample="get"]');
+            const sampleResetBtn = el.querySelector('[data-aoi-sample="reset"]');
+
             orignalPolygonInfoEl.innerHTML = orignalPolygonInfoEl.innerText
                 .replace('{type}', aoiPolygonType)
                 .replace('{polygonCount}', aoiPolygonType === 'multipolygon' ? data.coordinates.length: 1)
@@ -932,6 +941,80 @@ function LidarScraperMap() {
                 mapSources.highlight.setData(simplifiedPolygonTurf);
             })
 
+            sampleResetBtn.addEventListener('click', e => {
+                const projectIntersections = [];
+                sampleInfoEl.style.display='none';
+                Object.keys(intersectingProjects).forEach(projectId => {
+                    intersectingProjects[projectId].sample = [];
+                    projectIntersections.push(intersectingProjects[projectId].projectIntersection)
+                });
+                mapSources.highlight.setData({type: "FeatureCollection", features: projectIntersections});
+            });
+            sampleGetBtn.addEventListener('click', e => {
+                let sampleTiles = [];
+                let debugIntersections = []
+                const intersectionAoi = {};
+                const intersectionAreas = {};
+                let intersectionArea = 0;
+                Object.keys(intersectingProjects).forEach(projectId => {
+                    intersectionAoi[projectId] = turf.intersect(aoiPolygonSimpleTurf, intersectingProjects[projectId].projectIntersection);
+                    intersectionAreas[projectId] = turf.area(intersectionAoi[projectId]);
+                    intersectionArea += intersectionAreas[projectId];
+                });
+                const cellCount = parseInt(sampleCellCountEl.value);
+                Object.keys(intersectingProjects).forEach(projectId => {
+                    intersectingProjects[projectId].sample = [];
+                    const cellCountI = Math.ceil(cellCount * intersectionAreas[projectId] / intersectionArea);
+                    let bbox = turf.bbox(intersectionAoi[projectId]);
+
+                    // xn * yn = cellCount (where xn = count of cells along x axis and yn = count of cells along y)
+                    // xn = xdelta / cellSize = abs(x1 - x0) / cellSize
+                    // yn = ydelta / cellSize = abs(y1 - y0) / cellSize
+                    // (abs(x1 - x0) / cellSize) * (abs(y1 - y0) / cellSize) = cellCount
+                    // (abs(x1 - x0) * abs(y1 - y0)) / cellSize^2 = cellCount
+                    // (abs(x1 - x0) * abs(y1 - y0)) / cellCount = cellSize^2
+                    // sqrt( (abs(x1 - x0) * abs(y1 - y0)) / cellCount ) = cellSize
+                    const cellSize = Math.sqrt( (Math.abs(bbox[2] - bbox[0]) * Math.abs(bbox[3] - bbox[1])) / cellCountI);
+                    bbox = turf.bbox(turf.buffer(intersectionAoi[projectId], cellSize, {units: 'degrees'}));
+                    const grid = turf.squareGrid(bbox, cellSize, {units: 'degrees'});
+
+                    debugIntersections.push(intersectionAoi[projectId]);
+                    grid.features.forEach(f => {
+                        const gridChunk = turf.polygon(f.geometry.coordinates)
+                        if (turf.booleanIntersects(gridChunk, intersectionAoi[projectId])) {
+                            let centerFeature = turf.centerOfMass(f);
+                            if (!turf.booleanPointInPolygon(centerFeature, intersectionAoi[projectId])) {
+                                const gridChunkIntersection = turf.intersect(gridChunk, intersectionAoi[projectId]);
+                                centerFeature = turf.centerOfMass(gridChunkIntersection);
+                            }
+                            const center = centerFeature.geometry.coordinates;
+                            debugIntersections.push(f);
+                            const centerBuffer = [
+                                (intersectingProjects[projectId].tiles[0].geometry.coordinates[0][0][0] - intersectingProjects[projectId].tiles[0].geometry.coordinates[0][1][0] ) / 2,
+                                (intersectingProjects[projectId].tiles[0].geometry.coordinates[0][0][1] - intersectingProjects[projectId].tiles[0].geometry.coordinates[0][1][1]) / 2
+                            ]
+                            const centerBufferCoordinates = [[
+                                [center[0]-centerBuffer[0], center[1]-centerBuffer[1]],
+                                [center[0]-centerBuffer[0], center[1]+centerBuffer[1]],
+                                [center[0]+centerBuffer[0], center[1]+centerBuffer[1]],
+                                [center[0]+centerBuffer[0], center[1]-centerBuffer[1]],
+                                [center[0]-centerBuffer[0], center[1]-centerBuffer[1]]
+                            ]];
+                            intersectingProjects[projectId].tiles.some(tile => {
+                                if (turf.booleanIntersects(turf.polygon(tile.geometry.coordinates), turf.polygon(centerBufferCoordinates))) {
+                                    intersectingProjects[projectId].sample.push(tile);
+                                    sampleTiles.push(tile);
+                                    return true;
+                                }
+                            })
+                            debugIntersections.push({type: 'Feature', geometry: {type: 'Polygon', coordinates: centerBufferCoordinates}});
+                        }
+                    })
+                })
+                sampleInfoEl.innerHTML = sampleInfoEl.originalInnerHTML.replace(/\{cellCount\}/, cellCount);
+                sampleInfoEl.style.display='';
+                mapSources.highlight.setData({type: "FeatureCollection", features: sampleTiles}); // [...debugIntersections, ...intersectingProjects[projectId].sample]
+            })
         };
         const addAoiProjectsControls = () => {
             const containerEl = el.querySelector('[data-intersecting-projects]');

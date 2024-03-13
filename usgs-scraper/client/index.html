@@ -178,6 +178,12 @@
                         <label><input type="checkbox" data-aoi-simple-polygon="file-download"/> as
                             file</label>
                     </div>
+                    <div><span><strong>Tile sampling:</strong></span>
+                        <label><input data-aoi-sample='cell-count' step="1" type="number" value="20" style="width: 30px;"/> tiles</label>
+                        <button data-aoi-sample='get'>get</button>
+                        <button data-aoi-sample='reset'>reset to all</button>
+                        <span data-aoi-sample='info' style="display:none">{cellCount} found</span>
+                    </div>
                 </div>
                 <button data-tiles-geojson>Tiles GeoJSON</button>
                 <button data-laz-list>LAZ URLs</button>
