@@ -42,7 +42,7 @@ scrape_xml_file() {
 
   local project_path="projects/$project/$subproject"
 
-  local xml_file_noext=$(sed -e 's/{u}/USGS_LPC_/' -e "s/{prj}/$project/" -e "s/{sprj}/$subproject/" <<< "$xml_file_abbr_noext")
+  local xml_file_noext=$(sed -e 's/{u}/USGS_LPC_/' -e "s@{prj}@$project@" -e "s@{sprj}@$subproject@" <<< "$xml_file_abbr_noext")
   local xml_file="$xml_file_noext.xml"
 
   local base_url=https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects
