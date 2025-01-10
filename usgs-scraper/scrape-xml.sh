@@ -25,7 +25,11 @@ scrape_xml_files() {
 
     ((xml_file_i++))
     local echo_out="$(date +'%H:%M:%S'): downloading xml $xml_file_i/$xml_file_count: $xml_file"
-    printf "\r%*s\r$echo_out" ${#echo_out}
+    if [ "$LIDAR_SCRAPER_COMPACT_TEXT_STATUS" = 0 ]; then
+      echo $echo_out;
+    else
+      printf "\r%*s\r$echo_out" ${#echo_out}
+    fi
 
     scrape_xml_file $project $xml_file
   done
