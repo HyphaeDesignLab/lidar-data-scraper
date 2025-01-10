@@ -81,8 +81,13 @@ extract_xml_files_data() {
   for fff in $meta_dir/*.xml; do
     if check_stop_scrape; then break; fi
 
-    printf "\r%*s\r" "$(tput cols)" " "
-    echo -n "$_count / $_total processing"
+    # by default print text status compactly (only the last line, overwrite previous lines)
+    if [ "$LIDAR_SCRAPER_COMPACT_TEXT_STATUS" = 0 ]; then
+      echo "$_count / $_total processing";
+    else
+      printf "\r%*s\r" "$(tput cols)" " "
+      echo -n "$_count / $_total processing"
+    fi
     ((_count++))
     extract_xml_data_of_single_file $meta_dir $(echo $fff | sed -E -e 's@^.+/@@;s/\.xml$//')
   done
