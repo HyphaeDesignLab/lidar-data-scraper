@@ -34,13 +34,13 @@ scrape_xml_files() {
 scrape_xml_file() {
   if check_stop_scrape; then return; fi
 
-  local project="$1"
+  local project_path="$1"
+  local project=$(cut -d/ -f1 <<< "$project_path")
+  local subproject=$(cut -d/ -f2 <<< "$project_path")
   local xml_file_abbr_noext="$2"
 
-  local meta_dir="projects/$project/meta"
-  local url_meta_dir="$(cat projects/$project/_index/current/metadata_dir.txt | tr -d '\n')"
-
-  local project_path="projects/$project/$subproject"
+  local meta_dir="projects/$project_path/meta"
+  local url_meta_dir="$(cat projects/$project_path/_index/current/metadata_dir.txt | tr -d '\n')"
 
   local xml_file_noext=$(sed -e 's/{u}/USGS_LPC_/' -e "s@{prj}@$project@" -e "s@{sprj}@$subproject@" <<< "$xml_file_abbr_noext")
   local xml_file="$xml_file_noext.xml"
@@ -50,7 +50,7 @@ scrape_xml_file() {
   if [ ! -s $meta_dir/$xml_file ]; then
     throttle_scrape 250/60 50/20
     ### DOWNLOAD
-    local url=$base_url/$project/$url_meta_dir/$xml_file
+    local url=$base_url/$project_path/$url_meta_dir/$xml_file
     rm $meta_dir/$xml_file.error 2>/dev/null
     curl_scrape $url $meta_dir/$xml_file $meta_dir/$xml_file.httpcode $meta_dir/$xml_file.error
     if [ $? != 0 ]; then
@@ -73,9 +73,8 @@ extract_xml_files_data() {
   if check_stop_scrape; then return; fi
 
   local project="$1"
-  local xml_files_dir="projects/$project/meta/"
 
-  local meta_dir=$project_path/meta
+  local meta_dir="projects/$project/meta/"
   local fff=''
   local _count=0;
   local _total=$(find $meta_dir -name '*.xml' -type f | wc -l)
