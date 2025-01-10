@@ -1,3 +1,18 @@
+# This script facilitates scraping and managing LIDAR data projects from the USGS website.
+# It includes functions to manage download directories, fetch and save project data,
+# scrape project details from the website, and handle LIDAR data files.
+#
+# Key Functionalities:
+# - Directory management for project downloads and data storage.
+# - Fetching and updating project and sub-project information stored in JSON format.
+# - Scraping web pages for project listings and details, identifying new or updated projects.
+# - Saving scraped data locally, including handling of metadata and LIDAR files.
+# - Functions to process LIDAR data, such as checking overlaps with city polygons and extracting data from metadata files.
+#
+# Usage:
+# The script is designed to be used as a command-line tool with specific commands
+# for different scraping and data management tasks. Each function includes a description
+# of its purpose and usage.
 import subprocess
 import re
 import os
@@ -12,12 +27,31 @@ from datetime import datetime
 url_base = 'https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/LPC/Projects'
 
 def downloads_dir_get(project_id):
+    """
+    Gets or creates a directory for downloading project-specific data.
+
+    Parameters:
+    - project_id (str): The ID of the project for which the downloads directory is retrieved or created.
+
+    Returns:
+    - dir_path (str): The path to the project's downloads directory.
+    """
     dir_path = 'projects/%s/_downloads' % (project_id)
     if not os.path.isdir(dir_path):
        os.makedirs(dir_path)
     return dir_path
 
 def project_db_get(project_id, subproject_id):
+    """
+    Retrieves the database (JSON file) for a given project and subproject. If the database does not exist, it creates an empty one.
+
+    Parameters:
+    - project_id (str): The ID of the project.
+    - subproject_id (str): The ID of the subproject within the project.
+
+    Returns:
+    - data (dict): The data contained in the project's database. Returns an empty dictionary if the database file does not exist.
+    """
     path = 'projects/%s/%s/data.json' % (project_id, subproject_id)
     data = {}
     if not os.path.isfile(path):
@@ -100,6 +134,16 @@ def projects_list_compare(new_projects, old_projects):
         return changes
 
 def projects_scrape(is_return_json=False):
+    """
+    Scrapes the main index page for projects, identifying new, updated, or removed projects and saving the changes locally.
+
+    Parameters:
+    - is_return_json (bool): Flag to determine if the scraped data should be returned as JSON. Default is False.
+
+    Returns:
+    - projects (dict/str): The updated projects data. Returns a dictionary by default or a JSON string if is_return_json is True.
+    """
+
     html_filepath = 'projects/_index/index.html'
     json_filepath = 'projects/_index/index.json'
     backup_dir = 'projects/_index/backup'
@@ -479,6 +523,18 @@ def city_polygon_get(city_id):
     return multipolygon
 
 def find_overlapping_lidar_scans(project_id, subproject_id, city_id):
+    """
+    Finds LIDAR scans that overlap with a given city's polygon and compiles information about those scans.
+
+    Parameters:
+    - project_id (str): The ID of the project to search within.
+    - subproject_id (str): The ID of the subproject within the project.
+    - city_id (str): The ID of the city to check for overlapping scans.
+
+    Returns:
+    - file_bounds_and_date (dict): A dictionary mapping file names to their bounds and date information, for files that overlap with the city polygon.
+    """
+
     city_multi_polygon = city_polygon_get(city_id)
 
     dir_path = downloads_dir_get(project_id)
