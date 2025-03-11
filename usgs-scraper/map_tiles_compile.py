@@ -250,7 +250,7 @@ def get_geojson_feature_collection_for_project(project):
              "date_start": tile_date_start,
              "date_end": tile_date_end,
              "leaves": are_leaves_on_or_off(tile_date_start[0:4+2+2], tile_date_end[0:4+2+2]),
-             "laz_tile": file_name_no_extension_abbreviated if file_name_no_extension_abbreviated in laz_details else '',
+             "laz_tile": file_name_no_extension_abbreviated, # even if file_name_no_extension_abbreviated NOT in laz_details, assume LAZ page just could not be scraped and laz_details extracted yet
              "laz_size": laz_details[file_name_no_extension_abbreviated]['size'] if file_name_no_extension_abbreviated in laz_details else ''
            }
          }))
